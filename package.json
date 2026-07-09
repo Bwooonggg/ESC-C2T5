@@ -1,0 +1,25 @@
+{
+  "name": "esc-c2t5",
+  "version": "1.0.0",
+  "description": "D.I.A.L Project",
+  "private": true,
+  "homepage": "https://github.com/Bwooonggg/ESC-C2T5#readme",
+  "bugs": {
+    "url": "https://github.com/Bwooonggg/ESC-C2T5/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Bwooonggg/ESC-C2T5.git"
+  },
+  "license": "ISC",
+  "author": "",
+  "workspaces": [
+    "client",
+    "server"
+  ],
+  "scripts": {
+    "dev:client": "npm run dev -w client",
+    "dev:server": "npm run dev -w server",
+    "build": "npm run build -w client && npm run build -w server"
+  }
+}
