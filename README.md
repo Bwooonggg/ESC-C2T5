@@ -71,7 +71,6 @@ DAS empowers people who learn differently — including those with dyslexia — 
 | Screening ML (DAS 1) | ML classification model for literacy-risk prediction |
 | Content generation (DAS 3) | RAG — vector database + embeddings + LLM API *(provider TBD)* |
 | Summaries (DAS 7) | LLM API for summarisation & recommendations |
-| Auth | JWT / Firebase Auth *(planned)* |
 | Repo tooling | npm workspaces monorepo |
 
 > **Not yet finalised:** hosting environment (local vs DAS/SUTD-provided — pending client ICT confirmation) and the specific LLM / vector-DB providers. No strict accuracy target is required; ~75–80% is acceptable for the proof of concept.
@@ -159,12 +158,9 @@ The team follows an **iterative model** (Requirement → Design → Development 
 
 **C2T5** — Brian Wong, Toh Shijie, Patrick Liu, Michael Soh, Le Bin, Vincent Alexander, Mahek Zaveri, Jia Zhi.
 
-Industry mentor: **Ms Soofrina Binte Mubarak** — Lead Educational Therapist, Dyslexia Association of Singapore.
-
 ---
 
 ## Notes & data handling
 
 - The DAS 1 screener is **non-diagnostic** and must not be presented as a clinical assessment.
 - User data is **anonymised** — hashed IDs only; no full names or NRIC stored in identifiable form.
-- Teaching materials and other assets provided by DAS are the **industry partner's IP** and are shared under NDA. Do **not** commit DAS-provided datasets, documents, or credentials to this repository.
