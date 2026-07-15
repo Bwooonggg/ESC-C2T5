@@ -5,15 +5,25 @@ import { type Summary } from "../types/domain";
 export function SummaryComponent({ studentId, }: { studentId: string; }) {
     const [data, setData] = useState<Summary | null>(null);
 
-    // Run this when mounted
     useEffect(() => {
+        let cancelled = false;
+        setData(null);
+
         async function loadSummary() {
-            const result = await getSummary(studentId);
-            setData(result);
+            try {
+                const result = await getSummary(studentId);
+                if (!cancelled) setData(result);
+            } catch {
+                if (!cancelled) setData(null);
+            }
         }
 
-        loadSummary();
-    }, [])
+        void loadSummary();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [studentId]);
 
     return <section><p>{data?.content ?? "Loading summary..."}</p></section>;
 }
