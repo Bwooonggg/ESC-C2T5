@@ -1,12 +1,6 @@
 import { createApiUrl } from "../config/api";
 import type { ApiEnvelope, Summary } from "../types/domain";
 
-<<<<<<< HEAD
-export type SummaryResponse = {
-    studentName: string;
-    content: string;
-};
-=======
 // GET /api/students/:studentId/summary  ->  the PM2 `Summary` entity.
 //
 // The backend answers every route in the { ok, data } | { ok, error } envelope.
@@ -14,7 +8,6 @@ export type SummaryResponse = {
 // have to reason about the transport.
 export async function getSummary(studentId: string): Promise<Summary> {
     const response = await fetch(createApiUrl(`students/${studentId}/summary`));
->>>>>>> 6da49cb216263b4973754c162bb146f0c59d1d19
 
     let body: ApiEnvelope<Summary>;
     try {
