@@ -7,6 +7,7 @@ import { getCurrentParent } from './api/client'
 import { SummaryComponent } from './components/summaryComponent'
 import { RecommendationComponent } from './components/recommendationComponent'
 import type { Parent, Student } from './types/domain'
+import { ProgressChart } from './components/progressChart'
 
 function App() {
   const [count, setCount] = useState(0)
@@ -93,7 +94,10 @@ function App() {
         )}
       </section>
       <section id="data">
-        {/* TODO */}
+        <h1>Progress</h1>
+        {selectedStudent && (
+          <ProgressChart studentId={selectedStudent.studentId} />
+        )}
       </section>
       <section id="recommendations">
         {selectedStudent && (
