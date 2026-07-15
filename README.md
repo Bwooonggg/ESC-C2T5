@@ -71,7 +71,7 @@ DAS empowers people who learn differently — including those with dyslexia — 
 | Screening ML (DAS 1) | ML classification model for literacy-risk prediction |
 | Content generation (DAS 3) | RAG — vector database + embeddings + LLM API *(provider TBD)* |
 | Summaries (DAS 7) | LLM API for summarisation & recommendations |
-| Repo tooling | npm workspaces monorepo |
+| Repo tooling | Monorepo; each subsystem owns its `package.json` + lockfile |
 
 > **Not yet finalised:** hosting environment (local vs DAS/SUTD-provided — pending client ICT confirmation) and the specific LLM / vector-DB providers. No strict accuracy target is required; ~75–80% is acceptable for the proof of concept.
 
@@ -81,17 +81,24 @@ DAS empowers people who learn differently — including those with dyslexia — 
 
 ```
 ESC-C2T5/
-├─ package.json          # root workspace manifest (private, workspaces)
-├─ package-lock.json     # locked dependency versions for all workspaces
-├─ client/               # React + Vite + TypeScript frontend
-│  ├─ package.json
-│  └─ tsconfig.json
-├─ server/               # Express + TypeScript backend
-│  ├─ package.json
-│  └─ tsconfig.json
+├─ package.json          # root manifest — convenience scripts that delegate to DAS_7/*
+├─ DAS_7/                # DAS 7 — Parent Insight Dashboard
+│  ├─ frontend/          # React 19 + Vite + TypeScript (own package.json + lockfile)
+│  │  ├─ src/            # app source
+│  │  └─ test/           # Jest unit tests
+│  └─ mock_backend/      # Express + TypeScript mock API (own package.json + lockfile)
 ├─ Files/                # project handout, briefs, and reference materials
 └─ README.md
 ```
+
+> **On layout:** each subsystem owns its dependencies and lockfile, and is installed and run
+> from its own directory. The root `package.json` only provides `das7:*` convenience scripts
+> that delegate via `npm --prefix`. The earlier `client/` + `server/` npm-workspaces scaffold
+> was removed — both were config-only shells that had no entry source file and could not start.
+>
+> `DAS_7/mock_backend` serves **hardcoded** data. It is DAS 7's throwaway backend for
+> prototyping, not the team's eventual shared backend — don't "fix" the duplication by
+> deleting it.
 
 ---
 
@@ -100,38 +107,41 @@ ESC-C2T5/
 **Prerequisites:** Node.js 18+ (20 LTS recommended) and npm 7+.
 
 ```bash
-# 1. Install dependencies for all workspaces (run once, at the repo root)
-npm install
+# 1. Install DAS 7 dependencies (from the repo root)
+npm run das7:install
 
-# 2. Start the frontend dev server
-npm run dev:client
+# 2. Start the mock backend            → http://localhost:4000
+npm run das7:backend
 
-# 3. In a second terminal, start the backend dev server
-npm run dev:server
+# 3. In a second terminal, the frontend → http://localhost:5173
+npm run das7:dev
 ```
 
-> The project is currently scaffolded (config only). The dev servers start once the entry
-> source files are added — `client/index.html` + `client/src/main.tsx` for the frontend, and
-> `server/src/index.ts` for the backend.
+Start the backend **first**. The Vite dev server proxies `/api/*` to `http://localhost:4000`,
+so the frontend uses relative URLs and needs no CORS handling or environment variables.
 
 ### Available scripts
 
-**Root**
+**Root** — thin wrappers; each delegates into `DAS_7/` via `npm --prefix`.
 | Script | Action |
 |--------|--------|
-| `npm run dev:client` | Run the frontend dev server (`vite`) |
-| `npm run dev:server` | Run the backend dev server (`tsx watch`) |
-| `npm run build` | Build both workspaces |
+| `npm run das7:install` | Install both DAS 7 frontend and mock backend |
+| `npm run das7:dev` | Run the DAS 7 frontend dev server (`vite`, :5173) |
+| `npm run das7:backend` | Run the DAS 7 mock backend (`tsx watch`, :4000) |
+| `npm run das7:build` | Type-check + production-build the frontend |
+| `npm run das7:test` | Run the frontend Jest unit tests |
+| `npm run das7:lint` | Lint the frontend (`oxlint`) |
 
-**`client/`**
+**`DAS_7/frontend/`**
 | Script | Action |
 |--------|--------|
 | `npm run dev` | Vite dev server |
 | `npm run build` | Type-check + production build |
 | `npm run preview` | Preview the production build |
-| `npm run typecheck` | Type-check without emitting |
+| `npm run test` | Jest unit tests |
+| `npm run lint` | `oxlint` |
 
-**`server/`**
+**`DAS_7/mock_backend/`**
 | Script | Action |
 |--------|--------|
 | `npm run dev` | Run with hot reload (`tsx watch`) |

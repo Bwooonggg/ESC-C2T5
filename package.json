@@ -13,13 +13,12 @@
   },
   "license": "ISC",
   "author": "",
-  "workspaces": [
-    "client",
-    "server"
-  ],
   "scripts": {
-    "dev:client": "npm run dev -w client",
-    "dev:server": "npm run dev -w server",
-    "build": "npm run build -w client && npm run build -w server"
+    "das7:install": "npm install --prefix DAS_7/frontend && npm install --prefix DAS_7/mock_backend",
+    "das7:dev": "npm run dev --prefix DAS_7/frontend",
+    "das7:backend": "npm run dev --prefix DAS_7/mock_backend",
+    "das7:build": "npm run build --prefix DAS_7/frontend",
+    "das7:test": "npm run test --prefix DAS_7/frontend",
+    "das7:lint": "npm run lint --prefix DAS_7/frontend"
   }
 }
