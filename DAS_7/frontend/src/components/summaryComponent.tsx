@@ -1,8 +1,9 @@
 import {useEffect, useState} from "react";
-import {getSummary, type SummaryResponse} from "../api/summaryApi";
+import {getSummary} from "../api/summaryApi";
+import * as types from "../types/domain";
 
 export function SummaryComponent({studentId,}: {studentId:string;}) {
-    const [data, setData] = useState<SummaryResponse | null>(null);
+    const [data, setData] = useState<types.Summary | null>(null);
 
     // Run this when mounted
     useEffect(() => {
