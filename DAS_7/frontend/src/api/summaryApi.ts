@@ -1,8 +1,8 @@
 import {createApiUrl} from "../config/api";
 
-type SummaryResponse = {
+export type SummaryResponse = {
     studentName: string;
-    summary: string;
+    content: string;
 };
 
 export async function getSummary(studentId: string): Promise<SummaryResponse> {

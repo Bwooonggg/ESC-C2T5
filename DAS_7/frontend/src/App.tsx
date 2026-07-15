@@ -3,6 +3,7 @@ import reactLogo from './assets/react.svg'
 import viteLogo from './assets/vite.svg'
 import heroImg from './assets/hero.png'
 import './App.css'
+import { SummaryComponent } from './components/summaryComponent'
 
 function App() {
   const [count, setCount] = useState(0)
@@ -11,7 +12,7 @@ function App() {
     <>
       <section id="summary">
         <h1>Summary</h1>
-
+        <SummaryComponent studentId = '1'/>
       </section>
       <section id="center">
         <div className="hero">
