@@ -1,9 +1,9 @@
-import {useEffect, useState} from "react";
-import {getSummary} from "../api/summaryApi";
-import * as types from "../types/domain";
+import { useEffect, useState } from "react";
+import { getSummary } from "../api/summaryApi";
+import { type Summary } from "../types/domain";
 
-export function SummaryComponent({studentId,}: {studentId:string;}) {
-    const [data, setData] = useState<types.Summary | null>(null);
+export function SummaryComponent({ studentId, }: { studentId: string; }) {
+    const [data, setData] = useState<Summary | null>(null);
 
     // Run this when mounted
     useEffect(() => {
@@ -15,5 +15,5 @@ export function SummaryComponent({studentId,}: {studentId:string;}) {
         loadSummary();
     }, [])
 
-    return <section><p>{data?.content ?? "Unable to fetch"}</p></section>;
+    return <section><p>{data?.content ?? "Loading summary..."}</p></section>;
 }
