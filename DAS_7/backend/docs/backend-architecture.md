@@ -1,7 +1,7 @@
 # DAS 7 Backend Architecture and Project Structure
 
 **Status:** Approved architecture reference  
-**Last updated:** 20 July 2026  
+**Last updated:** 21 July 2026
 **Scope:** DAS 7 TypeScript backend, MySQL persistence, external generation services, and scheduled email notifications
 
 ## 1. Purpose
@@ -230,6 +230,8 @@ backend/
 |-- package-lock.json
 |-- tsconfig.json
 |-- tsconfig.build.json
+|-- tsconfig.test.json
+|-- jest.config.cjs
 |-- .env.example
 |-- .gitignore
 |-- README.md
@@ -452,6 +454,10 @@ backend/
     |   |-- notifications/
     |   |-- preferences/
     |   `-- ingestion/
+    |-- http/
+    |   |-- health.test.ts
+    |   |-- middleware/
+    |   `-- routes/
     |-- integration/
     |   |-- mysql/
     |   |-- generator-adapters/
@@ -538,11 +544,19 @@ Extends Express request typing with the authenticated user, request ID, and auth
 
 ### `test/`
 
-- `unit`: isolated domain and application tests using fakes.
-- `integration`: real MySQL and mocked-provider boundary tests.
+- `unit`: isolated domain and application tests using injected fakes.
+- `http`: Express router, middleware, controller, validation, and response-envelope tests using Supertest.
+- `integration`: real MySQL and controlled-provider boundary tests.
 - `contract`: verifies frontend and external-service request/response shapes.
 - `e2e`: exercises complete API and worker workflows.
 - `fixtures`: fictional reusable test data.
+
+Jest is the only test runner. `ts-jest` transforms TypeScript for the test
+process, and Supertest exercises the Express application without opening a
+fixed network port. Production code continues to compile as ESM with NodeNext;
+`tsconfig.test.json` compiles tests as CommonJS and maps production `.js`
+import suffixes back to TypeScript modules. MySQL-backed integration and end-to-end
+suites run serially so they cannot mutate shared test state concurrently.
 
 ## 8. Database and Repository Rules
 
@@ -608,6 +622,12 @@ The schedule applies per parent preference, but execution remains student-scoped
 
 ## 12. Testing and Acceptance Criteria
 
+Use `.test.ts` filenames throughout. Run fast unit, HTTP, and contract tests
+without MySQL; run integration and end-to-end suites against an isolated test
+database. Prefer dependency injection and explicit fakes for application
+services. Use Jest mocks at technical boundaries only, Jest fake timers for the
+notification clock, and controlled HTTP servers for provider-adapter tests.
+
 The implementation is acceptable when all of the following hold:
 
 1. The existing frontend runs without changing its routes or response types.
@@ -623,10 +643,13 @@ The implementation is acceptable when all of the following hold:
 11. Raw SQL repositories pass integration tests against real MySQL.
 12. Concurrent summary requests and notification-worker claims do not create unintended duplicates.
 13. Generator timeouts, malformed responses, email failures, worker crashes, and database outages fail safely and observably.
+14. `npm run typecheck`, `npm run build`, `npm test`, `npm run test:integration`, `npm run test:contract`, and `npm run test:e2e` pass.
 
 ## 13. Recorded Decisions and Assumptions
 
 - Use raw Express and TypeScript.
+- Use Jest, `ts-jest`, and Supertest for all backend testing; do not introduce Vitest.
+- Keep production compilation on ESM/NodeNext and use CommonJS only in the Jest test transform.
 - Use `mysql2/promise` and plain SQL migrations.
 - Do not introduce Prisma, another ORM, Redis, or a microservice split initially.
 - Keep the API and worker in one repository but run them as separate processes.
