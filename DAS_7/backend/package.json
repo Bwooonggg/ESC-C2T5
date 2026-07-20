@@ -1,0 +1,29 @@
+{
+    "name": "das7-backend",
+    "version": "0.1.0",
+    "private": true,
+    "type": "module",
+    "description": "DAS 7 TypeScript backend scaffold",
+    "engines": {
+        "node": ">=20"
+    },
+    "scripts": {
+        "dev": "tsx watch src/entrypoints/api.ts",
+        "dev:worker": "tsx watch src/entrypoints/worker.ts",
+        "build": "tsc -p tsconfig.build.json",
+        "start": "node dist/entrypoints/api.js",
+        "start:worker": "node dist/entrypoints/worker.js",
+        "typecheck": "tsc --noEmit -p tsconfig.json"
+    },
+    "dependencies": {
+        "cors": "^2.8.5",
+        "express": "^4.21.2"
+    },
+    "devDependencies": {
+        "@types/cors": "^2.8.17",
+        "@types/express": "^4.17.21",
+        "@types/node": "^24.13.2",
+        "tsx": "^4.19.2",
+        "typescript": "~6.0.2"
+    }
+}
