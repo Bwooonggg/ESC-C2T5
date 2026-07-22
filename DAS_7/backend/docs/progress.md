@@ -4,7 +4,7 @@
 
 **Phase 4 — Implement MySQL repositories: in progress**
 
-**Next:** Phase 4, step 3 — Implement repositories with parameterized statements
+**Next:** Phase 4, step 4 — Add transaction support for related changes
 
 ## Completed Work
 
@@ -73,6 +73,13 @@
   notifications, notification jobs, and audit events.
 - Added mapper validation for MySQL date, decimal, boolean, JSON, and
   allow-list representations before values reach application workflows.
+- Added parameterized MySQL repositories for users, parents, students, progress
+  records, summaries, recommendations, notification preferences, email
+  notifications, notification jobs, and audit events.
+- Added repository unit coverage for parameter binding, ordered reads,
+  multi-row writes, and notification state updates.
+- Verified repository persistence and `FOR UPDATE SKIP LOCKED` notification-job
+  claiming against a fresh migrated MySQL 8 database.
 
 ## Verification Evidence
 
@@ -87,8 +94,8 @@ npm run test:coverage
 npm run test:integration
 ```
 
-Current unit/HTTP Jest result: 7 test suites passed and 35 tests passed.
-The MySQL integration result is 1 suite passed and 3 tests passed against a
+Current unit/HTTP Jest result: 9 test suites passed and 46 tests passed.
+The MySQL integration result is 1 suite passed and 4 tests passed against a
 disposable MySQL 8 test database.
 
 The migration runner and index migration were applied successfully to a blank
@@ -102,7 +109,7 @@ isolated MySQL 8 database, and a second run was verified as a no-op.
 | 1 | Establish configuration | Done |
 | 2 | Build the domain and interfaces | Done |
 | 3 | Create the MySQL schema | Done |
-| 4 | Implement MySQL repositories | In progress — row mappers complete |
+| 4 | Implement MySQL repositories | In progress — repositories complete |
 | 5 | Implement external generator boundaries | Pending |
 | 6 | Implement Track Progress and Summary | Pending |
 | 7 | Implement recommendations | Pending |
@@ -148,7 +155,7 @@ isolated MySQL 8 database, and a second run was verified as a no-op.
 | --- | --- | --- |
 | 1 | Configure the MySQL pool | Done |
 | 2 | Implement SQL row mappers | Done |
-| 3 | Implement repositories with parameterized statements | Next |
-| 4 | Add transaction support | Pending |
+| 3 | Implement repositories with parameterized statements | Done |
+| 4 | Add transaction support | Next |
 | 5 | Test repository behavior and rollback | Pending |
 | 6 | Run the MySQL integration suites serially | Pending |

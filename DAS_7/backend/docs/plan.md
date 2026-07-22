@@ -130,8 +130,8 @@ workflows maintain the guardian relationship's `1..*` minimum.
 
 1. **DONE:** Configure one `mysql2/promise` connection pool per process.
 2. **DONE:** Implement row mappers so SQL result shapes do not escape the infrastructure layer.
-3. **NEXT:** Implement repositories with parameterized statements.
-4. Add transaction support for related changes.
+3. **DONE:** Implement repositories with parameterized statements.
+4. **NEXT:** Add transaction support for related changes.
 5. Test CRUD, guardian lookup, summary history, latest-summary selection, idempotency, and rollback behavior.
 6. Run MySQL suites serially with `npm run test:integration`.
 
@@ -140,6 +140,12 @@ The row-mapping boundary is implemented under
 by repositories, converts MySQL date, decimal, boolean, and JSON representations,
 and constructs validated domain entities or application records. Authentication
 session mapping remains deferred with the final authentication phase.
+
+Concrete MySQL repositories are implemented under
+`src/infrastructure/mysql/repositories/`. They use the row mappers and bind
+all dynamic values through `mysql2` prepared statements. Notification job
+claiming uses a checked-out connection with `FOR UPDATE SKIP LOCKED`; broader
+transaction composition remains the next step.
 
 **Done when:** application workflows can use repositories without importing SQL or MySQL-specific types.
 

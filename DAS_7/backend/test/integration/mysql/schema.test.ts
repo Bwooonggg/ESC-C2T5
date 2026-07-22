@@ -1,7 +1,25 @@
 import { randomUUID } from 'node:crypto'
 import { resolve } from 'node:path'
 import { config as loadDotEnv } from 'dotenv'
+import {
+    afterAll,
+    beforeAll,
+    describe,
+    expect,
+    test,
+} from '@jest/globals'
 import type { Pool, PoolConnection, RowDataPacket } from 'mysql2/promise'
+import { EmailNotification } from '../../../src/domain/entities/email-notification.js'
+import { NotificationPreference } from '../../../src/domain/entities/notification-preference.js'
+import { Parent } from '../../../src/domain/entities/parent.js'
+import { ProgressRecord } from '../../../src/domain/entities/progress-record.js'
+import { Recommendation } from '../../../src/domain/entities/recommendation.js'
+import { Student } from '../../../src/domain/entities/student.js'
+import { Summary } from '../../../src/domain/entities/summary.js'
+import { AccountType } from '../../../src/domain/value-objects/account-type.js'
+import { EmailAddress } from '../../../src/domain/value-objects/email-address.js'
+import { NotificationFrequency } from '../../../src/domain/value-objects/notification-frequency.js'
+import { SkillArea } from '../../../src/domain/value-objects/skill-area.js'
 import { createMySqlPool } from '../../../src/infrastructure/mysql/pool.js'
 import {
     discoverMigrationFiles,
@@ -9,6 +27,18 @@ import {
     migrationTableName,
     runMigrations,
 } from '../../../src/infrastructure/mysql/migration-runner.js'
+import {
+    MySqlAuditRepository,
+    MySqlEmailNotificationRepository,
+    MySqlNotificationJobRepository,
+    MySqlNotificationPreferenceRepository,
+    MySqlParentRepository,
+    MySqlProgressRecordRepository,
+    MySqlRecommendationRepository,
+    MySqlStudentRepository,
+    MySqlSummaryRepository,
+    MySqlUserRepository,
+} from '../../../src/infrastructure/mysql/repositories/index.js'
 
 interface IntegrationDatabaseConfig {
     readonly host: string
@@ -74,7 +104,7 @@ describe('MySQL schema integration', () => {
         const config = readIntegrationDatabaseConfig()
 
         pool = createMySqlPool(config, {
-            connectionLimit: 1,
+            connectionLimit: 2,
             multipleStatements: true,
         })
         connection = await pool.getConnection()
@@ -337,6 +367,219 @@ describe('MySQL schema integration', () => {
             ).rejects.toThrow()
         } finally {
             await connection!.rollback()
+        }
+    })
+
+    test('persists and retrieves repository records against the migrated schema', async () => {
+        const ids = {
+            user: `repository-user-${randomUUID()}`,
+            parent: `repository-parent-${randomUUID()}`,
+            student: `repository-student-${randomUUID()}`,
+            record: `repository-record-${randomUUID()}`,
+            summary: `repository-summary-${randomUUID()}`,
+            recommendation: `repository-recommendation-${randomUUID()}`,
+            notification: `repository-notification-${randomUUID()}`,
+            job: `repository-job-${randomUUID()}`,
+            audit: `repository-audit-${randomUUID()}`,
+        }
+        const now = new Date('2026-07-23T12:00:00.000Z')
+        const userRepository = new MySqlUserRepository(connection!)
+        const parentRepository = new MySqlParentRepository(connection!)
+        const studentRepository = new MySqlStudentRepository(connection!)
+        const progressRepository = new MySqlProgressRecordRepository(
+            connection!,
+        )
+        const summaryRepository = new MySqlSummaryRepository(connection!)
+        const recommendationRepository =
+            new MySqlRecommendationRepository(connection!)
+        const preferenceRepository =
+            new MySqlNotificationPreferenceRepository(connection!)
+        const emailRepository = new MySqlEmailNotificationRepository(
+            connection!,
+        )
+        const auditRepository = new MySqlAuditRepository(connection!)
+        const jobRepository = new MySqlNotificationJobRepository(pool!)
+
+        try {
+            const parent = new Parent({
+                userId: ids.user,
+                parentId: ids.parent,
+                name: 'Repository Parent',
+                email: new EmailAddress(`${ids.user}@example.test`),
+                mobileNumber: '+6590000000',
+                passwordHash: 'deferred-auth-placeholder',
+                accountType: new AccountType('parent'),
+                isVerified: true,
+            })
+            const student = new Student({
+                studentId: ids.student,
+                name: 'Repository Student',
+                dateOfBirth: new Date('2015-06-15T00:00:00.000Z'),
+                bandLevel: 'Band 2',
+                currentProgressVersion: 'v1',
+            })
+
+            await userRepository.save(parent)
+            await parentRepository.save(parent)
+            await studentRepository.save(student)
+            await parentRepository.assignStudent(ids.parent, ids.student)
+            await progressRepository.save(
+                new ProgressRecord({
+                    recordId: ids.record,
+                    studentId: ids.student,
+                    date: new Date('2026-07-23T00:00:00.000Z'),
+                    skillArea: new SkillArea('Reading Fluency'),
+                    score: 98.75,
+                    notes: 'Repository integration fixture',
+                }),
+            )
+            await summaryRepository.save(
+                new Summary({
+                    summaryId: ids.summary,
+                    studentId: ids.student,
+                    content: 'Repository integration summary',
+                    generatedAt: now,
+                    sourceProgressVersion: 'v1',
+                }),
+            )
+            await recommendationRepository.save(
+                new Recommendation({
+                    recommendationId: ids.recommendation,
+                    studentId: ids.student,
+                    summaryId: ids.summary,
+                    content: 'Repository integration recommendation',
+                    generatedAt: now,
+                }),
+            )
+            await preferenceRepository.save(
+                new NotificationPreference({
+                    parentId: ids.parent,
+                    enabled: true,
+                    frequency: new NotificationFrequency('Weekly'),
+                    recipientEmail: new EmailAddress(
+                        `${ids.user}@example.test`,
+                    ),
+                }),
+            )
+            await emailRepository.save(
+                new EmailNotification({
+                    notificationId: ids.notification,
+                    parentId: ids.parent,
+                    summaryId: ids.summary,
+                    recipientEmail: new EmailAddress(
+                        `${ids.user}@example.test`,
+                    ),
+                    subject: 'Repository integration',
+                    body: 'Repository integration body',
+                    sentAt: null,
+                    sent: false,
+                }),
+            )
+            await jobRepository.save({
+                jobId: ids.job,
+                parentId: ids.parent,
+                studentId: ids.student,
+                summaryId: ids.summary,
+                emailNotificationId: ids.notification,
+                scheduledFor: new Date('2026-07-23T11:00:00.000Z'),
+                status: 'pending',
+                attempts: 0,
+                leaseExpiresAt: null,
+                completedAt: null,
+                failedAt: null,
+                retryAt: null,
+                lastError: null,
+            })
+            await auditRepository.record({
+                eventId: ids.audit,
+                actorUserId: ids.user,
+                action: 'repository.integration',
+                entityType: 'Student',
+                entityId: ids.student,
+                occurredAt: now,
+                metadata: { source: 'jest' },
+            })
+
+            expect((await userRepository.findById(ids.user))?.userId).toBe(
+                ids.user,
+            )
+            expect(
+                (await parentRepository.listStudents(ids.parent))[0]
+                    ?.studentId,
+            ).toBe(ids.student)
+            expect(
+                (await progressRepository.findByStudentId(ids.student))[0]
+                    ?.score,
+            ).toBe(98.75)
+            expect(
+                (await summaryRepository.findLatestByStudentId(ids.student))
+                    ?.summaryId,
+            ).toBe(ids.summary)
+            expect(
+                (await recommendationRepository.findBySummaryId(ids.summary))
+                    .length,
+            ).toBe(1)
+            expect(
+                (await preferenceRepository.findByParentId(ids.parent))
+                    ?.frequency.value,
+            ).toBe('Weekly')
+            expect(
+                (await emailRepository.findPending(10))[0]?.notificationId,
+            ).toBe(ids.notification)
+
+            const claimed = await jobRepository.claimDue(
+                now,
+                new Date('2026-07-23T12:30:00.000Z'),
+                10,
+            )
+            expect(claimed[0]).toMatchObject({
+                jobId: ids.job,
+                status: 'processing',
+                attempts: 1,
+            })
+
+            await jobRepository.markCompleted(ids.job, now)
+        } finally {
+            await connection!.execute(
+                'DELETE FROM notification_jobs WHERE job_id = ?',
+                [ids.job],
+            )
+            await connection!.execute(
+                'DELETE FROM email_notifications WHERE notification_id = ?',
+                [ids.notification],
+            )
+            await connection!.execute(
+                'DELETE FROM recommendations WHERE recommendation_id = ?',
+                [ids.recommendation],
+            )
+            await connection!.execute(
+                'DELETE FROM summaries WHERE summary_id = ?',
+                [ids.summary],
+            )
+            await connection!.execute(
+                'DELETE FROM progress_records WHERE record_id = ?',
+                [ids.record],
+            )
+            await connection!.execute(
+                'DELETE FROM notification_preferences WHERE parent_id = ?',
+                [ids.parent],
+            )
+            await connection!.execute(
+                'DELETE FROM audit_events WHERE event_id = ?',
+                [ids.audit],
+            )
+            await connection!.execute(
+                'DELETE FROM parent_students WHERE parent_id = ? AND student_id = ?',
+                [ids.parent, ids.student],
+            )
+            await connection!.execute(
+                'DELETE FROM parents WHERE parent_id = ?',
+                [ids.parent],
+            )
+            await connection!.execute(
+                'DELETE FROM users WHERE user_id = ?',
+                [ids.user],
+            )
         }
     })
 })
