@@ -4,7 +4,7 @@
 
 **Phase 2 — Build the Domain and Interfaces: in progress**
 
-**Next:** Phase 2, Step 3 — Define repository interfaces
+**Next:** Phase 2, Step 4 — Define external and technical ports
 
 ## Completed Work
 
@@ -25,6 +25,7 @@
 - Recorded the same-origin deployment decision for the frontend and `/api`.
 - Removed cross-origin middleware, configuration, and package dependencies from the real and mock APIs so the runtime matches that same-origin decision.
 - Implemented immutable value objects for account types, skill areas, email addresses, and notification frequencies.
+- Added repository ports for identity, parents, students, progress records, summaries, recommendations, preferences, email notifications, notification jobs, sessions, and audit events.
 
 ## Verification Evidence
 
@@ -46,7 +47,7 @@ Current Jest result: 5 test suites passed and 20 tests passed.
 | --- | --- | --- |
 | 0 | Verify the scaffold | Done |
 | 1 | Establish configuration | Done |
-| 2 | Build the domain and interfaces | In progress — Step 2 complete |
+| 2 | Build the domain and interfaces | In progress — Step 3 complete |
 | 3 | Create the MySQL schema | Pending |
 | 4 | Implement MySQL repositories | Pending |
 | 5 | Add development identity and parent context | Pending |
@@ -73,7 +74,7 @@ Current Jest result: 5 test suites passed and 20 tests passed.
 | --- | --- | --- |
 | 1 | Implement domain entities | Done |
 | 2 | Add value objects | Done |
-| 3 | Define repository interfaces | Next |
-| 4 | Define external and technical ports | Pending |
+| 3 | Define repository interfaces | Done |
+| 4 | Define external and technical ports | Next |
 | 5 | Add domain errors | Pending |
 | 6 | Test remaining entity invariants and failure cases | Pending |
