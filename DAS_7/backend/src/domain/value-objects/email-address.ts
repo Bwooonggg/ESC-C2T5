@@ -1,4 +1,5 @@
 import { requireValueText } from './value-object-validation.js'
+import { ValidationError } from '../errors/domain.error.js'
 
 // ^ : Start of string
 // [^\s@]+ : 1+ character that's not a whitespace or @
@@ -14,7 +15,9 @@ export class EmailAddress {
             .toLowerCase()
 
         if (!emailPattern.test(normalizedValue)) {
-            throw new Error('emailAddress must be a valid email address.')
+            throw new ValidationError(
+                'emailAddress must be a valid email address.',
+            )
         }
 
         this.value = normalizedValue

@@ -2,9 +2,9 @@
 
 ## Current Status
 
-**Phase 2 — Build the Domain and Interfaces: in progress**
+**Phase 2 — Build the Domain and Interfaces: complete**
 
-**Next:** Phase 2, Step 5 — Add domain errors
+**Next:** Phase 3 — Create the MySQL schema
 
 ## Completed Work
 
@@ -28,6 +28,8 @@
 - Added repository ports for identity, parents, students, progress records, summaries, recommendations, preferences, email notifications, notification jobs, sessions, and audit events.
 - Added provider-neutral ports for summary generation, recommendation generation, email delivery, and the system clock; authentication service ports remain deferred.
 - Deferred authentication configuration and route exposure so login, signup, password security, authentication, and authorization can be integrated in the final phase with the groupmate's implementation.
+- Added domain error types for validation, unavailable progress, and unavailable summaries.
+- Expanded domain tests for invalid fields, value-object requirements, boundary scores, immutable relationship data, and delivery-state invariants.
 
 ## Verification Evidence
 
@@ -41,7 +43,7 @@ npm run test:http
 npm run test:coverage
 ```
 
-Current Jest result: 5 test suites passed and 21 tests passed.
+Current Jest result: 6 test suites passed and 29 tests passed.
 
 ## Phase Tracking
 
@@ -49,8 +51,8 @@ Current Jest result: 5 test suites passed and 21 tests passed.
 | --- | --- | --- |
 | 0 | Verify the scaffold | Done |
 | 1 | Establish configuration | Done |
-| 2 | Build the domain and interfaces | In progress — Step 4 complete |
-| 3 | Create the MySQL schema | Pending |
+| 2 | Build the domain and interfaces | Done |
+| 3 | Create the MySQL schema | Next |
 | 4 | Implement MySQL repositories | Pending |
 | 5 | Implement external generator boundaries | Pending |
 | 6 | Implement Track Progress and Summary | Pending |
@@ -77,5 +79,5 @@ Current Jest result: 5 test suites passed and 21 tests passed.
 | 2 | Add value objects | Done |
 | 3 | Define repository interfaces | Done |
 | 4 | Define external and technical ports | Done |
-| 5 | Add domain errors | Next |
-| 6 | Test remaining entity invariants and failure cases | Pending |
+| 5 | Add domain errors | Done |
+| 6 | Test remaining entity invariants and failure cases | Done |

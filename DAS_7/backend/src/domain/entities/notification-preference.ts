@@ -1,4 +1,5 @@
 import { requireBoolean, requireText } from './entity-validation.js'
+import { ValidationError } from '../errors/domain.error.js'
 import { EmailAddress } from '../value-objects/email-address.js'
 import { NotificationFrequency } from '../value-objects/notification-frequency.js'
 
@@ -20,13 +21,13 @@ export class NotificationPreference {
         this.enabled = requireBoolean(props.enabled, 'enabled')
 
         if (!(props.frequency instanceof NotificationFrequency)) {
-            throw new Error(
+            throw new ValidationError(
                 'frequency must be a NotificationFrequency.',
             )
         }
 
         if (!(props.recipientEmail instanceof EmailAddress)) {
-            throw new Error('recipientEmail must be an EmailAddress.')
+            throw new ValidationError('recipientEmail must be an EmailAddress.')
         }
 
         this.frequency = props.frequency

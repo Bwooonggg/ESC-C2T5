@@ -2,9 +2,11 @@
 // Validation helpers for domain entities
 //
 
+import { ValidationError } from '../errors/domain.error.js'
+
 export function requireText(value: unknown, field: string): string {
     if (typeof value !== 'string' || value.trim() === '') {
-        throw new Error(`${field} must be a non-empty string.`)
+        throw new ValidationError(`${field} must be a non-empty string.`)
     }
 
     return value.trim()
@@ -12,7 +14,7 @@ export function requireText(value: unknown, field: string): string {
 
 export function allowText(value: unknown, field: string): string {
     if (typeof value !== 'string') {
-        throw new Error(`${field} must be a string.`)
+        throw new ValidationError(`${field} must be a string.`)
     }
 
     return value
@@ -20,7 +22,7 @@ export function allowText(value: unknown, field: string): string {
 
 export function requireDate(value: unknown, field: string): Date {
     if (!(value instanceof Date) || Number.isNaN(value.getTime())) {
-        throw new Error(`${field} must be a valid Date.`)
+        throw new ValidationError(`${field} must be a valid Date.`)
     }
 
     return new Date(value.getTime())
@@ -39,7 +41,7 @@ export function requireOptionalDate(
 
 export function requireBoolean(value: unknown, field: string): boolean {
     if (typeof value !== 'boolean') {
-        throw new Error(`${field} must be a boolean.`)
+        throw new ValidationError(`${field} must be a boolean.`)
     }
 
     return value
@@ -52,7 +54,9 @@ export function requireScore(value: unknown, field: string): number {
         value < 0 ||
         value > 100
     ) {
-        throw new Error(`${field} must be a number between 0 and 100.`)
+        throw new ValidationError(
+            `${field} must be a number between 0 and 100.`,
+        )
     }
 
     return value
@@ -63,7 +67,7 @@ export function requireStringArray(
     field: string,
 ): readonly string[] {
     if (!Array.isArray(value)) {
-        throw new Error(`${field} must be an array.`)
+        throw new ValidationError(`${field} must be an array.`)
     }
 
     return Object.freeze(

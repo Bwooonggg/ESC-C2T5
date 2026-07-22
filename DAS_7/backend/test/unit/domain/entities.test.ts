@@ -7,6 +7,7 @@ import { Recommendation } from '../../../src/domain/entities/recommendation.js'
 import { Student } from '../../../src/domain/entities/student.js'
 import { Summary } from '../../../src/domain/entities/summary.js'
 import { User } from '../../../src/domain/entities/user.js'
+import { ValidationError } from '../../../src/domain/errors/domain.error.js'
 import { AccountType } from '../../../src/domain/value-objects/account-type.js'
 import { EmailAddress } from '../../../src/domain/value-objects/email-address.js'
 import { NotificationFrequency } from '../../../src/domain/value-objects/notification-frequency.js'
@@ -15,6 +16,18 @@ import { SkillArea } from '../../../src/domain/value-objects/skill-area.js'
 const date = new Date('2026-01-20T00:00:00.000Z')
 
 describe('domain entities', () => {
+    it('rejects invalid required entity fields with a ValidationError', () => {
+        expect(
+            () =>
+                new Student({
+                    studentId: 's1',
+                    name: '',
+                    dateOfBirth: new Date('2015-04-10T00:00:00.000Z'),
+                    bandLevel: 'Band 3',
+                }),
+        ).toThrow(ValidationError)
+    })
+
     it('creates a User with identity and credential state', () => {
         const user = new User({
             userId: 'u1',
@@ -85,6 +98,49 @@ describe('domain entities', () => {
         ).toThrow('score must be a number between 0 and 100.')
     })
 
+    it('accepts progress score boundaries', () => {
+        expect(
+            new ProgressRecord({
+                recordId: 'r0',
+                studentId: 's1',
+                date,
+                skillArea: new SkillArea('Reading Fluency'),
+                score: 0,
+                notes: '',
+            }).score,
+        ).toBe(0)
+        expect(
+            new ProgressRecord({
+                recordId: 'r100',
+                studentId: 's1',
+                date,
+                skillArea: new SkillArea('Reading Fluency'),
+                score: 100,
+                notes: '',
+            }).score,
+        ).toBe(100)
+    })
+
+    it('protects Parent student IDs from later input-array changes', () => {
+        const studentIds = ['s1']
+        const parent = new Parent({
+            userId: 'u1',
+            parentId: 'p1',
+            name: 'A Parent',
+            email: new EmailAddress('parent@example.com'),
+            mobileNumber: '+6512345678',
+            passwordHash: 'hashed-password',
+            accountType: new AccountType('parent'),
+            isVerified: true,
+            studentIds,
+        })
+
+        studentIds.push('s2')
+
+        expect(parent.studentIds).toEqual(['s1'])
+        expect(Object.isFrozen(parent.studentIds)).toBe(true)
+    })
+
     it('links a Summary to its source progress version', () => {
         const summary = new Summary({
             summaryId: 'sum1',
@@ -116,6 +172,19 @@ describe('domain entities', () => {
         })
     })
 
+    it('rejects an invalid Summary source progress version', () => {
+        expect(
+            () =>
+                new Summary({
+                    summaryId: 'sum1',
+                    studentId: 's1',
+                    content: 'The student is progressing well.',
+                    generatedAt: date,
+                    sourceProgressVersion: '',
+                }),
+        ).toThrow(ValidationError)
+    })
+
     it('enforces EmailNotification delivery state consistency', () => {
         const pending = new EmailNotification({
             notificationId: 'n1',
@@ -142,6 +211,20 @@ describe('domain entities', () => {
                     sent: true,
                 }),
         ).toThrow('sentAt is required when sent is true.')
+
+        expect(
+            () =>
+                new EmailNotification({
+                    notificationId: 'n3',
+                    parentId: 'p1',
+                    summaryId: 'sum1',
+                    recipientEmail: new EmailAddress('parent@example.com'),
+                    subject: 'Progress update',
+                    body: 'Progress summary',
+                    sentAt: date,
+                    sent: false,
+                }),
+        ).toThrow('sentAt must be null when sent is false.')
     })
 
     it('creates NotificationPreference for a parent', () => {
@@ -156,5 +239,17 @@ describe('domain entities', () => {
         expect(preference.enabled).toBe(true)
         expect(preference.frequency.value).toBe('Weekly')
         expect(preference.recipientEmail.value).toBe('parent@example.com')
+    })
+
+    it('requires NotificationPreference value objects', () => {
+        expect(
+            () =>
+                new NotificationPreference({
+                    parentId: 'p1',
+                    enabled: true,
+                    frequency: 'Weekly' as never,
+                    recipientEmail: new EmailAddress('parent@example.com'),
+                }),
+        ).toThrow(ValidationError)
     })
 })

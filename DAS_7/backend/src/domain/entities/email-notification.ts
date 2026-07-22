@@ -3,6 +3,7 @@ import {
     requireOptionalDate,
     requireText,
 } from './entity-validation.js'
+import { ValidationError } from '../errors/domain.error.js'
 import { EmailAddress } from '../value-objects/email-address.js'
 
 export interface EmailNotificationProps {
@@ -35,7 +36,7 @@ export class EmailNotification {
         this.summaryId = requireText(props.summaryId, 'summaryId')
 
         if (!(props.recipientEmail instanceof EmailAddress)) {
-            throw new Error('recipientEmail must be an EmailAddress.')
+            throw new ValidationError('recipientEmail must be an EmailAddress.')
         }
 
         this.recipientEmail = props.recipientEmail
@@ -45,11 +46,11 @@ export class EmailNotification {
         this.sent = requireBoolean(props.sent, 'sent')
 
         if (this.sent && this.sentAt === null) {
-            throw new Error('sentAt is required when sent is true.')
+            throw new ValidationError('sentAt is required when sent is true.')
         }
 
         if (!this.sent && this.sentAt !== null) {
-            throw new Error('sentAt must be null when sent is false.')
+            throw new ValidationError('sentAt must be null when sent is false.')
         }
     }
 }

@@ -1,6 +1,8 @@
+import { ValidationError } from '../errors/domain.error.js'
+
 export function requireValueText(value: unknown, field: string): string {
     if (typeof value !== 'string' || value.trim() === '') {
-        throw new Error(`${field} must be a non-empty string.`)
+        throw new ValidationError(`${field} must be a non-empty string.`)
     }
 
     return value.trim()
@@ -14,7 +16,7 @@ export function requireKnownValue<T extends string>(
     const normalizedValue = requireValueText(value, field)
 
     if (!allowedValues.includes(normalizedValue as T)) {
-        throw new Error(
+        throw new ValidationError(
             `${field} must be one of: ${allowedValues.join(', ')}.`,
         )
     }

@@ -1,6 +1,6 @@
 # DAS 7 Backend Implementation Plan
 
-**Status:** Approved implementation sequence; Phase 2 in progress
+**Status:** Approved implementation sequence; Phase 2 complete; Phase 3 next
 
 **Testing stack:** Jest, `ts-jest`, and Supertest
 
@@ -44,7 +44,7 @@ deployment responsibility rather than a browser-origin setting in the backend.
 
 **Done when:** neither process reads unvalidated environment variables outside the configuration layer.
 
-## Phase 2: Build the Domain and Interfaces — IN PROGRESS
+## Phase 2: Build the Domain and Interfaces — DONE
 
 ### Step 1 — DONE: Implement the domain entities
 
@@ -57,10 +57,10 @@ Express, MySQL, or external services.
 2. [DONE] Add immutable value objects for account type, skill area, email address, and notification frequency.
 3. [DONE] Define repository interfaces for each persistence requirement.
 4. [DONE] Define ports for summary generation, recommendation generation, email delivery, and time. Password hashing and token/session service ports are deferred to the final authentication phase; persistence repository contracts may remain in place for integration.
-5. Add domain errors for validation, unavailable progress, and unavailable summaries. Authentication and authorization errors are deferred to the final phase.
-6. Test entity invariants and failure cases without Express or MySQL.
+5. [DONE] Add domain errors for validation, unavailable progress, and unavailable summaries. Authentication and authorization errors are deferred to the final phase.
+6. [DONE] Test entity invariants and failure cases without Express or MySQL.
 
-**Done when:** domain and application types have no dependency on Express, MySQL2, or provider-specific clients.
+**Done when:** domain and application types have no dependency on Express, MySQL2, or provider-specific clients. Authentication-specific ports and errors remain deferred to the final phase.
 
 ## Phase 3: Create the MySQL Schema
 

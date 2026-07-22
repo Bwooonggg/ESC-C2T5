@@ -4,6 +4,7 @@ import {
     requireScore,
     requireText,
 } from './entity-validation.js'
+import { ValidationError } from '../errors/domain.error.js'
 import { SkillArea } from '../value-objects/skill-area.js'
 
 export interface ProgressRecordProps {
@@ -29,7 +30,7 @@ export class ProgressRecord {
         this.date = requireDate(props.date, 'date')
 
         if (!(props.skillArea instanceof SkillArea)) {
-            throw new Error('skillArea must be a SkillArea.')
+            throw new ValidationError('skillArea must be a SkillArea.')
         }
 
         this.skillArea = props.skillArea
