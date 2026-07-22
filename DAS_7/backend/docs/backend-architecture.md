@@ -433,9 +433,12 @@ backend/
 |   |   |-- generators/
 |   |   |   |-- generator.adapter.ts
 |   |   |   |-- generator-service.adapter.ts
+|   |   |   |-- summary-generator.adapter.ts
+|   |   |   |-- recommendation-generator.adapter.ts
 |   |   |   |-- summary-generator.client.ts
 |   |   |   |-- recommendation-generator.client.ts
-|   |   |   `-- generator-response.schemas.ts
+|   |   |   |-- generator-response.schemas.ts
+|   |   |   `-- index.ts
 |   |   `-- email/
 |   |       |-- email-service.adapter.ts
 |   |       |-- email-provider.client.ts
@@ -488,6 +491,7 @@ backend/
 `-- test/
     |-- unit/
     |   |-- domain/
+    |   |-- adapters/
     |   |-- track-progress/
     |   |-- notifications/
     |   |-- preferences/
@@ -574,7 +578,12 @@ Inside a module:
 
 Translates domain inputs and outputs to external-service protocols. If a generator becomes internal later, its adapter can be replaced without changing controllers or models.
 
-`GeneratorAdapter` and `GeneratorServiceAdapter` are diagram-facing facades over shared external HTTP clients. They preserve the two diagram names without duplicating provider logic.
+`SummaryGeneratorAdapter` and `RecommendationGeneratorAdapter` implement the
+domain generator ports and extend `GeneratorServiceAdapter`. The shared base
+delegates to an injected, provider-neutral client while the concrete adapters
+own domain-to-client mapping. `GeneratorAdapter` describes that mapping
+boundary. An HTTP or SDK client can be wired in later without changing the
+application workflows.
 
 ### `infrastructure/`
 

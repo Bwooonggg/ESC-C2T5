@@ -6,7 +6,7 @@
 
 **Phase 5 — Implement external generator boundaries: in progress**
 
-**Next:** Phase 5, step 3 — Implement generator adapters
+**Next:** Phase 5, step 4 — Add runtime generator safeguards
 
 ## Completed Work
 
@@ -78,6 +78,13 @@
 - Added parameterized MySQL repositories for users, parents, students, progress
   records, summaries, recommendations, notification preferences, email
   notifications, notification jobs, and audit events.
+- Added generic generator adapter and client boundaries with dependency
+  injection for replaceable external generator clients.
+- Added summary and recommendation adapters that map domain objects to
+  provider-neutral client request shapes and map client responses back to the
+  generator ports.
+- Added adapter unit tests for date and timestamp conversion, request mapping,
+  metadata mapping, and client failure propagation.
 - Added repository unit coverage for parameter binding, ordered reads,
   multi-row writes, and notification state updates.
 - Verified repository persistence and `FOR UPDATE SKIP LOCKED` notification-job
@@ -137,7 +144,7 @@ isolated MySQL 8 database, and a second run was verified as a no-op.
 | 2 | Build the domain and interfaces | Done |
 | 3 | Create the MySQL schema | Done |
 | 4 | Implement MySQL repositories | Done |
-| 5 | Implement external generator boundaries | In progress — Step 3 next |
+| 5 | Implement external generator boundaries | In progress — Step 4 next |
 | 6 | Implement Track Progress and Summary | Pending |
 | 7 | Implement recommendations | Pending |
 | 8 | Implement notification preferences | Pending |

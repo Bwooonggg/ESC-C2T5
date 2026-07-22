@@ -159,8 +159,8 @@ of overwriting them on repeated requests.
 
 1. **DONE:** Define the summary-generator request and response contract.
 2. **DONE:** Define the recommendation-generator request and response contract.
-3. **NEXT:** Implement diagram-facing generator adapters around replaceable clients.
-4. Add runtime response validation, request timeouts, correlation IDs, and idempotency IDs.
+3. **DONE:** Implement diagram-facing generator adapters around replaceable clients.
+4. **NEXT:** Add runtime response validation, request timeouts, correlation IDs, and idempotency IDs.
 5. Test application logic with injected fakes.
 6. Test adapters against controlled HTTP servers for success, invalid data, timeouts, and provider failures.
 
@@ -172,6 +172,13 @@ The existing `SummaryGeneratorPort` remains provider-neutral: it accepts one
 student/progress snapshot and returns validated content plus optional provider
 metadata. Provider transport details, correlation IDs, timeouts, and retries
 remain adapter responsibilities.
+
+The diagram-facing adapters now live under `src/adapters/generators/`. They
+receive injected, provider-neutral clients, map domain students, progress
+records, and summaries to client request shapes, and map client responses back
+to the generator ports. No HTTP library, SDK, endpoint, or provider response
+schema is selected at this stage; those concerns belong to the provider client
+and the runtime-hardening work in step 4.
 
 The recommendation-generator logical contract is recorded in
 [`contracts/recommendation-generator.contract.md`](../contracts/recommendation-generator.contract.md).
