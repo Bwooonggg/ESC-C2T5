@@ -7,6 +7,10 @@ import { Recommendation } from '../../../src/domain/entities/recommendation.js'
 import { Student } from '../../../src/domain/entities/student.js'
 import { Summary } from '../../../src/domain/entities/summary.js'
 import { User } from '../../../src/domain/entities/user.js'
+import { AccountType } from '../../../src/domain/value-objects/account-type.js'
+import { EmailAddress } from '../../../src/domain/value-objects/email-address.js'
+import { NotificationFrequency } from '../../../src/domain/value-objects/notification-frequency.js'
+import { SkillArea } from '../../../src/domain/value-objects/skill-area.js'
 
 const date = new Date('2026-01-20T00:00:00.000Z')
 
@@ -14,19 +18,19 @@ describe('domain entities', () => {
     it('creates a User with identity and credential state', () => {
         const user = new User({
             userId: 'u1',
-            email: 'parent@example.com',
+            email: new EmailAddress('parent@example.com'),
             mobileNumber: '+6512345678',
             passwordHash: 'hashed-password',
-            accountType: 'parent',
+            accountType: new AccountType('parent'),
             isVerified: true,
         })
 
         expect(user).toMatchObject({
             userId: 'u1',
-            email: 'parent@example.com',
-            accountType: 'parent',
             isVerified: true,
         })
+        expect(user.email.value).toBe('parent@example.com')
+        expect(user.accountType.value).toBe('parent')
         expect(user.passwordHash).toBe('hashed-password')
     })
 
@@ -35,10 +39,10 @@ describe('domain entities', () => {
             userId: 'u1',
             parentId: 'p1',
             name: 'A Parent',
-            email: 'parent@example.com',
+            email: new EmailAddress('parent@example.com'),
             mobileNumber: '+6512345678',
             passwordHash: 'hashed-password',
-            accountType: 'parent',
+            accountType: new AccountType('parent'),
             isVerified: true,
             studentIds: ['s1', 's2'],
         })
@@ -58,7 +62,7 @@ describe('domain entities', () => {
             recordId: 'r1',
             studentId: student.studentId,
             date,
-            skillArea: 'Reading Fluency',
+            skillArea: new SkillArea('Reading Fluency'),
             score: 84,
             notes: 'Improving steadily.',
         })
@@ -74,7 +78,7 @@ describe('domain entities', () => {
                     recordId: 'r1',
                     studentId: 's1',
                     date,
-                    skillArea: 'Reading Fluency',
+                    skillArea: new SkillArea('Reading Fluency'),
                     score: 101,
                     notes: '',
                 }),
@@ -117,7 +121,7 @@ describe('domain entities', () => {
             notificationId: 'n1',
             parentId: 'p1',
             summaryId: 'sum1',
-            recipientEmail: 'parent@example.com',
+            recipientEmail: new EmailAddress('parent@example.com'),
             subject: 'Progress update',
             body: 'Progress summary',
             sentAt: null,
@@ -131,7 +135,7 @@ describe('domain entities', () => {
                     notificationId: 'n2',
                     parentId: 'p1',
                     summaryId: 'sum1',
-                    recipientEmail: 'parent@example.com',
+                    recipientEmail: new EmailAddress('parent@example.com'),
                     subject: 'Progress update',
                     body: 'Progress summary',
                     sentAt: null,
@@ -144,15 +148,13 @@ describe('domain entities', () => {
         const preference = new NotificationPreference({
             parentId: 'p1',
             enabled: true,
-            frequency: 'Weekly',
-            recipientEmail: 'parent@example.com',
+            frequency: new NotificationFrequency('Weekly'),
+            recipientEmail: new EmailAddress('parent@example.com'),
         })
 
-        expect(preference).toEqual({
-            parentId: 'p1',
-            enabled: true,
-            frequency: 'Weekly',
-            recipientEmail: 'parent@example.com',
-        })
+        expect(preference.parentId).toBe('p1')
+        expect(preference.enabled).toBe(true)
+        expect(preference.frequency.value).toBe('Weekly')
+        expect(preference.recipientEmail.value).toBe('parent@example.com')
     })
 })

@@ -1,28 +1,35 @@
-import {
-    requireBoolean,
-    requireText,
-} from './entity-validation.js'
+import { requireBoolean, requireText } from './entity-validation.js'
+import { EmailAddress } from '../value-objects/email-address.js'
+import { NotificationFrequency } from '../value-objects/notification-frequency.js'
 
 export interface NotificationPreferenceProps {
     readonly parentId: string
     readonly enabled: boolean
-    readonly frequency: string
-    readonly recipientEmail: string
+    readonly frequency: NotificationFrequency
+    readonly recipientEmail: EmailAddress
 }
 
 export class NotificationPreference {
     readonly parentId: string
     readonly enabled: boolean
-    readonly frequency: string
-    readonly recipientEmail: string
+    readonly frequency: NotificationFrequency
+    readonly recipientEmail: EmailAddress
 
     constructor(props: NotificationPreferenceProps) {
         this.parentId = requireText(props.parentId, 'parentId')
         this.enabled = requireBoolean(props.enabled, 'enabled')
-        this.frequency = requireText(props.frequency, 'frequency')
-        this.recipientEmail = requireText(
-            props.recipientEmail,
-            'recipientEmail',
-        )
+
+        if (!(props.frequency instanceof NotificationFrequency)) {
+            throw new Error(
+                'frequency must be a NotificationFrequency.',
+            )
+        }
+
+        if (!(props.recipientEmail instanceof EmailAddress)) {
+            throw new Error('recipientEmail must be an EmailAddress.')
+        }
+
+        this.frequency = props.frequency
+        this.recipientEmail = props.recipientEmail
     }
 }

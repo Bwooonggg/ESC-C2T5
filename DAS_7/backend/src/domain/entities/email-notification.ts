@@ -3,12 +3,13 @@ import {
     requireOptionalDate,
     requireText,
 } from './entity-validation.js'
+import { EmailAddress } from '../value-objects/email-address.js'
 
 export interface EmailNotificationProps {
     readonly notificationId: string
     readonly parentId: string
     readonly summaryId: string
-    readonly recipientEmail: string
+    readonly recipientEmail: EmailAddress
     readonly subject: string
     readonly body: string
     readonly sentAt: Date | null
@@ -19,7 +20,7 @@ export class EmailNotification {
     readonly notificationId: string
     readonly parentId: string
     readonly summaryId: string
-    readonly recipientEmail: string
+    readonly recipientEmail: EmailAddress
     readonly subject: string
     readonly body: string
     readonly sentAt: Date | null
@@ -32,10 +33,12 @@ export class EmailNotification {
         )
         this.parentId = requireText(props.parentId, 'parentId')
         this.summaryId = requireText(props.summaryId, 'summaryId')
-        this.recipientEmail = requireText(
-            props.recipientEmail,
-            'recipientEmail',
-        )
+
+        if (!(props.recipientEmail instanceof EmailAddress)) {
+            throw new Error('recipientEmail must be an EmailAddress.')
+        }
+
+        this.recipientEmail = props.recipientEmail
         this.subject = requireText(props.subject, 'subject')
         this.body = requireText(props.body, 'body')
         this.sentAt = requireOptionalDate(props.sentAt, 'sentAt')
