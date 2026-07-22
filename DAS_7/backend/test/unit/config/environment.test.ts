@@ -10,7 +10,6 @@ describe('loadConfig', () => {
 
         expect(config.api).toEqual({
             port: 4000,
-            corsOrigin: 'http://localhost:5173',
         })
         expect(config.mysql).toMatchObject({
             host: 'localhost',
@@ -32,7 +31,6 @@ describe('loadConfig', () => {
         const config = loadConfig({
             NODE_ENV: 'production',
             PORT: '4100',
-            CORS_ORIGIN: 'https://app.example.com',
             MYSQL_HOST: 'mysql.example.com',
             MYSQL_PORT: '3307',
             MYSQL_DATABASE: 'das7',
@@ -51,7 +49,7 @@ describe('loadConfig', () => {
 
         expect(config).toMatchObject({
             environment: 'production',
-            api: { port: 4100, corsOrigin: 'https://app.example.com' },
+            api: { port: 4100 },
             mysql: { host: 'mysql.example.com', port: 3307 },
             generators: {
                 summaryUrl: 'https://summary.example.com',
@@ -77,7 +75,6 @@ describe('loadConfig', () => {
 
         expect(configurationError.issues).toEqual(
             expect.arrayContaining([
-                'CORS_ORIGIN is required when NODE_ENV=production',
                 'MYSQL_HOST is required when NODE_ENV=production',
                 'MYSQL_PASSWORD is required when NODE_ENV=production',
                 'SUMMARY_GENERATOR_URL is required when NODE_ENV=production',
@@ -92,7 +89,6 @@ describe('loadConfig', () => {
             loadConfig({
                 NODE_ENV: 'development',
                 PORT: 'not-a-port',
-                CORS_ORIGIN: 'ftp://app.example.com',
                 MYSQL_PORT: '70000',
                 WORKER_ENABLED: 'sometimes',
                 NOTIFICATION_TIMEZONE: 'Not/ATimezone',
@@ -101,9 +97,6 @@ describe('loadConfig', () => {
 
         expect(configurationError.issues.join('\n')).toEqual(
             expect.stringContaining('PORT'),
-        )
-        expect(configurationError.issues.join('\n')).toEqual(
-            expect.stringContaining('CORS_ORIGIN'),
         )
         expect(configurationError.issues.join('\n')).toEqual(
             expect.stringContaining('WORKER_ENABLED'),

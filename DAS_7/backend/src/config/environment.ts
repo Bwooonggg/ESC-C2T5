@@ -9,7 +9,6 @@ export interface AppConfig {
     readonly environment: RuntimeEnvironment
     readonly api: {
         readonly port: number
-        readonly corsOrigin: string
     }
     readonly mysql: {
         readonly host: string
@@ -121,9 +120,6 @@ const rawEnvironmentSchema = z.object({
         .enum(['development', 'test', 'production'])
         .default('development'),
     PORT: z.coerce.number().int().min(1).max(65_535).default(4000),
-    CORS_ORIGIN: z
-        .union([z.literal('*'), httpUrlSchema])
-        .default('http://localhost:5173'),
     MYSQL_HOST: z.string().trim().min(1).default('localhost'),
     MYSQL_PORT: z.coerce.number().int().min(1).max(65_535).default(3306),
     MYSQL_DATABASE: z.string().trim().min(1).default('das7'),
@@ -190,7 +186,6 @@ function getProductionIssues(
     }
 
     const required = [
-        'CORS_ORIGIN',
         'MYSQL_HOST',
         'MYSQL_DATABASE',
         'MYSQL_USER',
@@ -227,7 +222,6 @@ function toAppConfig(raw: RawEnvironment): AppConfig {
         environment: raw.NODE_ENV,
         api: {
             port: raw.PORT,
-            corsOrigin: raw.CORS_ORIGIN,
         },
         mysql: {
             host: raw.MYSQL_HOST,

@@ -11,6 +11,7 @@ describe('health routes', () => {
             ok: true,
             data: { ok: true },
         })
+        expect(response.headers['access-control-allow-origin']).toBeUndefined()
     })
 
     it('reports that database readiness is not configured', async () => {

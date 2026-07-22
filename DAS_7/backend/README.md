@@ -11,7 +11,8 @@ npm run dev
 ```
 
 The API listens on `http://localhost:4000` by default. The frontend's Vite
-configuration already proxies `/api` to this port.
+configuration proxies `/api` to this port, so browser requests remain on the
+frontend's local origin.
 
 Useful checks:
 
@@ -54,13 +55,20 @@ validates environment values at process startup through
 `src/config/environment.ts`.
 
 Development and test runs use safe local defaults. Production requires explicit
-values for the CORS origin, MySQL connection, summary generator, recommendation
-generator, email provider, and authentication session secret. The session
-secret must contain at least 32 characters in production.
+values for the MySQL connection, summary generator, recommendation generator,
+email provider, and authentication session secret. The session secret must
+contain at least 32 characters in production.
 
 The API and worker read the same validated configuration through separate
 composition containers. The worker is disabled by default until notification
 processing is implemented.
+
+## Deployment model
+
+The React application and API use one public domain. The public web host serves
+the frontend at `/` and forwards `/api/*` to the Express process. The browser
+therefore calls relative `/api` URLs on the same origin. Local development uses
+the existing Vite proxy to preserve that behavior.
 
 ## Current scaffold behavior
 

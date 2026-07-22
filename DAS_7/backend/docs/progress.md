@@ -22,6 +22,8 @@
 - Verified the worker starts with the worker disabled by default.
 - Implemented the Phase 2 domain entities with basic state and relationship invariants.
 - Added unit tests for entity construction, relationships, invalid scores, and email delivery state.
+- Recorded the same-origin deployment decision for the frontend and `/api`.
+- Removed cross-origin middleware, configuration, and package dependencies from the real and mock APIs so the runtime matches that same-origin decision.
 
 ## Verification Evidence
 

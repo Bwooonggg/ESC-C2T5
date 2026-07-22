@@ -37,16 +37,22 @@ The backend is a modular monolith: one codebase with two independently runnable 
 Both processes share domain entities, application workflows, repository interfaces, MySQL implementations, external-service adapters, configuration, and observability.
 
 ```text
-React frontend
-      |
-      v
-Express routers -> middleware -> controllers -> application models/use cases
-                                                |                 |
-                                                v                 v
-                                         MySQL repositories   generator adapters
-                                                                  |
-                                                                  v
-                                                       external generator services
+Browser -> single public domain
+                    |
+                    v
+          same-origin web host
+             |             |
+             v             v
+       React assets     /api -> Express routers
+                                  |
+                                  v
+                       middleware -> controllers -> application models/use cases
+                                                       |                 |
+                                                       v                 v
+                                                MySQL repositories   generator adapters
+                                                                         |
+                                                                         v
+                                                              external generator services
 
 Worker / Clock -> NotificationController -> NotifierModel
                                                |       |
@@ -56,6 +62,18 @@ Worker / Clock -> NotificationController -> NotifierModel
                                                v       v
                                       SummaryGenerator EmailProvider
 ```
+
+### 2.1 Same-origin deployment
+
+The React application and public API share one scheme, hostname, and port. The
+public web host serves the frontend for `/` and forwards `/api/*` to the Express
+API process. Browser requests therefore remain same-origin and the backend does
+not expose cross-origin browser access or maintain an origin allowlist.
+
+Local development preserves the same browser-facing model: Vite serves the
+frontend and proxies `/api/*` to the local Express process. Calls to summary,
+recommendation, and email providers are server-to-server and are unaffected by
+the browser deployment model.
 
 ## 3. Diagram Alignment
 
@@ -124,6 +142,9 @@ The application must explicitly register routes. Controllers do not choose their
 ```text
 Frontend request
 GET /api/students/s1/track-progress
+              |
+              v
+Same-origin web host or development proxy
               |
               v
 Express application mounted at /api
@@ -496,7 +517,8 @@ Reads and validates environment configuration once during startup. Required conf
 
 `environment.ts` loads `.env` with `dotenv` and validates values with `zod`.
 Development and test environments receive local defaults; production rejects
-missing CORS, MySQL, generator, email-provider, or authentication settings.
+missing MySQL, generator, email-provider, or authentication settings. Public
+host routing is deployment configuration, not an application origin setting.
 Application code receives the resulting typed configuration through its
 composition container and must not read `process.env` directly.
 
@@ -664,6 +686,8 @@ The implementation is acceptable when all of the following hold:
 - Keep the API and worker in one repository but run them as separate processes.
 - Treat summary, recommendation, and email services as external through replaceable adapters.
 - Preserve the current frontend's routes and response envelope.
+- Serve the frontend and `/api` from one public origin; do not expose cross-origin browser API access.
+- Route `/` to the React application and `/api/*` to Express at the public web host.
 - Use routers explicitly; controllers do not register their own URLs.
 - Generate summaries during Track Progress, Request Summary, and Notify Parent, not during ingestion.
 - Generate recommendations only on explicit parent request.

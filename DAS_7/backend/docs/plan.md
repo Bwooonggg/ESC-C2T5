@@ -32,6 +32,9 @@ settings, applies development/test defaults, and rejects incomplete production
 configuration. API and worker entrypoints now receive separate typed containers
 instead of reading `process.env` directly.
 
+The public frontend and API will share one origin. Public path forwarding is a
+deployment responsibility rather than a browser-origin setting in the backend.
+
 1. Add startup validation for API, MySQL, generator, email, authentication, and worker settings.
 2. Fail startup with a clear configuration error when a required production value is missing or invalid.
 3. Keep environment access inside `src/config/`; pass validated configuration into other components.
@@ -214,9 +217,10 @@ fortnightly, monthly, retry, crash-recovery, and concurrent-worker scenarios.
 1. Add request IDs, structured logging, sensitive-data redaction, security headers, body limits, and rate limiting.
 2. Add MySQL readiness checks and worker operational health reporting.
 3. Implement graceful shutdown for HTTP, database, and worker resources.
-4. Document migrations, deployment, rollback, backup, and restore procedures.
-5. Run frontend compatibility checks against the backend.
-6. Run the complete acceptance command set.
+4. Configure the public host to serve the React application at `/` and forward `/api/*` to Express on the same origin.
+5. Document migrations, deployment, rollback, backup, and restore procedures.
+6. Run frontend compatibility checks against the backend.
+7. Run the complete acceptance command set.
 
 **Done when:** the system fails safely and observably during database outages,
 generator failures, email failures, malformed provider responses, and worker crashes.
@@ -279,6 +283,7 @@ be created merely to satisfy this document.
 - Use `mysql2/promise` and plain SQL migrations without an ORM.
 - Run the API and worker as separate processes from one modular-monolith codebase.
 - Treat summary, recommendation, and email services as external replaceable adapters.
+- Serve the frontend and `/api` through one public origin; do not expose cross-origin browser API access.
 - Generate summaries during Track Progress, Request Summary, and Notify Parent.
 - Generate recommendations only after an explicit parent request.
 - Send one scheduled email per student with one attached summary.
