@@ -1,6 +1,6 @@
 # DAS 7 Backend Implementation Plan
 
-**Status:** Approved implementation sequence; Phase 4 done, Phase 5 next
+**Status:** Approved implementation sequence; Phase 5 in progress
 
 **Testing stack:** Jest, `ts-jest`, and Supertest
 
@@ -157,14 +157,21 @@ of overwriting them on repeated requests.
 
 ## Phase 5: Implement External Generator Boundaries
 
-1. Define the summary-generator request and response contract.
-2. Define the recommendation-generator request and response contract.
+1. **DONE:** Define the summary-generator request and response contract.
+2. **NEXT:** Define the recommendation-generator request and response contract.
 3. Implement diagram-facing generator adapters around replaceable clients.
 4. Add runtime response validation, request timeouts, correlation IDs, and idempotency IDs.
 5. Test application logic with injected fakes.
 6. Test adapters against controlled HTTP servers for success, invalid data, timeouts, and provider failures.
 
 **Done when:** replacing an external generator requires changing only its adapter and composition wiring.
+
+The summary-generator logical contract is recorded in
+[`contracts/summary-generator.contract.md`](../contracts/summary-generator.contract.md).
+The existing `SummaryGeneratorPort` remains provider-neutral: it accepts one
+student/progress snapshot and returns validated content plus optional provider
+metadata. Provider transport details, correlation IDs, timeouts, and retries
+remain adapter responsibilities.
 
 ## Phase 6: Implement Track Progress and Summary
 

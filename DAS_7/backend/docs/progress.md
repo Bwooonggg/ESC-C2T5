@@ -4,7 +4,9 @@
 
 **Phase 4 — Implement MySQL repositories: done**
 
-**Next:** Phase 5, step 1 — Define the summary-generator contract
+**Phase 5 — Implement external generator boundaries: in progress**
+
+**Next:** Phase 5, step 2 — Define the recommendation-generator contract
 
 ## Completed Work
 
@@ -92,6 +94,11 @@
   protection, and terminal-state preservation.
 - Added real MySQL coverage for repository lookups, idempotency behavior, and
   rollback of related writes across two repositories.
+- Finalized the provider-neutral SummaryGeneratorService contract, including
+  snapshot/version semantics, ordered progress input, response validation, and
+  provider-error boundaries.
+- Added [`summary-generator.contract.md`](../contracts/summary-generator.contract.md)
+  for the logical external-service request and response shape.
 
 ## Verification Evidence
 
@@ -125,7 +132,7 @@ isolated MySQL 8 database, and a second run was verified as a no-op.
 | 2 | Build the domain and interfaces | Done |
 | 3 | Create the MySQL schema | Done |
 | 4 | Implement MySQL repositories | Done |
-| 5 | Implement external generator boundaries | Next |
+| 5 | Implement external generator boundaries | In progress — Step 2 next |
 | 6 | Implement Track Progress and Summary | Pending |
 | 7 | Implement recommendations | Pending |
 | 8 | Implement notification preferences | Pending |
