@@ -1,6 +1,6 @@
 # DAS 7 Backend Implementation Plan
 
-**Status:** Approved implementation sequence; Phase 3 complete; Phase 4 next
+**Status:** Approved implementation sequence; Phase 4 in progress
 
 **Testing stack:** Jest, `ts-jest`, and Supertest
 
@@ -126,14 +126,20 @@ dates without a time. Test migration application against an isolated database.
 database-enforceable diagram relationships are enforced, and application
 workflows maintain the guardian relationship's `1..*` minimum.
 
-## Phase 4: Implement MySQL Repositories — NEXT
+## Phase 4: Implement MySQL Repositories — IN PROGRESS
 
-1. Configure one `mysql2/promise` connection pool per process.
-2. Implement row mappers so SQL result shapes do not escape the infrastructure layer.
-3. Implement repositories with parameterized statements.
+1. **DONE:** Configure one `mysql2/promise` connection pool per process.
+2. **DONE:** Implement row mappers so SQL result shapes do not escape the infrastructure layer.
+3. **NEXT:** Implement repositories with parameterized statements.
 4. Add transaction support for related changes.
 5. Test CRUD, guardian lookup, summary history, latest-summary selection, idempotency, and rollback behavior.
 6. Run MySQL suites serially with `npm run test:integration`.
+
+The row-mapping boundary is implemented under
+`src/infrastructure/mysql/mappers/`. It accepts the snake_case columns selected
+by repositories, converts MySQL date, decimal, boolean, and JSON representations,
+and constructs validated domain entities or application records. Authentication
+session mapping remains deferred with the final authentication phase.
 
 **Done when:** application workflows can use repositories without importing SQL or MySQL-specific types.
 

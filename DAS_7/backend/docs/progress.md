@@ -2,9 +2,9 @@
 
 ## Current Status
 
-**Phase 3 — Create the MySQL schema: done**
+**Phase 4 — Implement MySQL repositories: in progress**
 
-**Next:** Phase 4 — Implement MySQL repositories
+**Next:** Phase 4, step 3 — Implement repositories with parameterized statements
 
 ## Completed Work
 
@@ -68,6 +68,11 @@
 - Added live MySQL integration coverage for migration application and replay,
   migration metadata, InnoDB tables, query indexes, foreign keys, allow-lists,
   and score bounds.
+- Added the MySQL row-mapping boundary for users, parents, students, progress
+  records, summaries, recommendations, notification preferences, email
+  notifications, notification jobs, and audit events.
+- Added mapper validation for MySQL date, decimal, boolean, JSON, and
+  allow-list representations before values reach application workflows.
 
 ## Verification Evidence
 
@@ -97,7 +102,7 @@ isolated MySQL 8 database, and a second run was verified as a no-op.
 | 1 | Establish configuration | Done |
 | 2 | Build the domain and interfaces | Done |
 | 3 | Create the MySQL schema | Done |
-| 4 | Implement MySQL repositories | Next |
+| 4 | Implement MySQL repositories | In progress — row mappers complete |
 | 5 | Implement external generator boundaries | Pending |
 | 6 | Implement Track Progress and Summary | Pending |
 | 7 | Implement recommendations | Pending |
@@ -136,3 +141,14 @@ isolated MySQL 8 database, and a second run was verified as a no-op.
 | 4 | Add query-driven secondary indexes | Done |
 | 5 | Configure the migration runner and database command | Done |
 | 6 | Apply migrations to an isolated MySQL database and add integration coverage | Done |
+
+## Phase 4 Step Tracking
+
+| Step | Description | Status |
+| --- | --- | --- |
+| 1 | Configure the MySQL pool | Done |
+| 2 | Implement SQL row mappers | Done |
+| 3 | Implement repositories with parameterized statements | Next |
+| 4 | Add transaction support | Pending |
+| 5 | Test repository behavior and rollback | Pending |
+| 6 | Run the MySQL integration suites serially | Pending |
