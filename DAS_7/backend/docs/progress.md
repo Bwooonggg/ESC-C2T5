@@ -2,9 +2,9 @@
 
 ## Current Status
 
-**Phase 4 — Implement MySQL repositories: in progress**
+**Phase 4 — Implement MySQL repositories: done**
 
-**Next:** Phase 4, step 5 — Test repository behavior and rollback
+**Next:** Phase 5, step 1 — Define the summary-generator contract
 
 ## Completed Work
 
@@ -25,7 +25,7 @@
 - Recorded the same-origin deployment decision for the frontend and `/api`.
 - Removed cross-origin middleware, configuration, and package dependencies from the real and mock APIs so the runtime matches that same-origin decision.
 - Implemented immutable value objects for account types, skill areas, email addresses, and notification frequencies.
-- Added repository ports for identity, parents, students, progress records, summaries, recommendations, preferences, email notifications, notification jobs, sessions, and audit events.
+- Added repository ports for identity, parents, students, progress records, summaries, recommendations, preferences, email notifications, notification jobs, sessions, audit events, and idempotency records.
 - Added provider-neutral ports for summary generation, recommendation generation, email delivery, and the system clock; authentication service ports remain deferred.
 - Deferred authentication configuration and route exposure so login, signup, password security, authentication, and authorization can be integrated in the final phase with the groupmate's implementation.
 - Added domain error types for validation, unavailable progress, and unavailable summaries.
@@ -86,6 +86,12 @@
 - Updated notification-job claiming to use the shared transaction boundary.
 - Added Jest coverage for transaction commit, rollback, error preservation, and
   connection lifecycle ordering.
+- Added the ingestion idempotency port, MySQL repository, and row mapper for
+  processing, completed, and failed request states.
+- Added repository coverage for idempotency response persistence, duplicate-key
+  protection, and terminal-state preservation.
+- Added real MySQL coverage for repository lookups, idempotency behavior, and
+  rollback of related writes across two repositories.
 
 ## Verification Evidence
 
@@ -101,11 +107,11 @@ npm run test:coverage
 npm run test:integration
 ```
 
-Current unit/HTTP Jest result: 10 test suites passed and 48 tests passed.
-The MySQL integration result is 1 suite passed and 4 tests passed against a
+Current unit/HTTP Jest result: 10 test suites passed and 49 tests passed.
+The MySQL integration result is 1 suite passed and 5 tests passed against a
 disposable MySQL 8 test database.
-The latest integration command requires the local `MYSQL_TEST_*` settings
-from `.env.integration`; it was not rerun without those settings.
+The integration suite was run against a disposable MySQL 8 instance with
+explicit `MYSQL_TEST_*` settings; no local database files were retained.
 
 The migration runner and index migration were applied successfully to a blank
 isolated MySQL 8 database, and a second run was verified as a no-op.
@@ -118,8 +124,8 @@ isolated MySQL 8 database, and a second run was verified as a no-op.
 | 1 | Establish configuration | Done |
 | 2 | Build the domain and interfaces | Done |
 | 3 | Create the MySQL schema | Done |
-| 4 | Implement MySQL repositories | In progress — repositories complete |
-| 5 | Implement external generator boundaries | Pending |
+| 4 | Implement MySQL repositories | Done |
+| 5 | Implement external generator boundaries | Next |
 | 6 | Implement Track Progress and Summary | Pending |
 | 7 | Implement recommendations | Pending |
 | 8 | Implement notification preferences | Pending |
@@ -166,5 +172,5 @@ isolated MySQL 8 database, and a second run was verified as a no-op.
 | 2 | Implement SQL row mappers | Done |
 | 3 | Implement repositories with parameterized statements | Done |
 | 4 | Add transaction support | Done |
-| 5 | Test repository behavior and rollback | Next |
-| 6 | Run the MySQL integration suites serially | Pending |
+| 5 | Test repository behavior and rollback | Done |
+| 6 | Run the MySQL integration suites serially | Done |

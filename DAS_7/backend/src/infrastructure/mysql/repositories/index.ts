@@ -1,5 +1,6 @@
 export { MySqlAuditRepository } from './mysql-audit.repository.js'
 export { MySqlEmailNotificationRepository } from './mysql-email-notification.repository.js'
+export { MySqlIdempotencyRepository } from './mysql-idempotency.repository.js'
 export { MySqlNotificationJobRepository } from './mysql-notification-job.repository.js'
 export { MySqlNotificationPreferenceRepository } from './mysql-notification-preference.repository.js'
 export { MySqlParentRepository } from './mysql-parent.repository.js'

@@ -14,6 +14,7 @@ import { NotificationFrequency } from '../../../src/domain/value-objects/notific
 import { SkillArea } from '../../../src/domain/value-objects/skill-area.js'
 import {
     MySqlEmailNotificationRepository,
+    MySqlIdempotencyRepository,
     MySqlNotificationJobRepository,
     MySqlNotificationPreferenceRepository,
     MySqlParentRepository,
@@ -262,6 +263,81 @@ describe('MySQL repositories', () => {
             null,
             'Provider failed',
             'job1',
+        ])
+    })
+
+    it('persists idempotency state and maps a stored response body', async () => {
+        const fake = createFakeExecutor([
+            [
+                row({
+                    scope: 'staff-1',
+                    operation: 'add-progress',
+                    idempotency_key: 'request-1',
+                    request_hash: 'a'.repeat(64),
+                    status: 'completed',
+                    response_status: 201,
+                    response_body: { ok: true, data: { accepted: true } },
+                    expires_at: '2026-07-24 12:00:00.000',
+                    completed_at: '2026-07-23 12:01:00.000',
+                    failed_at: null,
+                    created_at: '2026-07-23 12:00:00.000',
+                }),
+            ],
+            [],
+            [],
+            [],
+        ])
+        const repository = new MySqlIdempotencyRepository(fake.executor)
+        const key = {
+            scope: 'staff-1',
+            operation: 'add-progress',
+            idempotencyKey: 'request-1',
+        }
+
+        const record = await repository.find(key)
+
+        expect(record).toMatchObject({
+            ...key,
+            status: 'completed',
+            responseStatus: 201,
+            responseBody: { ok: true, data: { accepted: true } },
+        })
+
+        await repository.createProcessing({
+            ...key,
+            requestHash: 'a'.repeat(64),
+            expiresAt: new Date('2026-07-24T12:00:00.000Z'),
+        })
+        await repository.markCompleted(
+            key,
+            201,
+            { ok: true, data: { accepted: true } },
+            date,
+        )
+        await repository.markFailed(key, 409, null, date)
+
+        expect(fake.execute.mock.calls[1]?.[1]).toEqual([
+            'staff-1',
+            'add-progress',
+            'request-1',
+            'a'.repeat(64),
+            new Date('2026-07-24T12:00:00.000Z'),
+        ])
+        expect(fake.execute.mock.calls[2]?.[1]).toEqual([
+            201,
+            JSON.stringify({ ok: true, data: { accepted: true } }),
+            date,
+            'staff-1',
+            'add-progress',
+            'request-1',
+        ])
+        expect(fake.execute.mock.calls[3]?.[1]).toEqual([
+            409,
+            null,
+            date,
+            'staff-1',
+            'add-progress',
+            'request-1',
         ])
     })
 })

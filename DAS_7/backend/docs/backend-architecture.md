@@ -414,7 +414,8 @@ backend/
 |   |   |   |   |-- add-progress-records.ts
 |   |   |   |   `-- correct-progress-record.ts
 |   |   |   `-- ports/
-|   |   |       `-- audit.repository.ts
+|   |   |       |-- audit.repository.ts
+|   |   |       `-- idempotency.repository.ts
 |   |   |
 |   |   `-- notifications/
 |   |       |-- application/
@@ -457,7 +458,8 @@ backend/
 |   |   |       |-- mysql-preference.repository.ts
 |   |   |       |-- mysql-email-notification.repository.ts
 |   |   |       |-- mysql-notification-job.repository.ts
-|   |   |       `-- mysql-audit.repository.ts
+|   |   |       |-- mysql-audit.repository.ts
+|   |   |       `-- mysql-idempotency.repository.ts
 |   |   |-- jobs/
 |   |   |   |-- job-runner.ts
 |   |   |   |-- job-claimer.ts

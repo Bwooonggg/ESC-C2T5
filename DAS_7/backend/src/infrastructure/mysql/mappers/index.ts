@@ -24,5 +24,6 @@ export {
 } from './domain-row-mappers.js'
 export {
     mapAuditEventRow,
+    mapIdempotencyRecordRow,
     mapNotificationJobRow,
 } from './support-row-mappers.js'

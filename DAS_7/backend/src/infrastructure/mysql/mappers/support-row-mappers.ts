@@ -1,5 +1,9 @@
 import type { AuditEvent } from '../../../modules/ingestion/ports/audit.repository.js'
 import type {
+    IdempotencyRecord,
+    IdempotencyStatus,
+} from '../../../modules/ingestion/ports/idempotency.repository.js'
+import type {
     NotificationJob,
     NotificationJobStatus,
 } from '../../../modules/notifications/ports/notification-job.repository.js'
@@ -20,6 +24,12 @@ const NOTIFICATION_JOB_STATUS_VALUES = [
     'completed',
     'failed',
 ] as const satisfies readonly NotificationJobStatus[]
+
+const IDEMPOTENCY_STATUS_VALUES = [
+    'processing',
+    'completed',
+    'failed',
+] as const satisfies readonly IdempotencyStatus[]
 
 export function mapNotificationJobRow(row: MysqlRow): NotificationJob {
     return {
@@ -56,4 +66,48 @@ export function mapAuditEventRow(row: MysqlRow): AuditEvent {
         occurredAt: readDate(row, 'occurred_at'),
         metadata: readJsonObject(row, 'metadata'),
     }
+}
+
+export function mapIdempotencyRecordRow(
+    row: MysqlRow,
+): IdempotencyRecord {
+    return {
+        scope: readString(row, 'scope'),
+        operation: readString(row, 'operation'),
+        idempotencyKey: readString(row, 'idempotency_key'),
+        requestHash: readString(row, 'request_hash'),
+        status: readKnownValue(
+            row,
+            'status',
+            IDEMPOTENCY_STATUS_VALUES,
+        ),
+        responseStatus: readNullableInteger(row, 'response_status'),
+        responseBody: readNullableJsonObject(row, 'response_body'),
+        expiresAt: readDate(row, 'expires_at'),
+        completedAt: readNullableDate(row, 'completed_at'),
+        failedAt: readNullableDate(row, 'failed_at'),
+        createdAt: readDate(row, 'created_at'),
+    }
+}
+
+function readNullableInteger(
+    row: MysqlRow,
+    field: string,
+): number | null {
+    if (row[field] === null) {
+        return null
+    }
+
+    return readInteger(row, field)
+}
+
+function readNullableJsonObject(
+    row: MysqlRow,
+    field: string,
+): Readonly<Record<string, unknown>> | null {
+    if (row[field] === null) {
+        return null
+    }
+
+    return readJsonObject(row, field)
 }

@@ -16,6 +16,7 @@ import { ProgressRecord } from '../../../src/domain/entities/progress-record.js'
 import { Recommendation } from '../../../src/domain/entities/recommendation.js'
 import { Student } from '../../../src/domain/entities/student.js'
 import { Summary } from '../../../src/domain/entities/summary.js'
+import { User } from '../../../src/domain/entities/user.js'
 import { AccountType } from '../../../src/domain/value-objects/account-type.js'
 import { EmailAddress } from '../../../src/domain/value-objects/email-address.js'
 import { NotificationFrequency } from '../../../src/domain/value-objects/notification-frequency.js'
@@ -30,6 +31,7 @@ import {
 import {
     MySqlAuditRepository,
     MySqlEmailNotificationRepository,
+    MySqlIdempotencyRepository,
     MySqlNotificationJobRepository,
     MySqlNotificationPreferenceRepository,
     MySqlParentRepository,
@@ -39,6 +41,7 @@ import {
     MySqlSummaryRepository,
     MySqlUserRepository,
 } from '../../../src/infrastructure/mysql/repositories/index.js'
+import { withMySqlTransaction } from '../../../src/infrastructure/mysql/transaction-manager.js'
 
 interface IntegrationDatabaseConfig {
     readonly host: string
@@ -381,6 +384,8 @@ describe('MySQL schema integration', () => {
             notification: `repository-notification-${randomUUID()}`,
             job: `repository-job-${randomUUID()}`,
             audit: `repository-audit-${randomUUID()}`,
+            idempotency: `repository-idempotency-${randomUUID()}`,
+            failedIdempotency: `repository-failed-idempotency-${randomUUID()}`,
         }
         const now = new Date('2026-07-23T12:00:00.000Z')
         const userRepository = new MySqlUserRepository(connection!)
@@ -398,7 +403,19 @@ describe('MySQL schema integration', () => {
             connection!,
         )
         const auditRepository = new MySqlAuditRepository(connection!)
+        const idempotencyRepository = new MySqlIdempotencyRepository(
+            connection!,
+        )
         const jobRepository = new MySqlNotificationJobRepository(pool!)
+        const idempotencyKey = {
+            scope: ids.parent,
+            operation: 'repository.integration',
+            idempotencyKey: ids.idempotency,
+        }
+        const failedIdempotencyKey = {
+            ...idempotencyKey,
+            idempotencyKey: ids.failedIdempotency,
+        }
 
         try {
             const parent = new Parent({
@@ -499,9 +516,77 @@ describe('MySQL schema integration', () => {
                 occurredAt: now,
                 metadata: { source: 'jest' },
             })
+            await idempotencyRepository.createProcessing({
+                ...idempotencyKey,
+                requestHash: 'a'.repeat(64),
+                expiresAt: new Date('2099-01-01T00:00:00.000Z'),
+            })
+            expect(await idempotencyRepository.find(idempotencyKey)).toMatchObject(
+                {
+                    ...idempotencyKey,
+                    status: 'processing',
+                },
+            )
+            await idempotencyRepository.markCompleted(
+                idempotencyKey,
+                201,
+                { ok: true, data: { accepted: true } },
+                now,
+            )
+            expect(
+                await idempotencyRepository.find(idempotencyKey),
+            ).toMatchObject({
+                status: 'completed',
+                responseStatus: 201,
+                responseBody: { ok: true, data: { accepted: true } },
+            })
+            await expect(
+                idempotencyRepository.createProcessing({
+                    ...idempotencyKey,
+                    requestHash: 'b'.repeat(64),
+                    expiresAt: new Date('2099-01-01T00:00:00.000Z'),
+                }),
+            ).rejects.toThrow()
+            await idempotencyRepository.markCompleted(
+                idempotencyKey,
+                202,
+                { ok: true, data: { shouldNotReplace: true } },
+                new Date('2026-07-23T12:02:00.000Z'),
+            )
+            expect(
+                (await idempotencyRepository.find(idempotencyKey))
+                    ?.responseStatus,
+            ).toBe(201)
+            await idempotencyRepository.createProcessing({
+                ...failedIdempotencyKey,
+                requestHash: 'c'.repeat(64),
+                expiresAt: new Date('2099-01-01T00:00:00.000Z'),
+            })
+            await idempotencyRepository.markFailed(
+                failedIdempotencyKey,
+                422,
+                { ok: false, error: 'invalid progress' },
+                now,
+            )
+            expect(
+                await idempotencyRepository.find(failedIdempotencyKey),
+            ).toMatchObject({
+                status: 'failed',
+                responseStatus: 422,
+                responseBody: { ok: false, error: 'invalid progress' },
+            })
 
             expect((await userRepository.findById(ids.user))?.userId).toBe(
                 ids.user,
+            )
+            expect(
+                (await userRepository.findByEmail(parent.email))?.userId,
+            ).toBe(ids.user)
+            expect(
+                (await parentRepository.findByUserId(ids.user))?.parentId,
+            ).toBe(ids.parent)
+            expect((await studentRepository.findById(ids.student))?.studentId).toBe(
+                ids.student,
             )
             expect(
                 (await parentRepository.listStudents(ids.parent))[0]
@@ -520,12 +605,24 @@ describe('MySQL schema integration', () => {
                     .length,
             ).toBe(1)
             expect(
+                (await recommendationRepository.findByStudentId(ids.student))
+                    .length,
+            ).toBe(1)
+            expect(
                 (await preferenceRepository.findByParentId(ids.parent))
                     ?.frequency.value,
             ).toBe('Weekly')
             expect(
+                (await preferenceRepository.listEnabled()).some(
+                    (preference) => preference.parentId === ids.parent,
+                ),
+            ).toBe(true)
+            expect(
                 (await emailRepository.findPending(10))[0]?.notificationId,
             ).toBe(ids.notification)
+            expect(
+                (await emailRepository.findById(ids.notification))?.sent,
+            ).toBe(false)
 
             const claimed = await jobRepository.claimDue(
                 now,
@@ -569,6 +666,15 @@ describe('MySQL schema integration', () => {
                 [ids.audit],
             )
             await connection!.execute(
+                'DELETE FROM idempotency_records WHERE scope = ? AND operation = ? AND idempotency_key IN (?, ?)',
+                [
+                    idempotencyKey.scope,
+                    idempotencyKey.operation,
+                    idempotencyKey.idempotencyKey,
+                    failedIdempotencyKey.idempotencyKey,
+                ],
+            )
+            await connection!.execute(
                 'DELETE FROM parent_students WHERE parent_id = ? AND student_id = ?',
                 [ids.parent, ids.student],
             )
@@ -581,6 +687,43 @@ describe('MySQL schema integration', () => {
                 [ids.user],
             )
         }
+    })
+
+    test('rolls back related repository writes as one transaction', async () => {
+        const ids = {
+            user: `rollback-user-${randomUUID()}`,
+            student: `rollback-student-${randomUUID()}`,
+        }
+        const user = new User({
+            userId: ids.user,
+            email: new EmailAddress(`${ids.user}@example.test`),
+            mobileNumber: '+6590000000',
+            passwordHash: 'deferred-auth-placeholder',
+            accountType: new AccountType('parent'),
+            isVerified: true,
+        })
+        const student = new Student({
+            studentId: ids.student,
+            name: 'Rollback Student',
+            dateOfBirth: new Date('2015-06-15T00:00:00.000Z'),
+            bandLevel: 'Band 2',
+            currentProgressVersion: 'v0',
+        })
+
+        await expect(
+            withMySqlTransaction(pool!, async (transaction) => {
+                await new MySqlUserRepository(transaction).save(user)
+                await new MySqlStudentRepository(transaction).save(student)
+                throw new Error('intentional transaction failure')
+            }),
+        ).rejects.toThrow('intentional transaction failure')
+
+        expect(await new MySqlUserRepository(connection!).findById(ids.user)).toBe(
+            null,
+        )
+        expect(
+            await new MySqlStudentRepository(connection!).findById(ids.student),
+        ).toBe(null)
     })
 })
 

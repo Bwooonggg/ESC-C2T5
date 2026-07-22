@@ -1,6 +1,6 @@
 # DAS 7 Backend Implementation Plan
 
-**Status:** Approved implementation sequence; Phase 4 in progress
+**Status:** Approved implementation sequence; Phase 4 done, Phase 5 next
 
 **Testing stack:** Jest, `ts-jest`, and Supertest
 
@@ -126,15 +126,15 @@ dates without a time. Test migration application against an isolated database.
 database-enforceable diagram relationships are enforced, and application
 workflows maintain the guardian relationship's `1..*` minimum.
 
-## Phase 4: Implement MySQL Repositories — IN PROGRESS
+## Phase 4: Implement MySQL Repositories — DONE
 
 1. **DONE:** Configure one `mysql2/promise` connection pool per process.
 2. **DONE:** Implement row mappers so SQL result shapes do not escape the infrastructure layer.
 3. **DONE:** Implement repositories with parameterized statements.
 4. **DONE:** Add transaction support for related changes.
-5. **NEXT:** Test CRUD, guardian lookup, summary history, latest-summary
+5. **DONE:** Test CRUD, guardian lookup, summary history, latest-summary
    selection, idempotency, and rollback behavior.
-6. Run MySQL suites serially with `npm run test:integration`.
+6. **DONE:** Run MySQL suites serially with `npm run test:integration`.
 
 The row-mapping boundary is implemented under
 `src/infrastructure/mysql/mappers/`. It accepts the snake_case columns selected
@@ -149,7 +149,9 @@ claiming uses a checked-out connection with `FOR UPDATE SKIP LOCKED` through the
 shared `withMySqlTransaction` boundary in
 `src/infrastructure/mysql/transaction-manager.ts`. Related workflows can pass
 that same checked-out connection to multiple repositories, while generator and
-email-provider calls remain outside the transaction.
+email-provider calls remain outside the transaction. Idempotency records use a
+composite scope/operation/key boundary and preserve terminal responses instead
+of overwriting them on repeated requests.
 
 **Done when:** application workflows can use repositories without importing SQL or MySQL-specific types.
 
