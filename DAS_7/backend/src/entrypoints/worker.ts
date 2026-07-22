@@ -1,7 +1,11 @@
-/**
- * Worker entrypoint placeholder.
- *
- * The worker will become the Clock actor once the MySQL job repository,
- * notification controller, and external adapters are implemented.
- */
-console.log('[worker] DAS 7 worker scaffold started; job runner is not configured yet')
+import { createWorkerContainer } from '../app/worker-container.js'
+
+const container = createWorkerContainer()
+
+if (container.config.worker.enabled) {
+    console.log(
+        `[worker] DAS 7 worker enabled; polling every ${container.config.worker.pollIntervalMs}ms`,
+    )
+} else {
+    console.log('[worker] DAS 7 worker is disabled by configuration')
+}

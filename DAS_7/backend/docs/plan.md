@@ -1,8 +1,6 @@
 # DAS 7 Backend Implementation Plan
 
-**Status:** Approved implementation sequence
-
-**Last updated:** 21 July 2026
+**Status:** Approved implementation sequence; Phase 1 complete
 
 **Testing stack:** Jest, `ts-jest`, and Supertest
 
@@ -10,7 +8,13 @@ This plan implements the architecture in
 [`backend-architecture.md`](backend-architecture.md). Complete the phases in
 order and keep each phase passing before beginning the next one.
 
-## Phase 0: Verify the Scaffold
+## Phase 0: Verify the Scaffold — DONE
+
+The scaffold verification is complete. Dependencies are installed, the Jest
+test harness is configured, the health routes have HTTP smoke coverage, and
+the TypeScript checks and production build pass. The repository also ignores
+the generated build, coverage, test-transform, environment, log, and dependency
+directories, and the backend files follow the four-space indentation convention.
 
 1. Install dependencies with `npm install`.
 2. Run `npm run typecheck`, `npm run build`, and `npm test`.
@@ -20,7 +24,13 @@ order and keep each phase passing before beginning the next one.
 
 **Done when:** the existing scaffold builds and both health-route tests pass.
 
-## Phase 1: Establish Configuration
+## Phase 1: Establish Configuration — DONE
+
+The configuration boundary is implemented. `src/config/environment.ts` loads
+`.env`, validates all API, MySQL, generator, email, authentication, and worker
+settings, applies development/test defaults, and rejects incomplete production
+configuration. API and worker entrypoints now receive separate typed containers
+instead of reading `process.env` directly.
 
 1. Add startup validation for API, MySQL, generator, email, authentication, and worker settings.
 2. Fail startup with a clear configuration error when a required production value is missing or invalid.

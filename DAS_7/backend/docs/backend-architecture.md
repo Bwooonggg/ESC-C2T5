@@ -1,7 +1,6 @@
 # DAS 7 Backend Architecture and Project Structure
 
 **Status:** Approved architecture reference  
-**Last updated:** 21 July 2026
 **Scope:** DAS 7 TypeScript backend, MySQL persistence, external generation services, and scheduled email notifications
 
 ## 1. Purpose
@@ -487,9 +486,19 @@ Contains process startup and graceful shutdown only. Entrypoints do not contain 
 
 Constructs the application and manually injects dependencies. The containers connect interfaces such as `ProgressRecordRepository` to implementations such as `MySqlProgressRecordRepository`.
 
+`api-container.ts` and `worker-container.ts` are separate composition roots.
+They receive the same validated `AppConfig` shape while keeping API and worker
+dependencies independently constructible.
+
 ### `config/`
 
 Reads and validates environment configuration once during startup. Required configuration includes MySQL connection details, external-service endpoints and credentials, email-provider settings, timeouts, and notification schedules.
+
+`environment.ts` loads `.env` with `dotenv` and validates values with `zod`.
+Development and test environments receive local defaults; production rejects
+missing CORS, MySQL, generator, email-provider, or authentication settings.
+Application code receives the resulting typed configuration through its
+composition container and must not read `process.env` directly.
 
 ### `domain/`
 

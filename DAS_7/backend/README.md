@@ -45,6 +45,22 @@ MySQL layer is implemented, and those suites run serially to avoid sharing
 mutable database state.
 
 The ordered implementation plan is recorded in [`docs/plan.md`](docs/plan.md).
+Current phase status is tracked in [`docs/progress.md`](docs/progress.md).
+
+## Configuration
+
+Copy `.env.example` to `.env` for local development. The backend loads and
+validates environment values at process startup through
+`src/config/environment.ts`.
+
+Development and test runs use safe local defaults. Production requires explicit
+values for the CORS origin, MySQL connection, summary generator, recommendation
+generator, email provider, and authentication session secret. The session
+secret must contain at least 32 characters in production.
+
+The API and worker read the same validated configuration through separate
+composition containers. The worker is disabled by default until notification
+processing is implemented.
 
 ## Current scaffold behavior
 
