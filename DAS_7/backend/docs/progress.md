@@ -4,7 +4,7 @@
 
 **Phase 2 — Build the Domain and Interfaces: in progress**
 
-**Next:** Phase 2, Step 4 — Define external and technical ports
+**Next:** Phase 2, Step 5 — Add domain errors
 
 ## Completed Work
 
@@ -26,6 +26,7 @@
 - Removed cross-origin middleware, configuration, and package dependencies from the real and mock APIs so the runtime matches that same-origin decision.
 - Implemented immutable value objects for account types, skill areas, email addresses, and notification frequencies.
 - Added repository ports for identity, parents, students, progress records, summaries, recommendations, preferences, email notifications, notification jobs, sessions, and audit events.
+- Added provider-neutral ports for summary generation, recommendation generation, email delivery, and the system clock; authentication service ports remain deferred.
 - Deferred authentication configuration and route exposure so login, signup, password security, authentication, and authorization can be integrated in the final phase with the groupmate's implementation.
 
 ## Verification Evidence
@@ -48,7 +49,7 @@ Current Jest result: 5 test suites passed and 21 tests passed.
 | --- | --- | --- |
 | 0 | Verify the scaffold | Done |
 | 1 | Establish configuration | Done |
-| 2 | Build the domain and interfaces | In progress — Step 3 complete |
+| 2 | Build the domain and interfaces | In progress — Step 4 complete |
 | 3 | Create the MySQL schema | Pending |
 | 4 | Implement MySQL repositories | Pending |
 | 5 | Implement external generator boundaries | Pending |
@@ -75,6 +76,6 @@ Current Jest result: 5 test suites passed and 21 tests passed.
 | 1 | Implement domain entities | Done |
 | 2 | Add value objects | Done |
 | 3 | Define repository interfaces | Done |
-| 4 | Define external and technical ports | Next |
-| 5 | Add domain errors | Pending |
+| 4 | Define external and technical ports | Done |
+| 5 | Add domain errors | Next |
 | 6 | Test remaining entity invariants and failure cases | Pending |

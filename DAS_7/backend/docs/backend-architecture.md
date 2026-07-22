@@ -375,7 +375,9 @@ backend/
 |   |   |       |-- student.repository.ts
 |   |   |       |-- progress-record.repository.ts
 |   |   |       |-- summary.repository.ts
-|   |   |       `-- recommendation.repository.ts
+|   |   |       |-- recommendation.repository.ts
+|   |   |       |-- summary-generator.ts
+|   |   |       `-- recommendation-generator.ts
 |   |   |
 |   |   |-- preferences/
 |   |   |   |-- http/
@@ -410,7 +412,9 @@ backend/
 |   |       |   `-- retry-failed-notification.ts
 |   |       `-- ports/
 |   |           |-- email-notification.repository.ts
-|   |           `-- notification-job.repository.ts
+|   |           |-- notification-job.repository.ts
+|   |           |-- email-delivery.ts
+|   |           `-- clock.ts
 |   |
 |   |-- adapters/
 |   |   |-- generators/

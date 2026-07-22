@@ -56,7 +56,7 @@ Express, MySQL, or external services.
 1. [DONE] Implement `User`, `Parent`, `Student`, `ProgressRecord`, `Summary`, `Recommendation`, `EmailNotification`, and `NotificationPreference`.
 2. [DONE] Add immutable value objects for account type, skill area, email address, and notification frequency.
 3. [DONE] Define repository interfaces for each persistence requirement.
-4. Define ports for summary generation, recommendation generation, email delivery, and time. Password hashing and token/session service ports are deferred to the final authentication phase; persistence repository contracts may remain in place for integration.
+4. [DONE] Define ports for summary generation, recommendation generation, email delivery, and time. Password hashing and token/session service ports are deferred to the final authentication phase; persistence repository contracts may remain in place for integration.
 5. Add domain errors for validation, unavailable progress, and unavailable summaries. Authentication and authorization errors are deferred to the final phase.
 6. Test entity invariants and failure cases without Express or MySQL.
 
