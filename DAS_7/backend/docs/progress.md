@@ -4,7 +4,8 @@
 
 **Phase 3 — Create the MySQL schema: in progress**
 
-**Next:** Phase 3, step 5 — Configure the migration runner and database command
+**Next:** Phase 3, step 6 — Apply migrations to an isolated MySQL database
+and add integration coverage
 
 ## Completed Work
 
@@ -56,6 +57,12 @@
 - Added `0011_add_query_indexes.sql` for guardian reverse lookups, ordered
   progress and summary reads, recommendation history, notification queues,
   audit investigations, and idempotency cleanup.
+- Added the portable MySQL pool and migration runner with environment-driven
+  connection settings, entrypoint-relative migration discovery, checksums,
+  duplicate-run protection, and a database-scoped advisory lock.
+- Added `npm run migrate` and `npm run migrate:compiled` commands plus Jest
+  coverage for migration ordering, line-ending normalization, replay, checksum
+  drift, and missing migration detection.
 
 ## Verification Evidence
 
@@ -69,10 +76,11 @@ npm run test:http
 npm run test:coverage
 ```
 
-Current Jest result: 6 test suites passed and 30 tests passed.
+Current Jest result: 7 test suites passed and 35 tests passed.
 
-The index migration has been reviewed statically. Live migration application
-remains Phase 3 step 6 because the local MySQL service is currently stopped.
+The migration runner and index migration have been reviewed statically. Live
+migration application remains Phase 3 step 6 because the local MySQL service
+is currently stopped.
 
 ## Phase Tracking
 
@@ -119,5 +127,5 @@ remains Phase 3 step 6 because the local MySQL service is currently stopped.
 | 2 | Define relationships and foreign keys | Done |
 | 3 | Add database-level validity constraints | Done |
 | 4 | Add query-driven secondary indexes | Done |
-| 5 | Configure the migration runner and database command | Next |
-| 6 | Apply migrations to an isolated MySQL database and add integration coverage | Pending |
+| 5 | Configure the migration runner and database command | Done |
+| 6 | Apply migrations to an isolated MySQL database and add integration coverage | Next |

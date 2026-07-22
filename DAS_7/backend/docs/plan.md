@@ -64,11 +64,12 @@ Express, MySQL, or external services.
 
 ## Phase 3: Create the MySQL Schema
 
-The schema foundation for steps 1–3 is implemented in
+The schema foundation for steps 1–5 is implemented in
 [`database-schema.md`](database-schema.md) and the plain SQL files under
 `db/migrations/`. These files define the domain tables, direct relationships,
 foreign keys, database-level validity constraints, and query-driven secondary
-indexes. The migration runner remains as the next step. The many-to-many guardian
+indexes. A portable migration runner now applies these files from validated
+environment configuration. The many-to-many guardian
 relationship uses foreign keys to prevent invalid pairs; its class-diagram
 `1..*` minimum on both sides is completed by application workflows because
 ordinary foreign keys cannot enforce a minimum child count.
@@ -82,7 +83,7 @@ ordinary foreign keys cannot enforce a minimum child count.
    and state consistency constraints.
 4. **DONE:** Add query-driven secondary indexes in
    `0011_add_query_indexes.sql`.
-5. Configure the migration runner and database command.
+5. **DONE:** Configure the portable migration runner and database command.
 6. Apply the migrations to an isolated MySQL database and add integration
    coverage.
 
@@ -100,6 +101,11 @@ Create plain SQL migrations in this order:
 9. Audit events.
 10. Idempotency records.
 11. Query-driven secondary indexes.
+
+The migration runner creates the operational `schema_migrations` table, uses a
+database-scoped advisory lock, records SHA-256 checksums, and rejects missing
+or modified applied files. Migration paths are resolved relative to the
+entrypoint rather than the process working directory.
 
 Authentication behavior, secret management, verification workflows, and
 session tables are added by the final authentication phase. The initial

@@ -59,6 +59,20 @@ values for the MySQL connection, summary generator, recommendation generator,
 and email provider. Authentication configuration is introduced with the final
 authentication and authorization phase.
 
+The migration runner reads the `MYSQL_*` values from the same environment,
+resolves `db/migrations/` relative to its entrypoint, records applied
+migrations in `schema_migrations`, and does not depend on a developer-specific
+filesystem path:
+
+```powershell
+# Development entrypoint
+npm run migrate
+
+# Compiled/deployment entrypoint
+npm run build
+npm run migrate:compiled
+```
+
 The API and worker read the same validated configuration through separate
 composition containers. The worker is disabled by default until notification
 processing is implemented.
@@ -76,6 +90,7 @@ the existing Vite proxy to preserve that behavior.
 - `GET /api/health/ready` reports that database readiness is not wired yet.
 - Existing frontend and future ingestion routes are registered, but business
   handlers currently return a JSON `501 Not implemented` envelope.
-- MySQL, authentication, generator services, email delivery, and worker job
-  processing are intentionally reserved for their respective implementation
-  slices. Authentication routes remain unmounted until the final phase.
+- MySQL repositories, authentication, generator services, email delivery, and
+  worker job processing are intentionally reserved for their respective
+  implementation slices. The migration runner is available, while
+  authentication routes remain unmounted until the final phase.

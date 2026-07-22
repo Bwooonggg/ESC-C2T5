@@ -1,4 +1,3 @@
-import cors from 'cors'
 import express from 'express'
 import type { NextFunction, Request, Response } from 'express'
 import { das7Routes } from './routes/das7Routes.js'
@@ -9,10 +8,8 @@ const PORT = Number(process.env.PORT ?? 4000)
 
 const app = express()
 
-// The Vite dev server proxies /api to this port, so requests normally arrive
-// same-origin and never preflight. CORS is here for the case where someone
-// points a browser or REST client straight at :4000.
-app.use(cors({ origin: 'http://localhost:5173' }))
+// The Vite dev server proxies /api to this port, so browser requests remain
+// on the same origin during local development.
 app.use(express.json())
 
 app.use('/api', das7Routes)

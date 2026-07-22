@@ -2,7 +2,7 @@
 //
 // Relative on purpose. In dev, Vite proxies /api to the mock backend on :4000
 // (see vite.config.ts); in production the app is served from the same origin as
-// the API. Either way the frontend needs no CORS handling and no environment
+// the API. Either way the frontend needs no cross-origin handling and no environment
 // variable, and this file does not change between environments.
 const baseUrl = "/api/";
 

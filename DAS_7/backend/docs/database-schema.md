@@ -114,3 +114,6 @@ the idempotency key.
 
 Authentication session/verification tables are intentionally absent and will be
 added during the final authentication integration phase.
+
+The migration runner also creates `schema_migrations` as operational metadata.
+It is not part of the domain model or the diagram relationships.

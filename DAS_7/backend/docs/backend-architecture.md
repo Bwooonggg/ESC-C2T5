@@ -619,6 +619,9 @@ SQL migrations and their future repository implementations:
 - Use MySQL 8.x with InnoDB.
 - Use `mysql2/promise` with one configured pool per process.
 - Use parameterized statements for all dynamic values.
+- Run migrations through the portable `migrate` entrypoint using the validated
+  `MYSQL_*` environment settings; never embed a developer-specific path or
+  credential in migration code.
 - Use `DATE` for dates without time and UTC `DATETIME(3)` for timestamps.
 - Use foreign keys for diagram relationships.
 - Use transactions for related database changes.
