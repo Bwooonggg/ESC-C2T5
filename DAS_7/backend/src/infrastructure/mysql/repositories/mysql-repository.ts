@@ -8,8 +8,8 @@ import type { MysqlRow } from '../mappers/index.js'
 
 /**
  * Both a pool and a checked-out PoolConnection satisfy this boundary. This
- * lets ordinary repository calls use the pool while future workflows can pass
- * a transaction connection without changing repository contracts.
+ * lets ordinary repository calls use the pool while transaction workflows pass
+ * a shared connection without changing repository contracts.
  */
 export type MySqlExecutor = Pick<PromisePool, 'execute'>
 

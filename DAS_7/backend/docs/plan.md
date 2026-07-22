@@ -131,8 +131,9 @@ workflows maintain the guardian relationship's `1..*` minimum.
 1. **DONE:** Configure one `mysql2/promise` connection pool per process.
 2. **DONE:** Implement row mappers so SQL result shapes do not escape the infrastructure layer.
 3. **DONE:** Implement repositories with parameterized statements.
-4. **NEXT:** Add transaction support for related changes.
-5. Test CRUD, guardian lookup, summary history, latest-summary selection, idempotency, and rollback behavior.
+4. **DONE:** Add transaction support for related changes.
+5. **NEXT:** Test CRUD, guardian lookup, summary history, latest-summary
+   selection, idempotency, and rollback behavior.
 6. Run MySQL suites serially with `npm run test:integration`.
 
 The row-mapping boundary is implemented under
@@ -144,8 +145,11 @@ session mapping remains deferred with the final authentication phase.
 Concrete MySQL repositories are implemented under
 `src/infrastructure/mysql/repositories/`. They use the row mappers and bind
 all dynamic values through `mysql2` prepared statements. Notification job
-claiming uses a checked-out connection with `FOR UPDATE SKIP LOCKED`; broader
-transaction composition remains the next step.
+claiming uses a checked-out connection with `FOR UPDATE SKIP LOCKED` through the
+shared `withMySqlTransaction` boundary in
+`src/infrastructure/mysql/transaction-manager.ts`. Related workflows can pass
+that same checked-out connection to multiple repositories, while generator and
+email-provider calls remain outside the transaction.
 
 **Done when:** application workflows can use repositories without importing SQL or MySQL-specific types.
 

@@ -1,6 +1,5 @@
 import type {
     Pool,
-    PoolConnection,
     RowDataPacket,
 } from 'mysql2/promise'
 import type {
@@ -8,6 +7,7 @@ import type {
     NotificationJobRepository,
 } from '../../../modules/notifications/ports/notification-job.repository.js'
 import { mapNotificationJobRow } from '../mappers/index.js'
+import { withMySqlTransaction } from '../transaction-manager.js'
 import {
     asMysqlRow,
     executeRows,
@@ -29,10 +29,7 @@ export class MySqlNotificationJobRepository
     ): Promise<readonly NotificationJob[]> {
         requirePositiveLimit(limit)
 
-        const connection = await this.pool.getConnection()
-
-        try {
-            await connection.beginTransaction()
+        return withMySqlTransaction(this.pool, async (connection) => {
             // MySQL does not reliably bind LIMIT placeholders in prepared
             // statements. The value is validated as a positive integer first.
             const rows = await executeRows<NotificationJobRow>(
@@ -99,14 +96,8 @@ export class MySqlNotificationJobRepository
                 })
             }
 
-            await connection.commit()
             return claimed
-        } catch (error) {
-            await rollbackQuietly(connection)
-            throw error
-        } finally {
-            connection.release()
-        }
+        })
     }
 
     async save(job: NotificationJob): Promise<void> {
@@ -198,13 +189,5 @@ export class MySqlNotificationJobRepository
 function requirePositiveLimit(limit: number): void {
     if (!Number.isInteger(limit) || limit < 1) {
         throw new RangeError('limit must be a positive integer.')
-    }
-}
-
-async function rollbackQuietly(connection: PoolConnection): Promise<void> {
-    try {
-        await connection.rollback()
-    } catch {
-        // Preserve the original transaction error.
     }
 }

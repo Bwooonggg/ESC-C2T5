@@ -4,7 +4,7 @@
 
 **Phase 4 — Implement MySQL repositories: in progress**
 
-**Next:** Phase 4, step 4 — Add transaction support for related changes
+**Next:** Phase 4, step 5 — Test repository behavior and rollback
 
 ## Completed Work
 
@@ -80,6 +80,12 @@
   multi-row writes, and notification state updates.
 - Verified repository persistence and `FOR UPDATE SKIP LOCKED` notification-job
   claiming against a fresh migrated MySQL 8 database.
+- Added `withMySqlTransaction`, which checks out one connection, commits
+  successful related operations, rolls back failures, and always releases the
+  connection.
+- Updated notification-job claiming to use the shared transaction boundary.
+- Added Jest coverage for transaction commit, rollback, error preservation, and
+  connection lifecycle ordering.
 
 ## Verification Evidence
 
@@ -89,14 +95,17 @@ The following checks passed from `backend/`:
 npm run typecheck
 npm run build
 npm test
+npx tsc --noEmit -p tsconfig.test.json
 npm run test:http
 npm run test:coverage
 npm run test:integration
 ```
 
-Current unit/HTTP Jest result: 9 test suites passed and 46 tests passed.
+Current unit/HTTP Jest result: 10 test suites passed and 48 tests passed.
 The MySQL integration result is 1 suite passed and 4 tests passed against a
 disposable MySQL 8 test database.
+The latest integration command requires the local `MYSQL_TEST_*` settings
+from `.env.integration`; it was not rerun without those settings.
 
 The migration runner and index migration were applied successfully to a blank
 isolated MySQL 8 database, and a second run was verified as a no-op.
@@ -156,6 +165,6 @@ isolated MySQL 8 database, and a second run was verified as a no-op.
 | 1 | Configure the MySQL pool | Done |
 | 2 | Implement SQL row mappers | Done |
 | 3 | Implement repositories with parameterized statements | Done |
-| 4 | Add transaction support | Next |
-| 5 | Test repository behavior and rollback | Pending |
+| 4 | Add transaction support | Done |
+| 5 | Test repository behavior and rollback | Next |
 | 6 | Run the MySQL integration suites serially | Pending |
