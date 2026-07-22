@@ -158,8 +158,8 @@ of overwriting them on repeated requests.
 ## Phase 5: Implement External Generator Boundaries
 
 1. **DONE:** Define the summary-generator request and response contract.
-2. **NEXT:** Define the recommendation-generator request and response contract.
-3. Implement diagram-facing generator adapters around replaceable clients.
+2. **DONE:** Define the recommendation-generator request and response contract.
+3. **NEXT:** Implement diagram-facing generator adapters around replaceable clients.
 4. Add runtime response validation, request timeouts, correlation IDs, and idempotency IDs.
 5. Test application logic with injected fakes.
 6. Test adapters against controlled HTTP servers for success, invalid data, timeouts, and provider failures.
@@ -172,6 +172,12 @@ The existing `SummaryGeneratorPort` remains provider-neutral: it accepts one
 student/progress snapshot and returns validated content plus optional provider
 metadata. Provider transport details, correlation IDs, timeouts, and retries
 remain adapter responsibilities.
+
+The recommendation-generator logical contract is recorded in
+[`contracts/recommendation-generator.contract.md`](../contracts/recommendation-generator.contract.md).
+It accepts exactly one persisted summary and returns one recommendation content
+value plus optional provider metadata; the backend owns recommendation identity
+and the summary relationship.
 
 ## Phase 6: Implement Track Progress and Summary
 

@@ -6,7 +6,7 @@
 
 **Phase 5 — Implement external generator boundaries: in progress**
 
-**Next:** Phase 5, step 2 — Define the recommendation-generator contract
+**Next:** Phase 5, step 3 — Implement generator adapters
 
 ## Completed Work
 
@@ -99,6 +99,11 @@
   provider-error boundaries.
 - Added [`summary-generator.contract.md`](../contracts/summary-generator.contract.md)
   for the logical external-service request and response shape.
+- Finalized the provider-neutral RecommendationGeneratorService contract,
+  including its persisted-summary basis, response shape, and provider-error
+  boundary.
+- Added [`recommendation-generator.contract.md`](../contracts/recommendation-generator.contract.md)
+  for the logical external-service request and response shape.
 
 ## Verification Evidence
 
@@ -132,7 +137,7 @@ isolated MySQL 8 database, and a second run was verified as a no-op.
 | 2 | Build the domain and interfaces | Done |
 | 3 | Create the MySQL schema | Done |
 | 4 | Implement MySQL repositories | Done |
-| 5 | Implement external generator boundaries | In progress — Step 2 next |
+| 5 | Implement external generator boundaries | In progress — Step 3 next |
 | 6 | Implement Track Progress and Summary | Pending |
 | 7 | Implement recommendations | Pending |
 | 8 | Implement notification preferences | Pending |
