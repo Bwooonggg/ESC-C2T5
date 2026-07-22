@@ -41,9 +41,12 @@ npm run test:e2e
 ```
 
 Unit, HTTP, and contract suites must not require a running MySQL instance.
-Integration and end-to-end suites will use a dedicated test database once the
-MySQL layer is implemented, and those suites run serially to avoid sharing
-mutable database state.
+The default `npm test` command excludes the integration directory. The
+integration suite runs serially against a dedicated MySQL test database and
+requires `MYSQL_TEST_HOST`, `MYSQL_TEST_PORT`, `MYSQL_TEST_DATABASE`,
+`MYSQL_TEST_USER`, and `MYSQL_TEST_PASSWORD`. Copy
+`.env.integration.example` to `.env.integration` or export those variables
+before running `npm run test:integration`.
 
 The ordered implementation plan is recorded in [`docs/plan.md`](docs/plan.md).
 Current phase status is tracked in [`docs/progress.md`](docs/progress.md).
@@ -72,6 +75,12 @@ npm run migrate
 npm run build
 npm run migrate:compiled
 ```
+
+The integration suite applies the same migrations to the configured test
+database, verifies migration replay, checks the expected InnoDB tables and
+indexes, and exercises key foreign-key and value constraints. The test
+database must be isolated from development and production data; its name must
+identify it as a test database, such as `das7_integration_test`.
 
 The API and worker read the same validated configuration through separate
 composition containers. The worker is disabled by default until notification

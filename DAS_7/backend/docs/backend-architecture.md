@@ -689,9 +689,12 @@ The schedule applies per parent preference, but execution remains student-scoped
 
 Use `.test.ts` filenames throughout. Run fast unit, HTTP, and contract tests
 without MySQL; run integration and end-to-end suites against an isolated test
-database. Prefer dependency injection and explicit fakes for application
-services. Use Jest mocks at technical boundaries only, Jest fake timers for the
-notification clock, and controlled HTTP servers for provider-adapter tests.
+database. The default Jest configuration excludes `test/integration/`; the
+serial integration command uses `jest.integration.config.cjs` and explicit
+`MYSQL_TEST_*` connection variables. Prefer dependency injection and explicit
+fakes for application services. Use Jest mocks at technical boundaries only,
+Jest fake timers for the notification clock, and controlled HTTP servers for
+provider-adapter tests.
 
 The implementation is acceptable when all of the following hold:
 

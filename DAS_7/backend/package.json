@@ -21,7 +21,7 @@
         "test:coverage": "jest --coverage",
         "test:unit": "jest test/unit",
         "test:http": "jest test/http",
-        "test:integration": "jest test/integration --runInBand",
+        "test:integration": "jest --config jest.integration.config.cjs --runInBand",
         "test:contract": "jest test/contract",
         "test:e2e": "jest test/e2e --runInBand"
     },

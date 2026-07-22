@@ -12,5 +12,10 @@
         "declarationMap": false
     },
     "include": ["src/**/*.ts", "src/**/*.d.ts", "test/**/*.ts"],
-    "exclude": ["dist", "node_modules", "coverage"]
+    "exclude": [
+        "dist",
+        "node_modules",
+        "coverage",
+        "src/entrypoints/**/*.ts"
+    ]
 }

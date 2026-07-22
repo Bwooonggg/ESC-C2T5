@@ -3,4 +3,7 @@ dist/
 coverage/
 .ts-jest/
 .env
+.env.*
+!.env.example
+!.env.integration.example
 *.log

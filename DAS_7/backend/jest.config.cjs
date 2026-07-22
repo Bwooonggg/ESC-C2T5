@@ -8,6 +8,7 @@ module.exports = {
         'src/**/*.ts',
         '!src/entrypoints/**/*.ts',
     ],
+    testPathIgnorePatterns: ['<rootDir>/test/integration/'],
     coverageProvider: 'v8',
     transform: {
         '^.+\\.tsx?$': ['ts-jest', { tsconfig: '<rootDir>/tsconfig.test.json' }],

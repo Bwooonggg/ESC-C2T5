@@ -2,10 +2,9 @@
 
 ## Current Status
 
-**Phase 3 — Create the MySQL schema: in progress**
+**Phase 3 — Create the MySQL schema: done**
 
-**Next:** Phase 3, step 6 — Apply migrations to an isolated MySQL database
-and add integration coverage
+**Next:** Phase 4 — Implement MySQL repositories
 
 ## Completed Work
 
@@ -63,6 +62,12 @@ and add integration coverage
 - Added `npm run migrate` and `npm run migrate:compiled` commands plus Jest
   coverage for migration ordering, line-ending normalization, replay, checksum
   drift, and missing migration detection.
+- Added a separate Jest integration configuration and explicit
+  `MYSQL_TEST_*` environment boundary so the default test command remains
+  database-free.
+- Added live MySQL integration coverage for migration application and replay,
+  migration metadata, InnoDB tables, query indexes, foreign keys, allow-lists,
+  and score bounds.
 
 ## Verification Evidence
 
@@ -74,13 +79,15 @@ npm run build
 npm test
 npm run test:http
 npm run test:coverage
+npm run test:integration
 ```
 
-Current Jest result: 7 test suites passed and 35 tests passed.
+Current unit/HTTP Jest result: 7 test suites passed and 35 tests passed.
+The MySQL integration result is 1 suite passed and 3 tests passed against a
+disposable MySQL 8 test database.
 
-The migration runner and index migration have been reviewed statically. Live
-migration application remains Phase 3 step 6 because the local MySQL service
-is currently stopped.
+The migration runner and index migration were applied successfully to a blank
+isolated MySQL 8 database, and a second run was verified as a no-op.
 
 ## Phase Tracking
 
@@ -89,8 +96,8 @@ is currently stopped.
 | 0 | Verify the scaffold | Done |
 | 1 | Establish configuration | Done |
 | 2 | Build the domain and interfaces | Done |
-| 3 | Create the MySQL schema | In progress — schema foundation complete |
-| 4 | Implement MySQL repositories | Pending |
+| 3 | Create the MySQL schema | Done |
+| 4 | Implement MySQL repositories | Next |
 | 5 | Implement external generator boundaries | Pending |
 | 6 | Implement Track Progress and Summary | Pending |
 | 7 | Implement recommendations | Pending |
@@ -128,4 +135,4 @@ is currently stopped.
 | 3 | Add database-level validity constraints | Done |
 | 4 | Add query-driven secondary indexes | Done |
 | 5 | Configure the migration runner and database command | Done |
-| 6 | Apply migrations to an isolated MySQL database and add integration coverage | Next |
+| 6 | Apply migrations to an isolated MySQL database and add integration coverage | Done |

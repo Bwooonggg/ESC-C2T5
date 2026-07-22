@@ -1,6 +1,6 @@
 # DAS 7 Backend Implementation Plan
 
-**Status:** Approved implementation sequence; Phase 3 in progress; schema foundation complete
+**Status:** Approved implementation sequence; Phase 3 complete; Phase 4 next
 
 **Testing stack:** Jest, `ts-jest`, and Supertest
 
@@ -62,9 +62,9 @@ Express, MySQL, or external services.
 
 **Done when:** domain and application types have no dependency on Express, MySQL2, or provider-specific clients. Authentication-specific ports and errors remain deferred to the final phase.
 
-## Phase 3: Create the MySQL Schema
+## Phase 3: Create the MySQL Schema — DONE
 
-The schema foundation for steps 1–5 is implemented in
+The schema and integration verification for all six steps are implemented in
 [`database-schema.md`](database-schema.md) and the plain SQL files under
 `db/migrations/`. These files define the domain tables, direct relationships,
 foreign keys, database-level validity constraints, and query-driven secondary
@@ -84,8 +84,8 @@ ordinary foreign keys cannot enforce a minimum child count.
 4. **DONE:** Add query-driven secondary indexes in
    `0011_add_query_indexes.sql`.
 5. **DONE:** Configure the portable migration runner and database command.
-6. Apply the migrations to an isolated MySQL database and add integration
-   coverage.
+6. **DONE:** Apply the migrations to an isolated MySQL database and add
+   integration coverage.
 
 Create plain SQL migrations in this order:
 
@@ -107,6 +107,13 @@ database-scoped advisory lock, records SHA-256 checksums, and rejects missing
 or modified applied files. Migration paths are resolved relative to the
 entrypoint rather than the process working directory.
 
+The Jest integration suite loads `.env.integration` when present, while CI can
+provide the same `MYSQL_TEST_*` values directly. It runs the migration command
+against a dedicated database, verifies replay and checksums, checks all
+expected InnoDB tables and query indexes, and exercises representative
+foreign-key, allow-list, and score constraints. The base `npm test` command
+keeps this suite excluded so unit and HTTP tests remain database-free.
+
 Authentication behavior, secret management, verification workflows, and
 session tables are added by the final authentication phase. The initial
 `users` table retains `password_hash` and `is_verified` because they are
@@ -115,11 +122,11 @@ structural fields in the existing `User` domain entity.
 Use MySQL 8, InnoDB, foreign keys, UTC `DATETIME(3)` timestamps, and `DATE` for
 dates without a time. Test migration application against an isolated database.
 
-**Done when:** a blank test database can be migrated reproducibly, all
+**Done:** a blank test database can be migrated reproducibly, all
 database-enforceable diagram relationships are enforced, and application
 workflows maintain the guardian relationship's `1..*` minimum.
 
-## Phase 4: Implement MySQL Repositories
+## Phase 4: Implement MySQL Repositories — NEXT
 
 1. Configure one `mysql2/promise` connection pool per process.
 2. Implement row mappers so SQL result shapes do not escape the infrastructure layer.

@@ -116,4 +116,8 @@ Authentication session/verification tables are intentionally absent and will be
 added during the final authentication integration phase.
 
 The migration runner also creates `schema_migrations` as operational metadata.
+The MySQL integration suite applies the migrations to a dedicated test
+database, verifies replay and checksums, and checks representative tables,
+indexes, foreign keys, allow-lists, and score bounds. Configure that suite with
+the explicit `MYSQL_TEST_*` variables described in the backend README.
 It is not part of the domain model or the diagram relationships.
