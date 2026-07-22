@@ -27,15 +27,16 @@ directories, and the backend files follow the four-space indentation convention.
 ## Phase 1: Establish Configuration — DONE
 
 The configuration boundary is implemented. `src/config/environment.ts` loads
-`.env`, validates all API, MySQL, generator, email, authentication, and worker
-settings, applies development/test defaults, and rejects incomplete production
-configuration. API and worker entrypoints now receive separate typed containers
-instead of reading `process.env` directly.
+`.env`, validates API, MySQL, generator, email, and worker settings, applies
+development/test defaults, and rejects incomplete production configuration.
+Authentication configuration is intentionally deferred to the final phase. API
+and worker entrypoints receive separate typed containers instead of reading
+`process.env` directly.
 
 The public frontend and API will share one origin. Public path forwarding is a
 deployment responsibility rather than a browser-origin setting in the backend.
 
-1. Add startup validation for API, MySQL, generator, email, authentication, and worker settings.
+1. Add startup validation for API, MySQL, generator, email, and worker settings.
 2. Fail startup with a clear configuration error when a required production value is missing or invalid.
 3. Keep environment access inside `src/config/`; pass validated configuration into other components.
 4. Create separate API and worker dependency containers.
@@ -55,8 +56,8 @@ Express, MySQL, or external services.
 1. [DONE] Implement `User`, `Parent`, `Student`, `ProgressRecord`, `Summary`, `Recommendation`, `EmailNotification`, and `NotificationPreference`.
 2. [DONE] Add immutable value objects for account type, skill area, email address, and notification frequency.
 3. [DONE] Define repository interfaces for each persistence requirement.
-4. Define ports for summary generation, recommendation generation, email delivery, password hashing, tokens, and time.
-5. Add domain errors for validation, authentication, authorization, unavailable progress, and unavailable summaries.
+4. Define ports for summary generation, recommendation generation, email delivery, and time. Password hashing and token/session service ports are deferred to the final authentication phase; persistence repository contracts may remain in place for integration.
+5. Add domain errors for validation, unavailable progress, and unavailable summaries. Authentication and authorization errors are deferred to the final phase.
 6. Test entity invariants and failure cases without Express or MySQL.
 
 **Done when:** domain and application types have no dependency on Express, MySQL2, or provider-specific clients.
@@ -72,9 +73,11 @@ Create plain SQL migrations in this order:
 5. Recommendations and their basis summary.
 6. Notification preferences.
 7. Email notifications.
-8. Authentication sessions and verification data.
-9. Durable notification jobs.
-10. Audit events and idempotency records.
+8. Durable notification jobs.
+9. Audit events and idempotency records.
+
+Credential, verification, and session tables are added by the final
+authentication phase rather than this initial schema pass.
 
 Use MySQL 8, InnoDB, foreign keys, UTC `DATETIME(3)` timestamps, and `DATE` for
 dates without a time. Test migration application against an isolated database.
@@ -92,17 +95,7 @@ dates without a time. Test migration application against an isolated database.
 
 **Done when:** application workflows can use repositories without importing SQL or MySQL-specific types.
 
-## Phase 5: Add Development Identity and Parent Context
-
-1. Add a development-only authenticated parent identity.
-2. Implement `GET /api/me` using the parent and student repositories.
-3. Add authentication, role authorization, and guardian authorization middleware.
-4. Return only students associated with the authenticated parent.
-5. Test valid access, missing identity, wrong role, and unrelated-student access with Supertest.
-
-**Done when:** the current frontend can load a parent and their guarded students without bypassing authorization rules.
-
-## Phase 6: Implement External Generator Boundaries
+## Phase 5: Implement External Generator Boundaries
 
 1. Define the summary-generator request and response contract.
 2. Define the recommendation-generator request and response contract.
@@ -113,7 +106,7 @@ dates without a time. Test migration application against an isolated database.
 
 **Done when:** replacing an external generator requires changing only its adapter and composition wiring.
 
-## Phase 7: Implement Track Progress and Summary
+## Phase 6: Implement Track Progress and Summary
 
 Implement:
 
@@ -122,24 +115,23 @@ Implement:
 
 For each request:
 
-1. Authenticate the parent.
-2. Verify the guardian relationship.
-3. Load ordered progress records from MySQL.
-4. Return `progressUnavailable` when progress cannot be obtained.
-5. Generate a summary through the adapter.
-6. Validate and persist the summary.
-7. Return the frontend response envelope.
+1. Resolve the student context through the application boundary. Production authentication and guardian authorization are added in the final phase.
+2. Load ordered progress records from MySQL.
+3. Return `progressUnavailable` when progress cannot be obtained.
+4. Generate a summary through the adapter.
+5. Validate and persist the summary.
+6. Return the frontend response envelope.
 
 Coalesce overlapping requests for the same student progress version so the
 frontend cannot accidentally cause duplicate generator work.
 
 **Done when:** the success and `progressUnavailable` branches from the Track Child's Progress diagram pass HTTP and end-to-end tests.
 
-## Phase 8: Implement Recommendations
+## Phase 7: Implement Recommendations
 
 Implement `POST /api/students/:studentId/recommendations`:
 
-1. Authenticate and authorize the parent.
+1. Resolve the student context through the application boundary. Production authentication and authorization are added in the final phase.
 2. Load the student's latest summary.
 3. Return a public error when no summary exists.
 4. Generate recommendations through the external-service adapter.
@@ -148,29 +140,21 @@ Implement `POST /api/students/:studentId/recommendations`:
 
 **Done when:** recommendations are generated only after an explicit parent request and always reference their basis summary.
 
-## Phase 9: Implement Notification Preferences
+## Phase 8: Implement Notification Preferences
 
 Implement:
 
 - `GET /api/parents/:parentId/preferences`
 - `PUT /api/parents/:parentId/preferences`
 
-Validate parent ownership, enabled state, notification frequency, and recipient
-email. Test defaults, updates, invalid data, and cross-parent access.
+Validate enabled state, notification frequency, and recipient email. Parent
+ownership and cross-parent access checks are added in the final authentication
+and authorization phase. Test defaults, updates, and invalid data now; add
+access-control tests when that phase is integrated.
 
-**Done when:** a parent can safely configure their own schedule and recipient but cannot change another parent's settings.
+**Done when:** preference data validates and persists correctly; parent ownership checks are added in the final authentication and authorization phase.
 
-## Phase 10: Implement Production Authentication
-
-1. Implement login, verification, logout, sessions or tokens, and password hashing.
-2. Store password hashes only.
-3. Replace the development identity outside development mode.
-4. Preserve the authenticated-user type already consumed by middleware.
-5. Test expiry, revocation, invalid credentials, unverified accounts, and role restrictions.
-
-**Done when:** deployed environments cannot enable or fall back to the development identity.
-
-## Phase 11: Implement Data Ingestion
+## Phase 9: Implement Data Ingestion
 
 Add versioned staff/system endpoints for:
 
@@ -180,13 +164,14 @@ Add versioned staff/system endpoints for:
 - Adding progress records.
 - Correcting progress records.
 
-Require request validation, staff/system authorization, provenance, audit
-records, transactions, and idempotency keys. Progress writes update the current
+Require request validation, provenance, audit records, transactions, and
+idempotency keys. Staff/system authorization is added in the final
+authentication and authorization phase. Progress writes update the current
 progress version but do not generate summaries.
 
-**Done when:** repeated writes are safe, unauthorized writes are rejected, and every accepted mutation is auditable.
+**Done when:** repeated writes are safe, invalid requests are rejected, and every accepted mutation is auditable; staff/system authorization is added in the final phase.
 
-## Phase 12: Implement the Notification Worker
+## Phase 10: Implement the Notification Worker
 
 1. Use the worker clock to find due parent preferences.
 2. Create or claim one durable job for each parent-student pair.
@@ -202,7 +187,7 @@ fortnightly, monthly, retry, crash-recovery, and concurrent-worker scenarios.
 
 **Done when:** both branches in the Notify Parent sequence diagram pass end-to-end tests without a public notification-trigger route.
 
-## Phase 13: Connect Real Providers
+## Phase 11: Connect Real Providers
 
 1. Connect the summary and recommendation clients to the selected service endpoints.
 2. Connect the email adapter to the selected email provider.
@@ -212,7 +197,7 @@ fortnightly, monthly, retry, crash-recovery, and concurrent-worker scenarios.
 
 **Done when:** provider implementations can be replaced without changing controllers, application workflows, or domain entities.
 
-## Phase 14: Harden and Prepare for Deployment
+## Phase 12: Harden and Prepare for Deployment
 
 1. Add request IDs, structured logging, sensitive-data redaction, security headers, body limits, and rate limiting.
 2. Add MySQL readiness checks and worker operational health reporting.
@@ -224,6 +209,25 @@ fortnightly, monthly, retry, crash-recovery, and concurrent-worker scenarios.
 
 **Done when:** the system fails safely and observably during database outages,
 generator failures, email failures, malformed provider responses, and worker crashes.
+
+## Phase 13: Implement Authentication and Authorization
+
+Implement this phase after the remaining application workflows, providers, and
+deployment hardening are complete. The authentication and authorization
+implementation is intentionally owned and integrated with the groupmate's work.
+
+1. Agree on the authenticated-principal, password-hasher, token/session, and middleware contracts.
+2. Add authentication configuration, credential/session/verification migrations, and secret management.
+3. Implement signup if the final product requires a public account-creation flow.
+4. Implement login, verification, logout, password hashing, and session or token handling.
+5. Add authentication and authorization domain errors plus authentication, role, and guardian authorization middleware.
+6. Protect `/api/me`, student, preference, and ingestion routes with the agreed authorization rules.
+7. Replace any development identity or test-only principal in deployed environments.
+8. Test invalid credentials, expiry, revocation, unverified accounts, role restrictions, guardian restrictions, and session/token failures.
+
+**Done when:** deployed environments require the integrated authentication boundary,
+parents can access only their own students, and staff/system routes reject
+unauthorized callers.
 
 ## Public API Contract
 

@@ -15,7 +15,7 @@
 - Recorded the full implementation sequence in [`plan.md`](plan.md).
 - Added `.ts-jest/` to the backend ignore list.
 - Confirmed four-space indentation in the updated scaffold files.
-- Added `.env` loading and typed validation for API, MySQL, generator, email, authentication, and worker settings.
+- Added `.env` loading and typed validation for API, MySQL, generator, email, and worker settings.
 - Added separate API and worker composition containers.
 - Added tests for development defaults, valid production settings, missing production settings, malformed values, and container composition.
 - Verified the built API starts with validated configuration and returns HTTP 200 from `GET /api/health`.
@@ -26,6 +26,7 @@
 - Removed cross-origin middleware, configuration, and package dependencies from the real and mock APIs so the runtime matches that same-origin decision.
 - Implemented immutable value objects for account types, skill areas, email addresses, and notification frequencies.
 - Added repository ports for identity, parents, students, progress records, summaries, recommendations, preferences, email notifications, notification jobs, sessions, and audit events.
+- Deferred authentication configuration and route exposure so login, signup, password security, authentication, and authorization can be integrated in the final phase with the groupmate's implementation.
 
 ## Verification Evidence
 
@@ -39,7 +40,7 @@ npm run test:http
 npm run test:coverage
 ```
 
-Current Jest result: 5 test suites passed and 20 tests passed.
+Current Jest result: 5 test suites passed and 21 tests passed.
 
 ## Phase Tracking
 
@@ -50,16 +51,15 @@ Current Jest result: 5 test suites passed and 20 tests passed.
 | 2 | Build the domain and interfaces | In progress — Step 3 complete |
 | 3 | Create the MySQL schema | Pending |
 | 4 | Implement MySQL repositories | Pending |
-| 5 | Add development identity and parent context | Pending |
-| 6 | Implement external generator boundaries | Pending |
-| 7 | Implement Track Progress and Summary | Pending |
-| 8 | Implement recommendations | Pending |
-| 9 | Implement notification preferences | Pending |
-| 10 | Implement production authentication | Pending |
-| 11 | Implement data ingestion | Pending |
-| 12 | Implement the notification worker | Pending |
-| 13 | Connect real providers | Pending |
-| 14 | Harden and prepare for deployment | Pending |
+| 5 | Implement external generator boundaries | Pending |
+| 6 | Implement Track Progress and Summary | Pending |
+| 7 | Implement recommendations | Pending |
+| 8 | Implement notification preferences | Pending |
+| 9 | Implement data ingestion | Pending |
+| 10 | Implement the notification worker | Pending |
+| 11 | Connect real providers | Pending |
+| 12 | Harden and prepare for deployment | Pending |
+| 13 | Implement authentication and authorization | Deferred to final phase |
 
 ## Progress Rules
 

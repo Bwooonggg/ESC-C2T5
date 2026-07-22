@@ -23,4 +23,14 @@ describe('health routes', () => {
             error: 'Database readiness is not configured yet.',
         })
     })
+
+    it('keeps deferred authentication routes unmounted', async () => {
+        const response = await request(createApiApp()).post('/api/auth/login')
+
+        expect(response.status).toBe(404)
+        expect(response.body).toEqual({
+            ok: false,
+            error: 'Not found.',
+        })
+    })
 })

@@ -517,8 +517,10 @@ Reads and validates environment configuration once during startup. Required conf
 
 `environment.ts` loads `.env` with `dotenv` and validates values with `zod`.
 Development and test environments receive local defaults; production rejects
-missing MySQL, generator, email-provider, or authentication settings. Public
-host routing is deployment configuration, not an application origin setting.
+missing MySQL, generator, and email-provider settings. Authentication secrets,
+session settings, and related route configuration are introduced in the final
+authentication phase. Public host routing is deployment configuration, not an
+application origin setting.
 Application code receives the resulting typed configuration through its
 composition container and must not read `process.env` directly.
 
@@ -540,6 +542,9 @@ Groups behavior by feature:
 - `preferences`: notification settings.
 - `ingestion`: future staff/system data entry.
 - `notifications`: clock-triggered notification processing without HTTP routes.
+
+The `auth` module is reserved for the final authentication and authorization
+phase. Its routes and middleware remain unmounted until that integration.
 
 Inside a module:
 

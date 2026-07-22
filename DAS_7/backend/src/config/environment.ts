@@ -27,10 +27,6 @@ export interface AppConfig {
         readonly providerUrl?: string
         readonly providerApiKey?: string
     }
-    readonly auth: {
-        readonly sessionSecret: string
-        readonly sessionTtlMinutes: number
-    }
     readonly worker: {
         readonly enabled: boolean
         readonly pollIntervalMs: number
@@ -131,13 +127,6 @@ const rawEnvironmentSchema = z.object({
     RECOMMENDATION_GENERATOR_API_KEY: optionalStringSchema,
     EMAIL_PROVIDER_URL: optionalUrlSchema,
     EMAIL_PROVIDER_API_KEY: optionalStringSchema,
-    AUTH_SESSION_SECRET: optionalStringSchema,
-    AUTH_SESSION_TTL_MINUTES: z.coerce
-        .number()
-        .int()
-        .min(1)
-        .max(10_080)
-        .default(60),
     WORKER_ENABLED: booleanSchema,
     WORKER_POLL_INTERVAL_MS: z.coerce
         .number()
@@ -149,9 +138,6 @@ const rawEnvironmentSchema = z.object({
 })
 
 type RawEnvironment = z.infer<typeof rawEnvironmentSchema>
-
-const developmentSessionSecret =
-    'development-only-session-secret-change-me'
 
 export function loadConfig(
     environment: NodeJS.ProcessEnv = process.env,
@@ -193,21 +179,11 @@ function getProductionIssues(
         'SUMMARY_GENERATOR_URL',
         'RECOMMENDATION_GENERATOR_URL',
         'EMAIL_PROVIDER_URL',
-        'AUTH_SESSION_SECRET',
     ] as const
 
     const issues = required
         .filter((key) => !hasValue(environment[key]))
         .map((key) => `${key} is required when NODE_ENV=production`)
-
-    if (
-        raw.AUTH_SESSION_SECRET !== undefined &&
-        raw.AUTH_SESSION_SECRET.length < 32
-    ) {
-        issues.push(
-            'AUTH_SESSION_SECRET must be at least 32 characters in production',
-        )
-    }
 
     return issues
 }
@@ -239,11 +215,6 @@ function toAppConfig(raw: RawEnvironment): AppConfig {
         email: {
             providerUrl: raw.EMAIL_PROVIDER_URL,
             providerApiKey: raw.EMAIL_PROVIDER_API_KEY,
-        },
-        auth: {
-            sessionSecret:
-                raw.AUTH_SESSION_SECRET ?? developmentSessionSecret,
-            sessionTtlMinutes: raw.AUTH_SESSION_TTL_MINUTES,
         },
         worker: {
             enabled: raw.WORKER_ENABLED,

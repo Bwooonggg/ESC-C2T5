@@ -56,8 +56,8 @@ validates environment values at process startup through
 
 Development and test runs use safe local defaults. Production requires explicit
 values for the MySQL connection, summary generator, recommendation generator,
-email provider, and authentication session secret. The session secret must
-contain at least 32 characters in production.
+and email provider. Authentication configuration is introduced with the final
+authentication and authorization phase.
 
 The API and worker read the same validated configuration through separate
 composition containers. The worker is disabled by default until notification
@@ -78,4 +78,4 @@ the existing Vite proxy to preserve that behavior.
   handlers currently return a JSON `501 Not implemented` envelope.
 - MySQL, authentication, generator services, email delivery, and worker job
   processing are intentionally reserved for their respective implementation
-  slices.
+  slices. Authentication routes remain unmounted until the final phase.

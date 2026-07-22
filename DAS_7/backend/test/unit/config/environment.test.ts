@@ -17,9 +17,6 @@ describe('loadConfig', () => {
             database: 'das7',
             user: 'das7',
         })
-        expect(config.auth.sessionSecret).toBe(
-            'development-only-session-secret-change-me',
-        )
         expect(config.worker).toEqual({
             enabled: false,
             pollIntervalMs: 60_000,
@@ -40,8 +37,6 @@ describe('loadConfig', () => {
             RECOMMENDATION_GENERATOR_URL:
                 'https://recommendation.example.com',
             EMAIL_PROVIDER_URL: 'https://email.example.com',
-            AUTH_SESSION_SECRET: 'a'.repeat(32),
-            AUTH_SESSION_TTL_MINUTES: '120',
             WORKER_ENABLED: 'true',
             WORKER_POLL_INTERVAL_MS: '30000',
             NOTIFICATION_TIMEZONE: 'Asia/Singapore',
@@ -56,10 +51,6 @@ describe('loadConfig', () => {
                 recommendationUrl: 'https://recommendation.example.com',
             },
             email: { providerUrl: 'https://email.example.com' },
-            auth: {
-                sessionSecret: 'a'.repeat(32),
-                sessionTtlMinutes: 120,
-            },
             worker: {
                 enabled: true,
                 pollIntervalMs: 30_000,
@@ -79,7 +70,6 @@ describe('loadConfig', () => {
                 'MYSQL_PASSWORD is required when NODE_ENV=production',
                 'SUMMARY_GENERATOR_URL is required when NODE_ENV=production',
                 'EMAIL_PROVIDER_URL is required when NODE_ENV=production',
-                'AUTH_SESSION_SECRET is required when NODE_ENV=production',
             ]),
         )
     })
