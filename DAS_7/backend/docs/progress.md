@@ -2,9 +2,9 @@
 
 ## Current Status
 
-**Phase 2 — Build the Domain and Interfaces: complete**
+**Phase 3 — Create the MySQL schema: in progress**
 
-**Next:** Phase 3 — Create the MySQL schema
+**Next:** Phase 3, step 5 — Configure the migration runner and database command
 
 ## Completed Work
 
@@ -30,6 +30,32 @@
 - Deferred authentication configuration and route exposure so login, signup, password security, authentication, and authorization can be integrated in the final phase with the groupmate's implementation.
 - Added domain error types for validation, unavailable progress, and unavailable summaries.
 - Expanded domain tests for invalid fields, value-object requirements, boundary scores, immutable relationship data, and delivery-state invariants.
+- Added the Phase 3 relational schema migrations for users, parents, students,
+  guardian relationships, progress records, summaries, recommendations,
+  notification preferences, email notifications, notification jobs, audit
+  events, and idempotency records.
+- Added database constraints for required values, account and value-object
+  allow-lists, score bounds, summary ownership, guardian job ownership, and
+  notification delivery state.
+- Aligned the guardian relationship with the class diagram's many-to-many
+  `1..*` logical minimum and changed destructive foreign-key cascades to
+  preserve parent, student, job, and audit history.
+- Added transactional progress-version state on students, allowed repeated
+  summary snapshots for an unchanged version, and linked notification jobs to
+  their generated summary and email output.
+- Documented snapshot/version revalidation so concurrent progress writes cannot
+  leave a generated summary claiming the wrong source version.
+- Added notification failure and retry timestamps, stable schedule semantics,
+  scoped idempotency keys, and idempotency lifecycle constraints.
+- Restricted progress scores to at most two decimal places in the domain and
+  schema, with Jest coverage for the precision rule.
+- Added database checks for non-empty identifiers and normalized email values
+  where the domain already requires them.
+- Documented the table mapping and relationship decisions in
+  [`database-schema.md`](database-schema.md).
+- Added `0011_add_query_indexes.sql` for guardian reverse lookups, ordered
+  progress and summary reads, recommendation history, notification queues,
+  audit investigations, and idempotency cleanup.
 
 ## Verification Evidence
 
@@ -43,7 +69,10 @@ npm run test:http
 npm run test:coverage
 ```
 
-Current Jest result: 6 test suites passed and 29 tests passed.
+Current Jest result: 6 test suites passed and 30 tests passed.
+
+The index migration has been reviewed statically. Live migration application
+remains Phase 3 step 6 because the local MySQL service is currently stopped.
 
 ## Phase Tracking
 
@@ -52,7 +81,7 @@ Current Jest result: 6 test suites passed and 29 tests passed.
 | 0 | Verify the scaffold | Done |
 | 1 | Establish configuration | Done |
 | 2 | Build the domain and interfaces | Done |
-| 3 | Create the MySQL schema | Next |
+| 3 | Create the MySQL schema | In progress — schema foundation complete |
 | 4 | Implement MySQL repositories | Pending |
 | 5 | Implement external generator boundaries | Pending |
 | 6 | Implement Track Progress and Summary | Pending |
@@ -81,3 +110,14 @@ Current Jest result: 6 test suites passed and 29 tests passed.
 | 4 | Define external and technical ports | Done |
 | 5 | Add domain errors | Done |
 | 6 | Test remaining entity invariants and failure cases | Done |
+
+## Phase 3 Step Tracking
+
+| Step | Description | Status |
+| --- | --- | --- |
+| 1 | Map domain entities and supporting records to tables | Done |
+| 2 | Define relationships and foreign keys | Done |
+| 3 | Add database-level validity constraints | Done |
+| 4 | Add query-driven secondary indexes | Done |
+| 5 | Configure the migration runner and database command | Next |
+| 6 | Apply migrations to an isolated MySQL database and add integration coverage | Pending |

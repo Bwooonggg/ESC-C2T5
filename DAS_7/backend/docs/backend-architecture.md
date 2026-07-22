@@ -85,8 +85,8 @@ The supplied UML diagrams are the primary source of truth for domain ownership a
 |---|---|
 | `User` | Domain entity and `users` table. Holds identity, contact information, credential hash, account type, and verification state. |
 | `Parent` | Domain entity specializing `User`; represented by a `parents` row referencing a `users` row. |
-| `Student` | Domain entity and `students` table. |
-| Guardian association | `parent_students` join table. |
+| `Student` | Domain entity and `students` table. The persistence-facing `current_progress_version` snapshot marker is operational metadata and is not a new UML relationship. |
+| Guardian association | `parent_students` many-to-many join table. The class diagram's logical `1..*` minimum for both parents and students is enforced by the application workflow. |
 | `ProgressRecord` | Domain entity and `progress_records` table. |
 | `Summary` | Domain entity and `summaries` table. Belongs to a student and records its source progress version. |
 | `Recommendation` | Domain entity and `recommendations` table. References both the advised student and basis summary. |
@@ -95,9 +95,10 @@ The supplied UML diagrams are the primary source of truth for domain ownership a
 Additional supporting entities are permitted where required by the frontend or operational needs:
 
 - `NotificationPreference`
-- Authentication sessions and verification codes
+- Authentication sessions and verification codes (final authentication phase)
 - Durable notification jobs
 - Audit events
+- Idempotency records for ingestion mutations
 
 These additions must not replace or reorder the interactions in the supplied diagrams.
 
@@ -116,7 +117,13 @@ The backend follows this sequence:
 9. If the parent explicitly requests recommendations, the model loads the latest summary and calls `RecommendationGeneratorService` through the adapter.
 10. If progress cannot be fetched, the backend returns `progressUnavailable` in the existing error envelope.
 
-The frontend currently issues overlapping summary and track-progress requests. Both requests invoke the same summary-generation application operation. The adapter may coalesce concurrent requests or reuse a result for the same student progress version, preventing duplicate external calls while preserving the diagram's logical interaction.
+The frontend currently issues overlapping summary and track-progress requests. Both requests invoke the same summary-generation application operation. The adapter may coalesce concurrent requests or reuse a result for the same student progress version, preventing duplicate external calls while preserving the diagram's logical interaction. This optimization must not make `(student, source progress version)` unique: a scheduled notification may intentionally create a fresh summary snapshot from unchanged progress.
+
+The application reads the student's progress records together with its current
+progress-version marker. It carries that marker into the generated `Summary`
+and verifies the marker has not changed before persisting the result. If a
+progress mutation wins the race while the external generator is running, the
+stale result is discarded or regenerated for the new version.
 
 ### 3.3 Notify Parent flow
 
@@ -171,7 +178,7 @@ TrackProgressController -> TrackProgressModel
 | Mount point | Router | Responsibility |
 |---|---|---|
 | `/health` | `health.routes.ts` | Liveness and readiness. |
-| `/auth` | `auth.routes.ts` | Login, verification, and logout. |
+| `/auth` (deferred) | `auth.routes.ts` | Reserved for login, verification, and logout during the final authentication phase. |
 | `/` | `parent.routes.ts` | Current-parent route such as `/me`. |
 | `/students` | `track-progress.routes.ts` | Progress, summary, and recommendation routes. |
 | `/parents` | `preference.routes.ts` | Notification preferences. |
@@ -194,6 +201,10 @@ Requests pass through middleware in this order:
 9. Global error handler.
 
 Authentication must occur before authorization. The global error handler must be installed last.
+
+In the current implementation, the authentication router and authentication/
+authorization middleware are intentionally unmounted. They are introduced in
+the final authentication integration phase.
 
 ## 5. Public API Contract
 
@@ -238,7 +249,7 @@ Staff and trusted-system accounts may use versioned routes such as:
 - `POST /api/v1/students/:studentId/progress-records`
 - `PATCH /api/v1/students/:studentId/progress-records/:recordId`
 
-Progress writes persist or correct `ProgressRecord` data and invalidate the current progress version. They do not generate summaries. Summary generation remains part of Track Progress, Request Summary, and Notify Parent.
+Progress writes persist or correct `ProgressRecord` data and update the student's `current_progress_version` in the same transaction. They do not generate summaries. Summary generation remains part of Track Progress, Request Summary, and Notify Parent.
 
 Mutating requests require validation, staff/system authorization, provenance, audit recording, and an idempotency key.
 
@@ -273,9 +284,10 @@ backend/
 |   |   |-- 0005_create_recommendations.sql
 |   |   |-- 0006_create_notification_preferences.sql
 |   |   |-- 0007_create_email_notifications.sql
-|   |   |-- 0008_create_auth_sessions.sql
-|   |   |-- 0009_create_notification_jobs.sql
-|   |   `-- 0010_create_audit_events.sql
+|   |   |-- 0008_create_notification_jobs.sql
+|   |   |-- 0009_create_audit_events.sql
+|   |   |-- 0010_create_idempotency_records.sql
+|   |   `-- 0011_add_query_indexes.sql
 |   `-- seeds/
 |       |-- skill-areas.sql
 |       `-- development-data.sql
@@ -600,6 +612,10 @@ suites run serially so they cannot mutate shared test state concurrently.
 
 ## 8. Database and Repository Rules
 
+The initial table mapping and constraint decisions are recorded in
+[`database-schema.md`](database-schema.md). The following rules apply to the
+SQL migrations and their future repository implementations:
+
 - Use MySQL 8.x with InnoDB.
 - Use `mysql2/promise` with one configured pool per process.
 - Use parameterized statements for all dynamic values.
@@ -607,9 +623,15 @@ suites run serially so they cannot mutate shared test state concurrently.
 - Use foreign keys for diagram relationships.
 - Use transactions for related database changes.
 - Do not keep a transaction open while calling a generator or email provider.
+- Normalize email values at the domain boundary and reject non-normalized email
+  values at the database boundary.
+- Keep recurring read and worker-query indexes in a dedicated numbered
+  migration, with each index tied to a documented query shape.
 - Store immutable summary history rather than overwriting prior summaries.
+- Allow multiple summary snapshots for the same student and source progress version when separate requests or schedules generate them.
 - Link each recommendation to its basis summary.
 - Link each email notification to one summary and one receiving parent.
+- Link each durable notification job to its generated summary and email notification when processing completes; keep the original `scheduled_for` value separate from `retry_at`.
 - Record staff/system mutations in `audit_events`.
 
 ## 9. External Service Boundaries
@@ -643,7 +665,7 @@ The first version uses Singapore time:
 - Fortnightly: Monday at 09:00 every fourteen days.
 - Monthly: first day of the month at 09:00.
 
-The worker safely claims due rows so multiple workers cannot send the same notification. A lease allows recovery if a worker crashes. Provider failures follow a capped retry policy and remain recorded for investigation after retries are exhausted.
+The worker safely claims due rows so multiple workers cannot send the same notification. A lease allows recovery if a worker crashes. The original `scheduled_for` time remains stable while transient provider failures use a separate `retry_at` and capped backoff. Each failure records `failed_at` and `last_error` for investigation, including after retries are exhausted.
 
 The schedule applies per parent preference, but execution remains student-scoped to follow the sequence diagram.
 

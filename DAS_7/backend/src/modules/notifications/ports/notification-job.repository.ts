@@ -8,10 +8,16 @@ export interface NotificationJob {
     readonly jobId: string
     readonly parentId: string
     readonly studentId: string
+    readonly summaryId: string | null
+    readonly emailNotificationId: string | null
     readonly scheduledFor: Date
     readonly status: NotificationJobStatus
     readonly attempts: number
     readonly leaseExpiresAt: Date | null
+    readonly completedAt: Date | null
+    readonly failedAt: Date | null
+    readonly retryAt: Date | null
+    readonly lastError: string | null
 }
 
 export interface NotificationJobRepository {

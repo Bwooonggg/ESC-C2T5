@@ -81,6 +81,7 @@ describe('domain entities', () => {
         })
 
         expect(student.studentId).toBe(progress.studentId)
+        expect(student.currentProgressVersion).toBe('v0')
         expect(progress.score).toBe(84)
     })
 
@@ -95,7 +96,36 @@ describe('domain entities', () => {
                     score: 101,
                     notes: '',
                 }),
-        ).toThrow('score must be a number between 0 and 100.')
+        ).toThrow(
+            'score must be a number between 0 and 100 with at most two decimal places.',
+        )
+    })
+
+    it('restricts progress scores to two decimal places', () => {
+        expect(
+            new ProgressRecord({
+                recordId: 'r-two-decimals',
+                studentId: 's1',
+                date,
+                skillArea: new SkillArea('Reading Fluency'),
+                score: 84.12,
+                notes: '',
+            }).score,
+        ).toBe(84.12)
+
+        expect(
+            () =>
+                new ProgressRecord({
+                    recordId: 'r-three-decimals',
+                    studentId: 's1',
+                    date,
+                    skillArea: new SkillArea('Reading Fluency'),
+                    score: 84.123,
+                    notes: '',
+                }),
+        ).toThrow(
+            'score must be a number between 0 and 100 with at most two decimal places.',
+        )
     })
 
     it('accepts progress score boundaries', () => {

@@ -1,6 +1,6 @@
 # DAS 7 Backend Implementation Plan
 
-**Status:** Approved implementation sequence; Phase 2 complete; Phase 3 next
+**Status:** Approved implementation sequence; Phase 3 in progress; schema foundation complete
 
 **Testing stack:** Jest, `ts-jest`, and Supertest
 
@@ -64,25 +64,54 @@ Express, MySQL, or external services.
 
 ## Phase 3: Create the MySQL Schema
 
+The schema foundation for steps 1–3 is implemented in
+[`database-schema.md`](database-schema.md) and the plain SQL files under
+`db/migrations/`. These files define the domain tables, direct relationships,
+foreign keys, database-level validity constraints, and query-driven secondary
+indexes. The migration runner remains as the next step. The many-to-many guardian
+relationship uses foreign keys to prevent invalid pairs; its class-diagram
+`1..*` minimum on both sides is completed by application workflows because
+ordinary foreign keys cannot enforce a minimum child count.
+
+### Phase 3 step tracking
+
+1. **DONE:** Map domain entities and supporting records to tables.
+2. **DONE:** Define parent-student, student-record, summary, recommendation,
+   notification, job, and audit relationships with foreign keys.
+3. **DONE:** Add required-field, uniqueness, normalization, allow-list, range,
+   and state consistency constraints.
+4. **DONE:** Add query-driven secondary indexes in
+   `0011_add_query_indexes.sql`.
+5. Configure the migration runner and database command.
+6. Apply the migrations to an isolated MySQL database and add integration
+   coverage.
+
 Create plain SQL migrations in this order:
 
 1. Users and parents.
-2. Students and parent-student guardian relationships.
+2. Students, their current progress versions, and parent-student guardian
+   relationships.
 3. Progress records.
-4. Summaries and their source progress version.
+4. Summaries and their source progress-version snapshots.
 5. Recommendations and their basis summary.
 6. Notification preferences.
 7. Email notifications.
 8. Durable notification jobs.
-9. Audit events and idempotency records.
+9. Audit events.
+10. Idempotency records.
+11. Query-driven secondary indexes.
 
-Credential, verification, and session tables are added by the final
-authentication phase rather than this initial schema pass.
+Authentication behavior, secret management, verification workflows, and
+session tables are added by the final authentication phase. The initial
+`users` table retains `password_hash` and `is_verified` because they are
+structural fields in the existing `User` domain entity.
 
 Use MySQL 8, InnoDB, foreign keys, UTC `DATETIME(3)` timestamps, and `DATE` for
 dates without a time. Test migration application against an isolated database.
 
-**Done when:** a blank test database can be migrated reproducibly and all diagram relationships are enforced.
+**Done when:** a blank test database can be migrated reproducibly, all
+database-enforceable diagram relationships are enforced, and application
+workflows maintain the guardian relationship's `1..*` minimum.
 
 ## Phase 4: Implement MySQL Repositories
 
@@ -116,10 +145,13 @@ Implement:
 For each request:
 
 1. Resolve the student context through the application boundary. Production authentication and guardian authorization are added in the final phase.
-2. Load ordered progress records from MySQL.
+2. Load ordered progress records and the student's current progress-version
+   marker from MySQL as one snapshot.
 3. Return `progressUnavailable` when progress cannot be obtained.
 4. Generate a summary through the adapter.
-5. Validate and persist the summary.
+5. Validate the generated summary, verify the progress version is still current,
+   and persist it; regenerate if a concurrent progress write made the snapshot
+   stale.
 6. Return the frontend response envelope.
 
 Coalesce overlapping requests for the same student progress version so the
@@ -175,11 +207,18 @@ progress version but do not generate summaries.
 
 1. Use the worker clock to find due parent preferences.
 2. Create or claim one durable job for each parent-student pair.
-3. Load that student's progress records.
-4. Generate and persist a fresh summary.
-5. Create an `EmailNotification` referencing one parent and one summary.
+3. Load that student's progress records and current progress-version marker as
+   one snapshot.
+4. Generate a fresh summary, revalidate the version snapshot, and persist it
+   only if it is still current; regenerate if a concurrent progress write made
+   it stale.
+5. Create an `EmailNotification` referencing one parent and one summary, then
+   attach its summary and notification IDs to the durable job in the same
+   transaction.
 6. Send it through the email adapter.
-7. Persist success or failure and retry only transient failures with capped backoff.
+7. Persist success or failure with `failed_at`, `retry_at`, and `last_error`,
+   keeping the original schedule time stable; retry only transient failures
+   with capped backoff.
 8. Use leases so another worker can recover work after a crash without duplicate delivery.
 
 Use Jest fake timers and a fixed clock for schedule tests. Test weekly,
