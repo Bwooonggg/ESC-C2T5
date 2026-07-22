@@ -2,9 +2,9 @@
 
 ## Current Status
 
-**Phase 1 — Establish Configuration: complete**
+**Phase 2 — Build the Domain and Interfaces: in progress**
 
-**Next:** Phase 2 — Build the Domain and Interfaces
+**Next:** Phase 2, Step 2 — Add value objects
 
 ## Completed Work
 
@@ -20,6 +20,8 @@
 - Added tests for development defaults, valid production settings, missing production settings, malformed values, and container composition.
 - Verified the built API starts with validated configuration and returns HTTP 200 from `GET /api/health`.
 - Verified the worker starts with the worker disabled by default.
+- Implemented the Phase 2 domain entities with basic state and relationship invariants.
+- Added unit tests for entity construction, relationships, invalid scores, and email delivery state.
 
 ## Verification Evidence
 
@@ -33,7 +35,7 @@ npm run test:http
 npm run test:coverage
 ```
 
-Current Jest result: 3 test suites passed and 7 tests passed.
+Current Jest result: 4 test suites passed and 15 tests passed.
 
 ## Phase Tracking
 
@@ -41,7 +43,7 @@ Current Jest result: 3 test suites passed and 7 tests passed.
 | --- | --- | --- |
 | 0 | Verify the scaffold | Done |
 | 1 | Establish configuration | Done |
-| 2 | Build the domain and interfaces | Next |
+| 2 | Build the domain and interfaces | In progress — Step 1 complete |
 | 3 | Create the MySQL schema | Pending |
 | 4 | Implement MySQL repositories | Pending |
 | 5 | Add development identity and parent context | Pending |
@@ -61,3 +63,14 @@ Current Jest result: 3 test suites passed and 7 tests passed.
 - Record the verification commands for each completed phase.
 - Keep only one phase marked `Next`.
 - Update [`plan.md`](plan.md) when the approved implementation sequence changes.
+
+## Phase 2 Step Tracking
+
+| Step | Description | Status |
+| --- | --- | --- |
+| 1 | Implement domain entities | Done |
+| 2 | Add value objects | Next |
+| 3 | Define repository interfaces | Pending |
+| 4 | Define external and technical ports | Pending |
+| 5 | Add domain errors | Pending |
+| 6 | Test remaining entity invariants and failure cases | Pending |

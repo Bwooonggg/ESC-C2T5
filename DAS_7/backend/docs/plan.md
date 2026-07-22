@@ -1,6 +1,6 @@
 # DAS 7 Backend Implementation Plan
 
-**Status:** Approved implementation sequence; Phase 1 complete
+**Status:** Approved implementation sequence; Phase 2 in progress
 
 **Testing stack:** Jest, `ts-jest`, and Supertest
 
@@ -40,9 +40,16 @@ instead of reading `process.env` directly.
 
 **Done when:** neither process reads unvalidated environment variables outside the configuration layer.
 
-## Phase 2: Build the Domain and Interfaces
+## Phase 2: Build the Domain and Interfaces — IN PROGRESS
 
-1. Implement `User`, `Parent`, `Student`, `ProgressRecord`, `Summary`, `Recommendation`, `EmailNotification`, and `NotificationPreference`.
+### Step 1 — DONE: Implement the domain entities
+
+The diagram entities now exist as backend-owned classes with basic invariants:
+`User`, `Parent`, `Student`, `ProgressRecord`, `Summary`, `Recommendation`,
+`EmailNotification`, and `NotificationPreference`. Their tests do not require
+Express, MySQL, or external services.
+
+1. [DONE] Implement `User`, `Parent`, `Student`, `ProgressRecord`, `Summary`, `Recommendation`, `EmailNotification`, and `NotificationPreference`.
 2. Add value objects for account type, skill area, email address, and notification frequency.
 3. Define repository interfaces for each persistence requirement.
 4. Define ports for summary generation, recommendation generation, email delivery, password hashing, tokens, and time.
