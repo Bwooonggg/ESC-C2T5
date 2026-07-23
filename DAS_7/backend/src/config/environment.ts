@@ -17,6 +17,12 @@ export interface AppConfig {
         readonly user: string
         readonly password: string
     }
+    readonly supabase: {
+        readonly url?: string
+        readonly publishableKey?: string
+        readonly secretKey?: string
+        readonly schema: string
+    }
     readonly generators: {
         readonly summaryUrl?: string
         readonly recommendationUrl?: string
@@ -123,6 +129,10 @@ const rawEnvironmentSchema = z.object({
     MYSQL_DATABASE: z.string().trim().min(1).default('das7'),
     MYSQL_USER: z.string().trim().min(1).default('das7'),
     MYSQL_PASSWORD: z.string().default('change-me'),
+    SUPABASE_URL: optionalUrlSchema,
+    SUPABASE_PUBLISHABLE_KEY: optionalStringSchema,
+    SUPABASE_SECRET_KEY: optionalStringSchema,
+    SUPABASE_SCHEMA: z.string().trim().min(1).default('insight'),
     SUMMARY_GENERATOR_URL: optionalUrlSchema,
     RECOMMENDATION_GENERATOR_URL: optionalUrlSchema,
     SUMMARY_GENERATOR_API_KEY: optionalStringSchema,
@@ -219,6 +229,12 @@ function toAppConfig(raw: RawEnvironment): AppConfig {
             database: raw.MYSQL_DATABASE,
             user: raw.MYSQL_USER,
             password: raw.MYSQL_PASSWORD,
+        },
+        supabase: {
+            url: raw.SUPABASE_URL,
+            publishableKey: raw.SUPABASE_PUBLISHABLE_KEY,
+            secretKey: raw.SUPABASE_SECRET_KEY,
+            schema: raw.SUPABASE_SCHEMA,
         },
         generators: {
             summaryUrl: raw.SUMMARY_GENERATOR_URL,

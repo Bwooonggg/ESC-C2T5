@@ -2,18 +2,26 @@
 
 ## Current Status
 
-**Architecture revision:** Planned, not started
+**Architecture revision:** R1 and R2 complete; R3 next
 
-**Next work:** Revision Phase R1 in [`revision-plan.md`](revision-plan.md)
+**Next work:** Revision Phase R3 in [`revision-plan.md`](revision-plan.md)
 
 **Feature plan:** Paused until the complete revision plan passes
 
 The target architecture now uses Supabase for PostgreSQL and Auth integration,
 a provider-neutral online LLM boundary, and a separate DAS 7 API and worker.
 
-The architecture and implementation documents have been revised. No Supabase
-implementation, MySQL removal, identity refactor, or routing change has been
-performed yet.
+Implementation and the later dedicated testing phase use a Supabase-hosted
+development project. No local Supabase database is planned. The production
+project remains unlinked until the final production handoff.
+
+Existing tests remain as the pre-revision baseline. New or substantially
+rewritten permanent test files are deferred until all revision and feature
+implementation phases are complete.
+
+The version-controlled Supabase CLI foundation is now present. No Supabase
+project has been linked, no remote migration has been pushed, and MySQL
+removal, identity refactoring, and routing changes have not started.
 
 ## Why the Plan Is Paused
 
@@ -112,6 +120,87 @@ Recorded results:
 These are historical baseline results, not evidence that the Supabase target
 has been implemented.
 
+## Revision R1 Verification
+
+R1 captured the current implementation baseline and identified the work that
+must be replaced or revalidated during the Supabase revision.
+
+### Environment
+
+- Node.js: `v24.8.0`
+- npm: `11.16.0`
+- Installed package tree recorded with `npm ls --depth=0`.
+
+### Database-free verification
+
+The following checks passed:
+
+```powershell
+npm run typecheck
+npm run build
+npm test
+npm run test:http
+```
+
+Results:
+
+- 17 Jest suites passed.
+- 82 tests passed.
+- 4 HTTP suites passed.
+- 16 HTTP tests passed.
+
+### Current database integration verification
+
+After the MySQL service was enabled, `npm run test:integration` passed:
+
+- 3 MySQL integration suites passed.
+- 12 MySQL integration tests passed.
+
+The earlier `ECONNREFUSED 127.0.0.1:3306` result was an environment outage,
+not a test failure. MySQL integration will eventually be replaced by tests
+against the hosted Supabase development project during the dedicated testing
+phase.
+
+### Impact inventory
+
+- MySQL coupling exists in `mysql2`, MySQL configuration, the API container,
+  migration entrypoint, MySQL infrastructure, SQL migrations, and MySQL unit
+  and integration tests.
+- Local identity coupling exists in the `User` entity, `AccountType`, user and
+  session ports, credential-related configuration/mappers, and tests.
+- Express currently mounts the router under `/api`; the target service-local
+  routes must instead rely on Traefik's `/api/insights` prefix stripping.
+- Summary and recommendation generation currently use the separate generator
+  adapter/client hierarchy and service-specific configuration; this will be
+  refactored to a shared provider-neutral LLM client boundary.
+- At the R1 baseline, no Supabase directory, dependency, client, or migration
+  existed.
+
+R1's baseline and impact-inventory gate is complete. The database-backed
+baseline is now reproducible with the MySQL service enabled and does not change
+the approved revision sequence.
+
+## Revision R2 Progress
+
+The implementation portion of R2 is complete:
+
+- Exact-pinned `@supabase/supabase-js` and `supabase` CLI packages are installed.
+- The project-pinned CLI reports version `2.109.1`.
+- `supabase/config.toml` is committed to the project structure and targets the
+  future `insight` schema.
+- Local Supabase seeding is disabled; no `seed.sql` was created.
+- Migration and generated-type directories are tracked without adding test
+  files.
+- Supabase environment fields and hosted-project CLI scripts are available.
+- The existing typecheck, build, and 82-test Jest baseline still pass.
+
+The CLI is authenticated and linked to the hosted project now designated for
+DAS7. The eight migration records from the previous project were repaired as
+reverted in the migration-history table only. The old `private` and `test`
+tables remain untouched and have zero estimated rows. Linked migration status
+and the dry-run push both succeed; no DAS7 migration, schema, or data has been
+applied yet.
+
 ## Documentation Pivot
 
 | Document | Status |
@@ -126,13 +215,13 @@ has been implemented.
 
 | Revision phase | Description | Status |
 | --- | --- | --- |
-| R1 | Capture the baseline and establish revision safety gates | Pending |
-| R2 | Add the local Supabase foundation and configuration | Pending |
+| R1 | Capture the baseline and establish revision safety gates | Done |
+| R2 | Add the hosted Supabase development foundation and configuration | Done |
 | R3 | Create the PostgreSQL `insight` schema and RPCs | Pending |
 | R4 | Refactor identity ownership and the domain boundary | Pending |
 | R5 | Implement Supabase clients, mappers, repositories, and readiness | Pending |
 | R6 | Integrate JWT verification and gateway-aligned routing | Pending |
-| R7 | Restore existing workflows and tests on Supabase | Pending |
+| R7 | Restore existing workflows on Supabase | Pending |
 | R8 | Refactor generator infrastructure to the shared LLM boundary | Pending |
 | R9 | Remove MySQL and obsolete authentication infrastructure | Pending |
 | R10 | Complete revision verification and documentation | Pending |
@@ -147,7 +236,8 @@ These phases remain blocked until R1 through R10 are complete.
 | 10 | Connect the online LLM provider | Blocked by revision |
 | 11 | Notification worker and email provider | Blocked by revision |
 | 12 | Packaging and operational hardening | Blocked by revision |
-| 13 | Cross-team integration and final acceptance | Blocked by revision |
+| 13 | Dedicated testing and verification | Blocked by revision |
+| 14 | Cross-team integration and production handoff | Blocked by revision |
 
 Authentication lifecycle implementation and frontend implementation are not
 DAS 7 phases.
@@ -159,6 +249,8 @@ DAS 7 phases.
 - Do not mark a revision phase done until its verification gate passes.
 - Record commands and test results under the completed revision phase.
 - Preserve existing behavior before deleting its superseded implementation.
+- Do not add or substantially rewrite permanent test files before the dedicated
+  testing phase; record cases in the testing backlog instead.
 - Update this file whenever a revision or feature phase is completed.
 - Do not add completion or update dates.
 - Update [`revision-plan.md`](revision-plan.md) or [`plan.md`](plan.md) when the

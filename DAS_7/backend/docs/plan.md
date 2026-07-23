@@ -6,6 +6,10 @@
 
 **Testing stack:** Jest, `ts-jest`, and Supertest
 
+**Testing timing:** Preserve existing tests, but defer new or substantially
+rewritten permanent test files until Phase 13 after Phases 9 through 12 are
+implemented.
+
 ## 1. How to Use This Plan
 
 The original implementation completed Phases 0 through 8 against MySQL. The
@@ -22,9 +26,15 @@ revision will:
 - Align internal routes with the `/api/insights` gateway prefix.
 - Replace the two generator-service clients with a provider-neutral LLM
   boundary.
-- Revalidate the already implemented DAS 7 workflows.
+- Restore the already implemented DAS 7 workflows on the hosted development
+  project.
 
 Once every revision completion gate passes, resume this plan at Phase 9.
+
+During Phases 9 through 12, record required test scenarios in the testing
+backlog. Use typecheck, build, existing applicable tests, migration previews,
+and narrowly scoped hosted-development smoke checks for implementation
+feedback. Create the permanent revised/new test files together in Phase 13.
 
 ## 2. Previously Completed Feature Baseline
 
@@ -84,19 +94,20 @@ DAS 7 verifies the token and passes trusted claims to Supabase. Staff/system
 claim assignment and the RLS policies that allow ingestion are owned by the
 platform/authentication team.
 
-### Tests
+### Deferred testing backlog
 
-- Unit tests for validation and application decisions.
-- HTTP tests for every route and error envelope.
-- Supabase integration tests for atomic writes and rollback.
-- Idempotency replay and conflicting-payload tests.
-- Progress-version advancement tests.
-- Append-only audit tests.
-- Authorization contract tests using platform-provided identities.
+Record the following for Phase 13 without creating permanent test files yet:
+
+- Unit cases for validation and application decisions.
+- HTTP cases for every route and error envelope.
+- Hosted Supabase integration cases for atomic writes and rollback.
+- Idempotency replay and conflicting-payload cases.
+- Progress-version advancement and append-only audit cases.
+- Authorization contract cases using platform-provided identities.
 
 **Done when:** valid writes are atomic and auditable, retries cannot duplicate
-data, progress versions advance correctly, and the platform authorization
-contract passes.
+data, progress versions advance correctly in the hosted development project,
+and all required test cases are recorded.
 
 ## Phase 10: Connect the Online LLM Provider
 
@@ -118,22 +129,24 @@ domain layers.
    time.
 7. Send only data required for the generation operation.
 8. Keep API keys, prompts, and generated student content out of logs.
-9. Retain deterministic fake generators for ordinary tests.
+9. Preserve the deterministic fake-generator seams for the dedicated testing
+   phase.
 
-### Tests
+### Deferred testing backlog
+
+Record the following for Phase 13:
 
 - Controlled provider success responses.
 - Malformed and incomplete structured output.
-- Authentication failure.
-- Rate limiting.
+- Authentication failure and rate limiting.
 - Timeout and abort behavior.
 - Retryable and non-retryable errors.
 - Summary and recommendation prompt-version metadata.
-- Confirmation that sensitive values are redacted.
+- Sensitive-value redaction.
 
 **Done when:** one configured provider supports both generation workflows and
 can be replaced without modifying controllers, application use cases, or
-domain entities.
+domain entities, and the provider test backlog is complete.
 
 ## Phase 11: Implement the Notification Worker and Email Provider
 
@@ -167,22 +180,21 @@ public notification-trigger endpoint.
 - Keep the original schedule occurrence stable across retries.
 - Make terminal delivery transitions idempotent.
 
-### Tests
+### Deferred testing backlog
 
-- Jest fake timers and fixed-clock unit tests.
+Record the following for Phase 13:
+
+- Jest fake-timer and fixed-clock cases.
 - Weekly, fortnightly, and monthly due calculations.
-- Disabled preferences.
-- Multiple children.
-- Fresh summary generation.
-- Stale progress-version regeneration.
+- Disabled preferences and multiple children.
+- Fresh summary generation and stale-version regeneration.
 - Provider success and permanent/transient failure.
-- Retry backoff.
-- Crash recovery and expired leases.
-- Concurrent worker claims.
-- Duplicate-delivery prevention.
+- Retry backoff, crash recovery, and expired leases.
+- Concurrent worker claims and duplicate-delivery prevention.
 
-**Done when:** success and failure branches in the Notify Parent diagram pass
-end-to-end tests and concurrent workers cannot actively claim the same job.
+**Done when:** the worker can execute the Notify Parent success and failure
+paths against controlled development dependencies, concurrent claims are
+handled by the database design, and all permanent test cases are recorded.
 
 ## Phase 12: Package and Harden DAS 7
 
@@ -203,28 +215,84 @@ Produce deployable API and worker processes with safe operational behavior.
 8. Implement graceful API and worker shutdown.
 9. Document environment configuration and secret ownership.
 10. Document migration deployment, rollback, backup, and restore procedures.
-11. Add CI commands for unit, HTTP, Supabase integration, contract, and
-    end-to-end suites.
+11. Record the CI command requirements that Phase 13 will implement for unit,
+    HTTP, Supabase integration, contract, and end-to-end suites.
 
-### Tests
+### Deferred testing backlog
 
-- Container starts the API on port `8000`.
-- Container starts the worker without exposing a public port.
-- Traefik strips `/api/insights` and reaches service-local routes.
-- Missing or malformed production configuration fails startup.
-- Supabase, LLM, and email outages produce safe observable failures.
-- Shutdown stops accepting work and releases resources.
-- No CORS middleware or cross-origin allowlist is present.
+Record the following for Phase 13:
+
+- API and worker container startup.
+- API port `8000` and worker non-exposure.
+- Traefik `/api/insights` prefix stripping.
+- Missing or malformed production configuration.
+- Supabase, LLM, and email outages.
+- Graceful shutdown.
+- Confirmation that no CORS configuration is present.
 
 **Done when:** the API and worker can be deployed independently from the same
-image and fail safely during dependency outages and process termination.
+image, implementation smoke checks pass, and operational test cases are
+recorded.
 
-## Phase 13: Cross-Team Integration and Final Acceptance
+## Phase 13: Dedicated Testing and Verification
+
+### Goal
+
+Create and run the permanent automated test suite after all revision and
+feature implementation work is complete.
+
+### Test implementation
+
+1. Review every deferred testing backlog from R2 through R10 and Phases 9
+   through 12.
+2. Remove or rewrite obsolete MySQL-era tests.
+3. Add/update unit tests for domain entities, value objects, application use
+   cases, scheduling, and error handling.
+4. Add/update Supertest HTTP tests for service-local routes, validation,
+   principals, middleware, and response envelopes.
+5. Add hosted Supabase integration tests for migrations, repositories, RPCs,
+   idempotency, ordering, leases, and RLS contracts.
+6. Add controlled LLM and email provider integration tests.
+7. Add API, ingestion, platform-claim, gateway, and provider contract tests.
+8. Add end-to-end API and worker workflows.
+9. Add the final CI scripts and coverage reporting.
+10. Resolve all implementation defects found by the completed suite.
+
+### Hosted-project safety
+
+- Tests target only the Supabase-hosted development project.
+- Test configuration rejects known production URLs and project references.
+- Each run uses unique identifiers.
+- Tests delete only records created by that run.
+- Tests never use a linked-project reset or wipe the development database.
+- No real parent, student, or production data is used.
+
+### Acceptance commands
+
+Run from `backend/`:
+
+```powershell
+npm run typecheck
+npm run build
+npm test
+npm run test:http
+npm run test:integration
+npm run test:contract
+npm run test:e2e
+npm run test:coverage
+```
+
+**Done when:** the permanent Jest suite covers the completed implementation,
+all commands pass against the hosted development environment where required,
+and no unresolved defect remains.
+
+## Phase 14: Cross-Team Integration and Production Handoff
 
 ### Goal
 
 Verify DAS 7 against platform-owned interfaces without implementing another
-team's responsibilities.
+team's responsibilities, then link and deploy to the production Supabase
+project through an explicitly reviewed handoff.
 
 ### Platform integration
 
@@ -237,6 +305,12 @@ team's responsibilities.
 6. Verify `/api/insights/*` gateway routing.
 7. Verify the shared frontend consumes the documented DAS 7 API contract.
 8. Record the compatible platform, frontend, and DAS 7 revisions.
+9. Preview the full committed migration history against the production
+   Supabase project.
+10. Link or deploy to production only after the preview is reviewed.
+11. Apply migrations without development data or test fixtures.
+12. Replace development environment values with production secrets through the
+    deployment environment.
 
 If a test fails because a platform claim or RLS policy is missing, report it as
 an external integration dependency. Do not add DAS 7 login, password, session,
@@ -255,7 +329,8 @@ or role-management code to work around it.
 - Secrets and student content are absent from logs and committed fixtures.
 
 **Done when:** all DAS 7 workflows pass through the platform gateway and
-Supabase policy boundary using the production-shaped container setup.
+Supabase policy boundary using the production-shaped container setup, and the
+reviewed migrations are deployed to the production project.
 
 ## Public API Contract
 
@@ -291,13 +366,15 @@ Failed responses use:
 }
 ```
 
-## Jest Test Organization
+## Dedicated Test Organization
+
+Phase 13 creates or updates:
 
 - `test/unit/`: domain and application behavior using injected fakes.
 - `test/http/`: service-local Express routes, middleware, validation, and
   envelopes.
 - `test/integration/supabase/`: migrations, repositories, RPCs, and RLS
-  contracts against local Supabase.
+  contracts against the hosted development project.
 - `test/integration/providers/`: LLM and email boundaries.
 - `test/contract/`: HTTP, ingestion, token-claim, and provider contracts.
 - `test/e2e/`: complete API and worker workflows.
@@ -307,23 +384,9 @@ Use `.test.ts` filenames. Prefer explicit fakes for business logic, Jest mocks
 for narrow technical boundaries, and Jest fake timers for clock-controlled
 behavior. Do not introduce Vitest.
 
-## Acceptance Commands
-
-The revision plan will define the final scripts. The completed project must
-provide an equivalent command set runnable from `backend/`:
-
-```powershell
-npm run typecheck
-npm run build
-npm test
-npm run test:http
-npm run test:integration
-npm run test:contract
-npm run test:e2e
-```
-
-Database integration and end-to-end commands require the disposable local
-Supabase stack. Ordinary unit and HTTP tests remain database-free.
+Before Phase 13, preserve existing baseline tests but do not create or
+substantially rewrite permanent test files. Implementation phases maintain a
+documented testing backlog and use hosted-development smoke checks.
 
 ## Fixed Boundaries
 
@@ -333,6 +396,9 @@ Supabase stack. Ordinary unit and HTTP tests remain database-free.
 - Authorization claim creation and RLS policy design are external
   responsibilities.
 - The frontend is external to DAS 7.
+- Implementation and testing use a Supabase-hosted development project; no
+  local Supabase database or local-storage framework is used.
+- The production Supabase project is linked only during Phase 14.
 - DAS 7 receives data through its ingestion APIs and does not query another
   subsystem.
 - The Supabase Data API is the only DAS 7 application runtime database access
@@ -344,3 +410,5 @@ Supabase stack. Ordinary unit and HTTP tests remain database-free.
 - API and worker run as separate processes.
 - Public traffic is same-origin through `/api/insights`; no CORS configuration
   is required.
+- Permanent new/revised test files are created together in Phase 13 after
+  feature implementation.

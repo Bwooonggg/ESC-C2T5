@@ -31,6 +31,10 @@ dependencies.
 - Use four spaces for indentation.
 - Use Supabase PostgreSQL through the Supabase Data API.
 - Use `@supabase/supabase-js` at the infrastructure boundary.
+- Use a Supabase-hosted development project during implementation. Do not run
+  a local Supabase database or use Supabase as local storage.
+- Link the production Supabase project only after implementation and the
+  dedicated testing phase are complete.
 - Store DAS 7 tables in a custom `insight` PostgreSQL schema.
 - Use Supabase Auth tokens issued by the platform.
 - Verify bearer tokens at the DAS 7 service boundary, but do not implement
@@ -47,6 +51,8 @@ dependencies.
 - Expose the API through Traefik at `/api/insights/*`.
 - Do not configure CORS because browser traffic uses the same public origin.
 - Do not migrate existing MySQL development data.
+- Preserve the existing test baseline, but defer new or rewritten permanent
+  test files until the dedicated testing phase after feature implementation.
 
 ## 3. System Context and Ownership
 
@@ -165,11 +171,25 @@ Supabase provides:
 
 - Supabase Auth.
 - The Data API used by `supabase-js`.
-- The PostgreSQL database.
-- Local development services started through the Supabase CLI.
+- A hosted PostgreSQL database for development and, later, production.
 
 DAS 7 uses an imperative migration workflow under `supabase/migrations/` and
-commits `supabase/config.toml` and sanitized `supabase/seed.sql`.
+commits `supabase/config.toml`. The CLI is linked to the hosted development
+project while implementation is in progress. It previews and applies committed
+migrations to that project and generates TypeScript types from the linked
+schema.
+
+The project does not use `supabase start`, `supabase stop`, a local Supabase
+container, or local database resets. Development records are created only in
+the hosted development project and are not committed as seed or fixture files.
+The hosted development project is explicitly designated for DAS7. If it was
+previously used by another project or subsystem, inspect and reconcile its
+migration history before the first DAS7 migration is pushed; do not silently
+adopt unrelated migrations. Hosted smoke checks use unique run identifiers and
+selective cleanup. Database migrations are durable remote changes, so a
+correction uses a reviewed forward migration; there is no automatic rollback
+assumption. The production project remains unlinked until the final production
+handoff.
 
 ### 4.4 LLM provider
 
@@ -618,8 +638,7 @@ backend/
 |
 |-- supabase/
 |   |-- config.toml
-|   |-- migrations/
-|   `-- seed.sql
+|   `-- migrations/
 |
 |-- src/
 |   |-- entrypoints/
@@ -691,13 +710,18 @@ backend/
 | --- | --- |
 | `contracts/` | Stable interfaces consumed by the frontend, platform teams, ingestion clients, and external providers. These files describe promises between systems rather than implementation details. |
 | `docs/` | Architecture decisions, schema explanations, implementation order, revision steps, and progress records for developers. |
-| `supabase/` | Database source of truth: local Supabase configuration, ordered PostgreSQL migrations, functions, grants, RLS enablement, and fictional seed data. |
+| `supabase/` | Database source of truth: CLI project configuration and ordered PostgreSQL migrations, functions, grants, and RLS enablement for the linked hosted project. It contains no database files or committed test data. |
 | `src/` | Production TypeScript for the API, worker, domain, use cases, and infrastructure adapters. |
 | `test/` | Jest unit, HTTP, Supabase integration, provider integration, contract, and end-to-end tests plus their fakes and fixtures. |
 
 The root configuration files define package installation, TypeScript
 compilation, Jest execution, environment examples, container packaging, and
 repository ignore rules.
+
+The `test/` tree shows the final structure after the dedicated testing phase.
+Existing baseline tests remain in place, but missing Supabase/provider test
+directories and files are not created during implementation merely to match
+the diagram.
 
 ### 11.2 `src/` directories
 
@@ -781,23 +805,55 @@ All package versions are pinned and the package lock is committed. Private
 environment files, Supabase temporary state, logs, coverage, dependencies, and
 build output remain ignored.
 
+### 12.3 Supabase environment workflow
+
+During implementation:
+
+- The CLI is linked only to the Supabase-hosted development project.
+- API and worker environment variables point only to that development project.
+- Schema changes are stored as committed migrations.
+- Every remote push is previewed before it is applied.
+- Remote reset commands are not part of the normal workflow.
+- Production URLs, keys, project references, and database credentials are not
+  used.
+
+After implementation and the dedicated testing phase:
+
+- Preview the complete migration history against the production project.
+- Link or deploy to production through an explicitly reviewed final step.
+- Apply the same committed migrations without development records or test
+  fixtures.
+- Replace development environment values with production values through the
+  deployment secret store.
+
 ## 13. Testing Strategy
 
-Use Jest throughout.
+Use Jest throughout, but create or substantially rewrite permanent test files
+only during the dedicated testing phase after all planned implementation work
+is complete.
+
+Existing test files remain available as the pre-revision behavioral baseline.
+During implementation, run any existing tests that remain applicable, plus
+typechecking, builds, migration previews, and narrowly scoped hosted-development
+smoke checks. Record future cases in the testing backlog instead of creating
+new `.test.ts` files in each implementation phase.
+
+The dedicated testing phase will organize:
 
 - `test/unit`: domain and application behavior using explicit fakes.
 - `test/http`: service-local Express routing and response contracts using
   Supertest.
 - `test/integration/supabase`: migrations, repositories, RPC functions,
-  idempotency, and job claiming against local Supabase.
+  idempotency, and job claiming against the hosted development project.
 - `test/integration/providers`: controlled LLM and email provider behavior.
 - `test/contract`: gateway paths, token claims, ingestion DTOs, and external
   provider shapes.
 - `test/e2e`: complete API and worker workflows.
 
-The normal unit and HTTP test commands remain database-free. Supabase
-integration tests use a disposable local stack and must be serial where they
-share database state.
+Hosted Supabase integration tests must never target production. They use unique
+run identifiers, create only isolated development records, run serially when
+they share state, and clean up only the records they created. They must not
+reset or wipe the linked hosted project.
 
 Authorization contract tests are a production gate, but the platform/auth team
 owns the final claims and policy implementation.
@@ -824,12 +880,13 @@ During the revision:
 
 - Preserve reusable domain, application, HTTP, and Jest behavior.
 - Replace MySQL adapters, migrations, environment settings, and integration
-  tests with Supabase equivalents.
+  boundaries with Supabase equivalents.
 - Remove locally owned credential and session concepts.
 - Change internal Express routing from `/api/*` to service-local paths.
 - Refactor the two generator-service clients into one provider-neutral LLM
   boundary.
-- Re-run existing workflow tests against Supabase before deleting MySQL code.
+- Validate implementation through the hosted development project and retain a
+  complete backlog for the dedicated permanent-test phase.
 
 No runtime dual-write, data-copy, or MySQL rollback path is required because
 there is no production MySQL data to preserve.
@@ -848,7 +905,7 @@ The exact execution order and completion gates are recorded in
   <https://supabase.com/docs/guides/api/securing-your-api>
 - Row Level Security:
   <https://supabase.com/docs/guides/database/postgres/row-level-security>
-- Local CLI workflow:
+- Linked-project CLI workflow:
   <https://supabase.com/docs/guides/local-development/cli-workflows>
 - Data API grant-default change:
   <https://supabase.com/changelog/45329-breaking-change-tables-not-exposed-to-data-and-graphql-api-automatically>

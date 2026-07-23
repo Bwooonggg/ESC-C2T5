@@ -62,6 +62,35 @@ values for the MySQL connection, summary generator, recommendation generator,
 and email provider. Authentication configuration is introduced with the final
 authentication and authorization phase.
 
+MySQL remains a transitional development dependency while the hosted Supabase
+migration is completed. Supabase configuration is currently optional so the
+existing backend can still start during the transition. The intended database
+workflow uses the hosted development project through the Supabase CLI; this
+repository does not require `supabase start`, `supabase stop`, or a local
+Supabase database.
+
+## Hosted Supabase development
+
+Install dependencies, authenticate the CLI, and link only the dedicated
+development project:
+
+```powershell
+npm install
+npx supabase login
+npx supabase link --project-ref <development-project-ref>
+```
+
+Review pending migrations before applying them:
+
+```powershell
+npm run supabase:db:push:dry-run
+npm run supabase:migrations
+```
+
+The migration push and generated-type commands operate on the linked hosted
+development project. Do not link this checkout to production until the final
+production handoff phase.
+
 The migration runner reads the `MYSQL_*` values from the same environment,
 resolves `db/migrations/` relative to its entrypoint, records applied
 migrations in `schema_migrations`, and does not depend on a developer-specific
