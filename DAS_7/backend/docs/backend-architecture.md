@@ -433,11 +433,13 @@ backend/
 |   |   |-- generators/
 |   |   |   |-- generator.adapter.ts
 |   |   |   |-- generator-service.adapter.ts
+|   |   |   |-- generator-http.client.ts
+|   |   |   |-- generator-error.ts
+|   |   |   |-- generator-response.schemas.ts
 |   |   |   |-- summary-generator.adapter.ts
 |   |   |   |-- recommendation-generator.adapter.ts
 |   |   |   |-- summary-generator.client.ts
 |   |   |   |-- recommendation-generator.client.ts
-|   |   |   |-- generator-response.schemas.ts
 |   |   |   `-- index.ts
 |   |   `-- email/
 |   |       |-- email-service.adapter.ts
@@ -483,6 +485,7 @@ backend/
 |   |   |-- identifiers.ts
 |   |   |-- date-time.ts
 |   |   |-- idempotency.ts
+|   |   |-- generator-context.ts
 |   |   `-- result.ts
 |   |
 |   `-- types/
@@ -582,8 +585,10 @@ Translates domain inputs and outputs to external-service protocols. If a generat
 domain generator ports and extend `GeneratorServiceAdapter`. The shared base
 delegates to an injected, provider-neutral client while the concrete adapters
 own domain-to-client mapping. `GeneratorAdapter` describes that mapping
-boundary. An HTTP or SDK client can be wired in later without changing the
-application workflows.
+boundary. `GeneratorHttpClient` supplies the generic HTTP transport with
+timeouts, correlation and idempotency headers, response validation, and
+provider-neutral errors. It accepts injected headers and a fetch implementation
+so provider authentication and tests do not depend on a particular SDK.
 
 ### `infrastructure/`
 

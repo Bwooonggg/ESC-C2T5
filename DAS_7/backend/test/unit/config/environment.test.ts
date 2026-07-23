@@ -22,6 +22,10 @@ describe('loadConfig', () => {
             pollIntervalMs: 60_000,
             timezone: 'Asia/Singapore',
         })
+        expect(config.generators).toMatchObject({
+            summaryTimeoutMs: 10_000,
+            recommendationTimeoutMs: 10_000,
+        })
     })
 
     it('loads a complete production configuration', () => {
@@ -80,8 +84,9 @@ describe('loadConfig', () => {
                 NODE_ENV: 'development',
                 PORT: 'not-a-port',
                 MYSQL_PORT: '70000',
-                WORKER_ENABLED: 'sometimes',
-                NOTIFICATION_TIMEZONE: 'Not/ATimezone',
+            WORKER_ENABLED: 'sometimes',
+            SUMMARY_GENERATOR_TIMEOUT_MS: 'not-a-timeout',
+            NOTIFICATION_TIMEZONE: 'Not/ATimezone',
             }),
         )
 
@@ -90,6 +95,9 @@ describe('loadConfig', () => {
         )
         expect(configurationError.issues.join('\n')).toEqual(
             expect.stringContaining('WORKER_ENABLED'),
+        )
+        expect(configurationError.issues.join('\n')).toEqual(
+            expect.stringContaining('SUMMARY_GENERATOR_TIMEOUT_MS'),
         )
     })
 })

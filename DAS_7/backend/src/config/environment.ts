@@ -22,6 +22,8 @@ export interface AppConfig {
         readonly recommendationUrl?: string
         readonly summaryApiKey?: string
         readonly recommendationApiKey?: string
+        readonly summaryTimeoutMs: number
+        readonly recommendationTimeoutMs: number
     }
     readonly email: {
         readonly providerUrl?: string
@@ -125,6 +127,18 @@ const rawEnvironmentSchema = z.object({
     RECOMMENDATION_GENERATOR_URL: optionalUrlSchema,
     SUMMARY_GENERATOR_API_KEY: optionalStringSchema,
     RECOMMENDATION_GENERATOR_API_KEY: optionalStringSchema,
+    SUMMARY_GENERATOR_TIMEOUT_MS: z.coerce
+        .number()
+        .int()
+        .min(100)
+        .max(120_000)
+        .default(10_000),
+    RECOMMENDATION_GENERATOR_TIMEOUT_MS: z.coerce
+        .number()
+        .int()
+        .min(100)
+        .max(120_000)
+        .default(10_000),
     EMAIL_PROVIDER_URL: optionalUrlSchema,
     EMAIL_PROVIDER_API_KEY: optionalStringSchema,
     WORKER_ENABLED: booleanSchema,
@@ -211,6 +225,8 @@ function toAppConfig(raw: RawEnvironment): AppConfig {
             recommendationUrl: raw.RECOMMENDATION_GENERATOR_URL,
             summaryApiKey: raw.SUMMARY_GENERATOR_API_KEY,
             recommendationApiKey: raw.RECOMMENDATION_GENERATOR_API_KEY,
+            summaryTimeoutMs: raw.SUMMARY_GENERATOR_TIMEOUT_MS,
+            recommendationTimeoutMs: raw.RECOMMENDATION_GENERATOR_TIMEOUT_MS,
         },
         email: {
             providerUrl: raw.EMAIL_PROVIDER_URL,

@@ -7,6 +7,21 @@ export type {
 export {
     GeneratorServiceAdapter,
 } from './generator-service.adapter.js'
+export {
+    GeneratorHttpClient,
+    type GeneratorFetch,
+    type GeneratorHttpClientOptions,
+    type GeneratorHttpResponse,
+} from './generator-http.client.js'
+export {
+    GeneratorServiceError,
+    type GeneratorErrorCode,
+    type GeneratorServiceErrorProps,
+} from './generator-error.js'
+export {
+    generatorResponseSchema,
+    parseGeneratorResponse,
+} from './generator-response.schemas.js'
 export type {
     GeneratorAdapter,
     GeneratorClient,

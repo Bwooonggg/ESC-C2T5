@@ -1,5 +1,6 @@
 import type { ProgressRecord } from '../../../domain/entities/progress-record.js'
 import type { Student } from '../../../domain/entities/student.js'
+import type { GeneratorInvocationContext } from '../../../shared/generator-context.js'
 
 export interface SummaryGenerationRequest {
     /**
@@ -26,5 +27,6 @@ export interface SummaryGenerationResult {
 export interface SummaryGeneratorPort {
     generate(
         request: SummaryGenerationRequest,
+        context?: GeneratorInvocationContext,
     ): Promise<SummaryGenerationResult>
 }

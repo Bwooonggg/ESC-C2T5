@@ -9,11 +9,20 @@ import {
 } from '../../../src/adapters/generators/index.js'
 import type { RecommendationGeneratorClientRequest } from '../../../src/adapters/generators/recommendation-generator.client.js'
 import type { SummaryGeneratorClientRequest } from '../../../src/adapters/generators/summary-generator.client.js'
+import type { GeneratorInvocationContext } from '../../../src/shared/generator-context.js'
 
 describe('generator adapters', () => {
     it('maps a domain progress snapshot to the summary client', async () => {
+        const invocationContext: GeneratorInvocationContext = {
+            correlationId: 'request-123',
+            idempotencyKey: 'summary-123',
+        }
         const generate = jest.fn(
-            async (request: SummaryGeneratorClientRequest) => {
+            async (
+                request: SummaryGeneratorClientRequest,
+                context: GeneratorInvocationContext,
+            ) => {
+                expect(context).toEqual(invocationContext)
                 expect(request).toEqual({
                     student: {
                         studentId: 'student-1',
@@ -42,25 +51,28 @@ describe('generator adapters', () => {
         )
         const adapter = new SummaryGeneratorAdapter({ generate })
 
-        const result = await adapter.generate({
-            student: new Student({
-                studentId: 'student-1',
-                name: 'A Student',
-                dateOfBirth: new Date('2015-06-15T00:00:00.000Z'),
-                bandLevel: 'Band 2',
-                currentProgressVersion: 'v4',
-            }),
-            records: [
-                new ProgressRecord({
-                    recordId: 'record-1',
+        const result = await adapter.generate(
+            {
+                student: new Student({
                     studentId: 'student-1',
-                    date: new Date('2026-07-23T00:00:00.000Z'),
-                    skillArea: new SkillArea('Reading Fluency'),
-                    score: 82.5,
-                    notes: 'Short reading practice.',
+                    name: 'A Student',
+                    dateOfBirth: new Date('2015-06-15T00:00:00.000Z'),
+                    bandLevel: 'Band 2',
+                    currentProgressVersion: 'v4',
                 }),
-            ],
-        })
+                records: [
+                    new ProgressRecord({
+                        recordId: 'record-1',
+                        studentId: 'student-1',
+                        date: new Date('2026-07-23T00:00:00.000Z'),
+                        skillArea: new SkillArea('Reading Fluency'),
+                        score: 82.5,
+                        notes: 'Short reading practice.',
+                    }),
+                ],
+            },
+            invocationContext,
+        )
 
         expect(result).toEqual({
             content: 'Summary content',

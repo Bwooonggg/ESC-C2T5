@@ -160,7 +160,7 @@ of overwriting them on repeated requests.
 1. **DONE:** Define the summary-generator request and response contract.
 2. **DONE:** Define the recommendation-generator request and response contract.
 3. **DONE:** Implement diagram-facing generator adapters around replaceable clients.
-4. **NEXT:** Add runtime response validation, request timeouts, correlation IDs, and idempotency IDs.
+4. **DONE:** Add runtime response validation, request timeouts, correlation IDs, and idempotency IDs.
 5. Test application logic with injected fakes.
 6. Test adapters against controlled HTTP servers for success, invalid data, timeouts, and provider failures.
 
@@ -179,6 +179,13 @@ records, and summaries to client request shapes, and map client responses back
 to the generator ports. No HTTP library, SDK, endpoint, or provider response
 schema is selected at this stage; those concerns belong to the provider client
 and the runtime-hardening work in step 4.
+
+Step 4 is implemented by the generic `GeneratorHttpClient`. It validates
+successful responses against the shared Zod response schema, aborts requests
+after the configured service timeout, forwards correlation and idempotency
+headers, and normalizes HTTP, timeout, transport, and malformed-response
+failures into `GeneratorServiceError`. The client accepts injected headers and
+`fetch` so provider authentication and testing remain replaceable.
 
 The recommendation-generator logical contract is recorded in
 [`contracts/recommendation-generator.contract.md`](../contracts/recommendation-generator.contract.md).

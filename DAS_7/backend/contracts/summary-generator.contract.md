@@ -57,6 +57,11 @@ The request carries domain values, not database rows, credentials, session
 tokens, or provider-specific fields. The adapter converts `Date` values to
 the provider's agreed date format.
 
+The transport metadata is supplied separately from this JSON request. Each
+invocation carries a correlation ID for tracing and an idempotency ID for safe
+retries. The adapter creates both when a caller does not provide them; retries
+of one invocation must reuse the same values.
+
 An empty `records` array is structurally valid, but the application should
 return its `progressUnavailable` result instead of calling the generator when
 there is no usable progress data.
@@ -87,8 +92,11 @@ The service returns:
 The adapter maps transport failures, timeouts, authentication failures, rate
 limits, and malformed provider responses into provider-neutral application
 errors. Raw provider response shapes and credentials must not cross the port.
-Timeouts, correlation IDs, idempotency IDs, and retry policy are added at the
-adapter boundary in Phase 5 Step 4.
+Timeouts, correlation IDs, idempotency IDs, and retryability classification are
+enforced at the adapter boundary. Provider-neutral errors include the service
+name, correlation ID, retryability, and (when applicable) HTTP status without
+exposing provider response bodies. Retry orchestration remains a caller or
+worker policy.
 
 ## Compatibility rule
 

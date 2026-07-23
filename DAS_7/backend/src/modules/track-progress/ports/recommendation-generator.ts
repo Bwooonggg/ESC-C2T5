@@ -1,4 +1,5 @@
 import type { Summary } from '../../../domain/entities/summary.js'
+import type { GeneratorInvocationContext } from '../../../shared/generator-context.js'
 
 export interface RecommendationGenerationRequest {
     /**
@@ -18,5 +19,6 @@ export interface RecommendationGenerationResult {
 export interface RecommendationGeneratorPort {
     generate(
         request: RecommendationGenerationRequest,
+        context?: GeneratorInvocationContext,
     ): Promise<RecommendationGenerationResult>
 }

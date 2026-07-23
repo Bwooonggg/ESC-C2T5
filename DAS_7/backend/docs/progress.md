@@ -6,7 +6,7 @@
 
 **Phase 5 — Implement external generator boundaries: in progress**
 
-**Next:** Phase 5, step 4 — Add runtime generator safeguards
+**Next:** Phase 5, step 5 — Test application logic with injected fakes
 
 ## Completed Work
 
@@ -85,6 +85,13 @@
   generator ports.
 - Added adapter unit tests for date and timestamp conversion, request mapping,
   metadata mapping, and client failure propagation.
+- Added shared generator invocation metadata for correlation and idempotency
+  identifiers, with generated defaults when callers do not provide a context.
+- Added the generic HTTP generator client with configurable timeouts,
+  abort-based cancellation, request metadata headers, runtime Zod response
+  validation, and provider-neutral error classification.
+- Added timeout, malformed-response, status-mapping, header, and configuration
+  tests for the generator safeguards.
 - Added repository unit coverage for parameter binding, ordered reads,
   multi-row writes, and notification state updates.
 - Verified repository persistence and `FOR UPDATE SKIP LOCKED` notification-job
@@ -144,7 +151,7 @@ isolated MySQL 8 database, and a second run was verified as a no-op.
 | 2 | Build the domain and interfaces | Done |
 | 3 | Create the MySQL schema | Done |
 | 4 | Implement MySQL repositories | Done |
-| 5 | Implement external generator boundaries | In progress — Step 4 next |
+| 5 | Implement external generator boundaries | In progress — Step 5 next |
 | 6 | Implement Track Progress and Summary | Pending |
 | 7 | Implement recommendations | Pending |
 | 8 | Implement notification preferences | Pending |
