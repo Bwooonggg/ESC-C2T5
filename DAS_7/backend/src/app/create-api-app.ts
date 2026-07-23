@@ -1,12 +1,12 @@
 import express, { type Express } from 'express'
 import { createApiContainer, type ApiContainer } from './api-container.js'
-import { apiRouter } from '../http/api.router.js'
+import { createApiRouter } from '../http/api.router.js'
 import { errorHandler } from '../http/middleware/error-handler.middleware.js'
 import { notFound } from '../http/middleware/not-found.middleware.js'
 import { requestId } from '../http/middleware/request-id.middleware.js'
 
 export function createApiApp(
-    _container: ApiContainer = createApiContainer(),
+    container: ApiContainer = createApiContainer(),
 ): Express {
     const app = express()
 
@@ -14,7 +14,7 @@ export function createApiApp(
     app.use(express.json({ limit: '1mb' }))
     app.use(requestId)
 
-    app.use('/api', apiRouter)
+    app.use('/api', createApiRouter(container))
 
     app.use(notFound)
     app.use(errorHandler)

@@ -4,9 +4,11 @@
 
 **Phase 4 — Implement MySQL repositories: done**
 
-**Phase 5 — Implement external generator boundaries: in progress**
+**Phase 5 — Implement external generator boundaries: done**
 
-**Next:** Phase 5, step 5 — Test application logic with injected fakes
+**Phase 6 — Implement Track Progress and Summary: in progress**
+
+**Next:** Complete the Phase 6 database-backed end-to-end verification
 
 ## Completed Work
 
@@ -118,6 +120,33 @@
   boundary.
 - Added [`recommendation-generator.contract.md`](../contracts/recommendation-generator.contract.md)
   for the logical external-service request and response shape.
+- Added `TrackProgressModel` and `RecommendationModel` application seams for
+  the diagram workflows without mounting HTTP routes yet.
+- Added explicit in-memory generator fakes and application tests for summary
+  persistence, unavailable progress, stale-version regeneration, invalid
+  output, recommendation basis selection, and provider failures.
+- Rescheduled the final application fake-test pass to Phases 6 and 7, and the
+  controlled HTTP/provider test pass to Phase 11 after provider wiring.
+- Added the Track Progress and Summary application-to-HTTP flow for the
+  frontend's `GET /api/students/:studentId/track-progress` and
+  `GET /api/students/:studentId/summary` requests.
+- Added route parameter validation, frontend-compatible response mapping for
+  dates and summaries, and centralized error mapping for unavailable progress,
+  unavailable summaries, generator failures, and invalid requests.
+- Added production API composition that connects the Track Progress model to
+  MySQL student, progress-record, and summary repositories plus the configured
+  external summary generator. Test composition can still inject a model and
+  does not open a database connection.
+- Added graceful MySQL-pool shutdown to the API entrypoint and a not-configured
+  response for non-production containers without infrastructure dependencies.
+- Added concurrent-request coalescing keyed by student and progress version so
+  overlapping frontend requests share one in-flight summary generation.
+- Added HTTP Jest coverage for success envelopes, summary-only responses,
+  request metadata propagation, invalid student IDs, and `progressUnavailable`.
+- Expanded application Jest coverage for concurrent request coalescing.
+- Reran the live MySQL integration suite against the dedicated
+  `das7_integration_test` database; migration, schema, repository, and
+  transaction checks passed.
 
 ## Verification Evidence
 
@@ -133,11 +162,15 @@ npm run test:coverage
 npm run test:integration
 ```
 
-Current unit/HTTP Jest result: 10 test suites passed and 49 tests passed.
+Current unit/HTTP Jest result: 14 test suites passed and 68 tests passed.
 The MySQL integration result is 1 suite passed and 5 tests passed against a
 disposable MySQL 8 test database.
 The integration suite was run against a disposable MySQL 8 instance with
 explicit `MYSQL_TEST_*` settings; no local database files were retained.
+
+The current integration command ran with the dedicated `MYSQL_TEST_*`
+configuration and passed. The database-backed Track Progress HTTP end-to-end
+scenario remains a separate Phase 6 verification item.
 
 The migration runner and index migration were applied successfully to a blank
 isolated MySQL 8 database, and a second run was verified as a no-op.
@@ -151,8 +184,8 @@ isolated MySQL 8 database, and a second run was verified as a no-op.
 | 2 | Build the domain and interfaces | Done |
 | 3 | Create the MySQL schema | Done |
 | 4 | Implement MySQL repositories | Done |
-| 5 | Implement external generator boundaries | In progress — Step 5 next |
-| 6 | Implement Track Progress and Summary | Pending |
+| 5 | Implement external generator boundaries | Done |
+| 6 | Implement Track Progress and Summary | In progress |
 | 7 | Implement recommendations | Pending |
 | 8 | Implement notification preferences | Pending |
 | 9 | Implement data ingestion | Pending |
@@ -200,3 +233,26 @@ isolated MySQL 8 database, and a second run was verified as a no-op.
 | 4 | Add transaction support | Done |
 | 5 | Test repository behavior and rollback | Done |
 | 6 | Run the MySQL integration suites serially | Done |
+
+## Phase 5 Step Tracking
+
+| Step | Description | Status |
+| --- | --- | --- |
+| 1 | Define summary-generator request and response contract | Done |
+| 2 | Define recommendation-generator request and response contract | Done |
+| 3 | Implement diagram-facing generator adapters | Done |
+| 4 | Add runtime validation, timeouts, and invocation metadata | Done |
+| 5 | Finalize application fake tests with workflow phases | Moved to Phases 6 and 7 |
+| 6 | Finalize controlled HTTP/provider tests after real provider wiring | Moved to Phase 11 |
+
+## Phase 6 Step Tracking
+
+| Step | Description | Status |
+| --- | --- | --- |
+| 1 | Add Track Progress and Summary controllers and routes | Done |
+| 2 | Map validated domain results to frontend response envelopes | Done |
+| 3 | Map domain and provider failures to public HTTP errors | Done |
+| 4 | Compose MySQL repositories and the summary generator for production | Done |
+| 5 | Coalesce concurrent requests for one student progress version | Done |
+| 6 | Verify the flow with application and HTTP Jest tests | Done |
+| 7 | Run database-backed end-to-end verification | Pending |

@@ -1,6 +1,6 @@
 # DAS 7 Backend Implementation Plan
 
-**Status:** Approved implementation sequence; Phase 5 in progress
+**Status:** Approved implementation sequence; Phase 6 in progress
 
 **Testing stack:** Jest, `ts-jest`, and Supertest
 
@@ -155,14 +155,14 @@ of overwriting them on repeated requests.
 
 **Done when:** application workflows can use repositories without importing SQL or MySQL-specific types.
 
-## Phase 5: Implement External Generator Boundaries
+## Phase 5: Implement External Generator Boundaries — DONE
 
 1. **DONE:** Define the summary-generator request and response contract.
 2. **DONE:** Define the recommendation-generator request and response contract.
 3. **DONE:** Implement diagram-facing generator adapters around replaceable clients.
 4. **DONE:** Add runtime response validation, request timeouts, correlation IDs, and idempotency IDs.
-5. Test application logic with injected fakes.
-6. Test adapters against controlled HTTP servers for success, invalid data, timeouts, and provider failures.
+5. **MOVED:** Test application logic with injected fakes; complete it with the Phase 6 and Phase 7 application workflows.
+6. **MOVED:** Test adapters against controlled HTTP servers; complete it after real provider wiring in Phase 11.
 
 **Done when:** replacing an external generator requires changing only its adapter and composition wiring.
 
@@ -187,13 +187,26 @@ headers, and normalizes HTTP, timeout, transport, and malformed-response
 failures into `GeneratorServiceError`. The client accepts injected headers and
 `fetch` so provider authentication and testing remain replaceable.
 
+The application seams used by the diagrams are present under
+`src/modules/track-progress/application/`. `TrackProgressModel` loads a
+student snapshot, skips generation when progress is unavailable, regenerates
+when the progress version changes during generation, and persists only a
+summary based on the current version. `RecommendationModel` loads the latest
+summary, generates a recommendation from that exact summary, and persists the
+basis relationship. Their final workflow tests are scheduled with the
+corresponding application phases below.
+
+The two remaining generator test activities are intentionally scheduled after
+their dependencies exist: application fake tests are completed with Phases 6
+and 7, while controlled HTTP/provider tests are completed in Phase 11.
+
 The recommendation-generator logical contract is recorded in
 [`contracts/recommendation-generator.contract.md`](../contracts/recommendation-generator.contract.md).
 It accepts exactly one persisted summary and returns one recommendation content
 value plus optional provider metadata; the backend owns recommendation identity
 and the summary relationship.
 
-## Phase 6: Implement Track Progress and Summary
+## Phase 6: Implement Track Progress and Summary — IN PROGRESS
 
 Implement:
 
@@ -202,20 +215,30 @@ Implement:
 
 For each request:
 
-1. Resolve the student context through the application boundary. Production authentication and guardian authorization are added in the final phase.
-2. Load ordered progress records and the student's current progress-version
+1. **DONE:** Resolve the student context through the application boundary. Production authentication and guardian authorization are added in the final phase.
+2. **DONE:** Load ordered progress records and the student's current progress-version
    marker from MySQL as one snapshot.
-3. Return `progressUnavailable` when progress cannot be obtained.
-4. Generate a summary through the adapter.
-5. Validate the generated summary, verify the progress version is still current,
+3. **DONE:** Return `progressUnavailable` when progress cannot be obtained.
+4. **DONE:** Generate a summary through the adapter.
+5. **DONE:** Validate the generated summary, verify the progress version is still current,
    and persist it; regenerate if a concurrent progress write made the snapshot
    stale.
-6. Return the frontend response envelope.
+6. **DONE:** Return the frontend response envelope.
 
-Coalesce overlapping requests for the same student progress version so the
-frontend cannot accidentally cause duplicate generator work.
+**DONE:** Coalesce overlapping requests for the same student progress version so
+the frontend cannot accidentally cause duplicate generator work.
 
-**Done when:** the success and `progressUnavailable` branches from the Track Child's Progress diagram pass HTTP and end-to-end tests.
+**DONE:** Add or finalize application-level Jest tests with injected fakes for missing
+progress, generator failures, invalid generated content, stale-version
+regeneration, summary persistence, and stable invocation context reuse.
+
+The HTTP/controller and application tests now cover the success,
+`progressUnavailable`, validation, stale-version, persistence, and concurrent
+request branches. A database-backed end-to-end test remains part of the final
+integration verification once the provider and deployment test environments are
+available.
+
+**Done when:** the success and `progressUnavailable` branches from the Track Child's Progress diagram pass HTTP and database-backed end-to-end tests.
 
 ## Phase 7: Implement Recommendations
 
@@ -227,6 +250,10 @@ Implement `POST /api/students/:studentId/recommendations`:
 4. Generate recommendations through the external-service adapter.
 5. Persist the recommendation with its basis summary.
 6. Return it in the standard response envelope.
+
+Complete application-level Jest tests with injected fakes for missing summaries,
+generator failures, summary-basis selection, recommendation persistence, and
+stable invocation context reuse.
 
 **Done when:** recommendations are generated only after an explicit parent request and always reference their basis summary.
 
@@ -289,7 +316,9 @@ fortnightly, monthly, retry, crash-recovery, and concurrent-worker scenarios.
 1. Connect the summary and recommendation clients to the selected service endpoints.
 2. Connect the email adapter to the selected email provider.
 3. Keep provider-specific data inside adapters.
-4. Add contract tests for success, invalid responses, authentication failure, rate limiting, timeouts, and retryable errors.
+4. Test the adapters against controlled HTTP servers for success, invalid
+   responses, authentication failure, rate limiting, timeouts, and retryable
+   errors.
 5. Confirm secrets and generated student content are excluded from logs and fixtures.
 
 **Done when:** provider implementations can be replaced without changing controllers, application workflows, or domain entities.

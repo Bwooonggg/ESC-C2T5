@@ -98,9 +98,16 @@ the existing Vite proxy to preserve that behavior.
 
 - `GET /api/health` returns a liveness response.
 - `GET /api/health/ready` reports that database readiness is not wired yet.
+- `GET /api/students/:studentId/track-progress` loads progress from MySQL,
+  generates and persists a summary through the configured external summary
+  service, and returns the frontend-compatible progress/summary envelope.
+- `GET /api/students/:studentId/summary` runs the same summary workflow and
+  returns only the summary object in the standard envelope.
+- Overlapping summary requests for the same student progress version share one
+  in-flight generation operation.
 - Existing frontend and future ingestion routes are registered, but business
   handlers currently return a JSON `501 Not implemented` envelope.
-- MySQL repositories, authentication, generator services, email delivery, and
-  worker job processing are intentionally reserved for their respective
-  implementation slices. The migration runner is available, while
-  authentication routes remain unmounted until the final phase.
+- Recommendation, notification-preference, ingestion, email-delivery, and
+  worker-job workflows remain reserved for their respective implementation
+  phases. Authentication routes and authorization middleware remain unmounted
+  until the final phase.

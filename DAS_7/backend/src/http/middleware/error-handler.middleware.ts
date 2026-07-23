@@ -1,5 +1,6 @@
 import type { ErrorRequestHandler } from 'express'
 import { fail } from '../responses/api-envelope.js'
+import { mapError } from '../responses/error-mapper.js'
 
 export const errorHandler: ErrorRequestHandler = (
     error,
@@ -8,5 +9,6 @@ export const errorHandler: ErrorRequestHandler = (
     _next,
 ) => {
     console.error('[server] unhandled error:', error)
-    fail(response, 'Something went wrong on the server.', 500)
+    const mappedError = mapError(error)
+    fail(response, mappedError.message, mappedError.status)
 }

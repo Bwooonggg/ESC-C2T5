@@ -117,13 +117,20 @@ The backend follows this sequence:
 9. If the parent explicitly requests recommendations, the model loads the latest summary and calls `RecommendationGeneratorService` through the adapter.
 10. If progress cannot be fetched, the backend returns `progressUnavailable` in the existing error envelope.
 
-The frontend currently issues overlapping summary and track-progress requests. Both requests invoke the same summary-generation application operation. The adapter may coalesce concurrent requests or reuse a result for the same student progress version, preventing duplicate external calls while preserving the diagram's logical interaction. This optimization must not make `(student, source progress version)` unique: a scheduled notification may intentionally create a fresh summary snapshot from unchanged progress.
+The frontend currently issues overlapping summary and track-progress requests. Both requests invoke the same summary-generation application operation. The application model coalesces concurrent requests for the same student progress version, preventing duplicate external calls while preserving the diagram's logical interaction. This optimization must not make `(student, source progress version)` unique: a scheduled notification may intentionally create a fresh summary snapshot from unchanged progress.
 
 The application reads the student's progress records together with its current
 progress-version marker. It carries that marker into the generated `Summary`
 and verifies the marker has not changed before persisting the result. If a
 progress mutation wins the race while the external generator is running, the
 stale result is discarded or regenerated for the new version.
+
+The current implementation exposes the two read routes through a
+container-backed router factory. The controller validates `studentId`, creates
+the generator invocation context from the request ID and optional idempotency
+header, calls `TrackProgressModel`, and maps domain entities to the frontend's
+existing JSON shape. Authentication and guardian authorization remain an
+explicit middleware seam for Phase 13.
 
 ### 3.3 Notify Parent flow
 
@@ -239,6 +246,36 @@ Failure:
 
 Parents may access only students linked to them through the guardian association. A parent may update only their own preferences.
 
+The implemented Track Progress response is:
+
+```json
+{
+  "ok": true,
+  "data": {
+    "progress": [
+      {
+        "recordId": "record-1",
+        "studentId": "student-1",
+        "date": "2026-07-23",
+        "skillArea": "Reading Fluency",
+        "score": 82.5,
+        "notes": "Short reading practice."
+      }
+    ],
+    "summary": {
+      "summaryId": "summary-1",
+      "studentId": "student-1",
+      "content": "...",
+      "generatedAt": "2026-07-23T12:00:00.000Z"
+    }
+  }
+}
+```
+
+The Summary route returns the same `summary` object as its `data` value. The
+internal `sourceProgressVersion` is persisted for consistency checks but is
+not exposed because it is not part of the current frontend type.
+
 ### 5.3 Future data-entry routes
 
 Staff and trusted-system accounts may use versioned routes such as:
@@ -349,7 +386,8 @@ backend/
 |   |   |   `-- error-handler.middleware.ts
 |   |   `-- responses/
 |   |       |-- api-envelope.ts
-|   |       `-- error-mapper.ts
+|   |       |-- error-mapper.ts
+|   |       `-- not-configured.ts
 |   |
 |   |-- modules/
 |   |   |-- auth/
@@ -380,9 +418,11 @@ backend/
 |   |   |   |-- http/
 |   |   |   |   |-- track-progress.routes.ts
 |   |   |   |   |-- track-progress.controller.ts
-|   |   |   |   `-- track-progress.schemas.ts
+|   |   |   |   |-- track-progress.schemas.ts
+|   |   |   |   `-- track-progress.responses.ts
 |   |   |   |-- application/
-|   |   |   |   `-- track-progress.model.ts
+|   |   |   |   |-- track-progress.model.ts
+|   |   |   |   `-- recommendation.model.ts
 |   |   |   `-- ports/
 |   |   |       |-- student.repository.ts
 |   |   |       |-- progress-record.repository.ts
@@ -516,6 +556,7 @@ backend/
     |   |-- preferences.e2e.test.ts
     |   |-- ingestion.e2e.test.ts
     |   `-- notify-parent.e2e.test.ts
+    |-- fakes/
     `-- fixtures/
         |-- parents.ts
         |-- students.ts
@@ -710,7 +751,9 @@ serial integration command uses `jest.integration.config.cjs` and explicit
 `MYSQL_TEST_*` connection variables. Prefer dependency injection and explicit
 fakes for application services. Use Jest mocks at technical boundaries only,
 Jest fake timers for the notification clock, and controlled HTTP servers for
-provider-adapter tests.
+provider-adapter tests. Application fake tests are finalized alongside their
+Phase 6 and 7 workflows; controlled HTTP/provider tests are finalized after
+provider wiring in Phase 11.
 
 The implementation is acceptable when all of the following hold:
 

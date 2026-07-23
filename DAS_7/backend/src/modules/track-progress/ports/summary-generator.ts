@@ -18,7 +18,7 @@ export interface SummaryGenerationRequest {
 }
 
 export interface SummaryGenerationResult {
-    /** Provider-generated summary content; the adapter validates it as non-empty. */
+    /** Provider-generated summary content; the external boundary validates it. */
     readonly content: string
     /** Provider-specific data that is not part of the domain Summary entity. */
     readonly metadata?: Readonly<Record<string, unknown>>

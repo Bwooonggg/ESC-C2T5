@@ -10,7 +10,7 @@ export interface RecommendationGenerationRequest {
 }
 
 export interface RecommendationGenerationResult {
-    /** Provider-generated recommendation content; the adapter validates it as non-empty. */
+    /** Provider-generated recommendation content; the external boundary validates it. */
     readonly content: string
     /** Provider-specific data that is not part of the domain Recommendation entity. */
     readonly metadata?: Readonly<Record<string, unknown>>
