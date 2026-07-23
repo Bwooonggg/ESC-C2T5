@@ -1,6 +1,6 @@
 # DAS 7 Backend Implementation Plan
 
-**Status:** Approved implementation sequence; Phase 6 in progress
+**Status:** Approved implementation sequence; Phase 6 complete; Phase 7 next
 
 **Testing stack:** Jest, `ts-jest`, and Supertest
 
@@ -206,7 +206,7 @@ It accepts exactly one persisted summary and returns one recommendation content
 value plus optional provider metadata; the backend owns recommendation identity
 and the summary relationship.
 
-## Phase 6: Implement Track Progress and Summary — IN PROGRESS
+## Phase 6: Implement Track Progress and Summary — DONE
 
 Implement:
 
@@ -232,11 +232,11 @@ the frontend cannot accidentally cause duplicate generator work.
 progress, generator failures, invalid generated content, stale-version
 regeneration, summary persistence, and stable invocation context reuse.
 
-The HTTP/controller and application tests now cover the success,
-`progressUnavailable`, validation, stale-version, persistence, and concurrent
-request branches. A database-backed end-to-end test remains part of the final
-integration verification once the provider and deployment test environments are
-available.
+The HTTP/controller, application, and database-backed end-to-end tests now cover
+the success, `progressUnavailable`, validation, stale-version, persistence, and
+concurrent-request branches. The end-to-end test uses the real MySQL
+repositories and a controlled in-process summary generator, so external
+provider credentials are not required for this phase.
 
 **Done when:** the success and `progressUnavailable` branches from the Track Child's Progress diagram pass HTTP and database-backed end-to-end tests.
 

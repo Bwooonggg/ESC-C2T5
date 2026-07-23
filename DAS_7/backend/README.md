@@ -80,8 +80,10 @@ The integration suite applies the same migrations to the configured test
 database, verifies migration replay, checks the expected InnoDB tables and
 indexes, exercises key foreign-key and value constraints, and verifies the
 non-authentication repository read/write and notification-job claim paths. The
-test database must be isolated from development and production data; its name
-must identify it as a test database, such as `das7_integration_test`.
+database-backed Track Progress API workflow is also exercised with a
+controlled summary generator. The test database must be isolated from
+development and production data; its name must identify it as a test database,
+such as `das7_integration_test`.
 
 The API and worker read the same validated configuration through separate
 composition containers. The worker is disabled by default until notification

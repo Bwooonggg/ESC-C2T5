@@ -6,9 +6,9 @@
 
 **Phase 5 — Implement external generator boundaries: done**
 
-**Phase 6 — Implement Track Progress and Summary: in progress**
+**Phase 6 — Implement Track Progress and Summary: done**
 
-**Next:** Complete the Phase 6 database-backed end-to-end verification
+**Next:** Phase 7 — Implement Recommendations
 
 ## Completed Work
 
@@ -147,6 +147,9 @@
 - Reran the live MySQL integration suite against the dedicated
   `das7_integration_test` database; migration, schema, repository, and
   transaction checks passed.
+- Added database-backed Track Progress end-to-end coverage using the real
+  Express route, MySQL repositories, application model, controlled summary
+  generator, summary persistence, and `progressUnavailable` branch.
 
 ## Verification Evidence
 
@@ -163,14 +166,14 @@ npm run test:integration
 ```
 
 Current unit/HTTP Jest result: 14 test suites passed and 68 tests passed.
-The MySQL integration result is 1 suite passed and 5 tests passed against a
+The MySQL integration result is 2 suites passed and 7 tests passed against a
 disposable MySQL 8 test database.
 The integration suite was run against a disposable MySQL 8 instance with
 explicit `MYSQL_TEST_*` settings; no local database files were retained.
 
 The current integration command ran with the dedicated `MYSQL_TEST_*`
-configuration and passed. The database-backed Track Progress HTTP end-to-end
-scenario remains a separate Phase 6 verification item.
+configuration and passed, including the database-backed Track Progress HTTP
+end-to-end scenario.
 
 The migration runner and index migration were applied successfully to a blank
 isolated MySQL 8 database, and a second run was verified as a no-op.
@@ -185,7 +188,7 @@ isolated MySQL 8 database, and a second run was verified as a no-op.
 | 3 | Create the MySQL schema | Done |
 | 4 | Implement MySQL repositories | Done |
 | 5 | Implement external generator boundaries | Done |
-| 6 | Implement Track Progress and Summary | In progress |
+| 6 | Implement Track Progress and Summary | Done |
 | 7 | Implement recommendations | Pending |
 | 8 | Implement notification preferences | Pending |
 | 9 | Implement data ingestion | Pending |
@@ -255,4 +258,4 @@ isolated MySQL 8 database, and a second run was verified as a no-op.
 | 4 | Compose MySQL repositories and the summary generator for production | Done |
 | 5 | Coalesce concurrent requests for one student progress version | Done |
 | 6 | Verify the flow with application and HTTP Jest tests | Done |
-| 7 | Run database-backed end-to-end verification | Pending |
+| 7 | Run database-backed end-to-end verification | Done |

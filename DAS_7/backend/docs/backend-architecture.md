@@ -545,13 +545,14 @@ backend/
     |   `-- routes/
     |-- integration/
     |   |-- mysql/
+    |   |   |-- schema.test.ts
+    |   |   `-- track-progress.e2e.test.ts
     |   |-- generator-adapters/
     |   `-- email-adapter/
     |-- contract/
     |   |-- frontend-api/
     |   `-- external-services/
     |-- e2e/
-    |   |-- track-progress.e2e.test.ts
     |   |-- recommendations.e2e.test.ts
     |   |-- preferences.e2e.test.ts
     |   |-- ingestion.e2e.test.ts
