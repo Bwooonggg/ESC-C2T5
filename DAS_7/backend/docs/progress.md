@@ -10,7 +10,9 @@
 
 **Phase 7 — Implement Recommendations: done**
 
-**Next:** Phase 8 — Implement Notification Preferences
+**Phase 8 — Implement Notification Preferences: done**
+
+**Next:** Phase 9 — Implement Data Ingestion
 
 ## Completed Work
 
@@ -161,6 +163,14 @@
 - Added application, HTTP, and database-backed end-to-end coverage for
   recommendation success, latest-summary selection, persistence, missing
   summaries, invalid student IDs, and generator failures.
+- Added `GET /api/parents/:parentId/preferences` and
+  `PUT /api/parents/:parentId/preferences` through preference application
+  models, request validation, response mapping, and container-backed routing.
+- Added preference persistence through the existing MySQL repository, including
+  email normalization and enabled/frequency validation.
+- Added HTTP and database-backed end-to-end coverage for preference reads,
+  updates, missing rows, normalized email values, invalid input, and database
+  persistence.
 
 ## Verification Evidence
 
@@ -176,15 +186,15 @@ npm run test:coverage
 npm run test:integration
 ```
 
-Current unit/HTTP Jest result: 15 test suites passed and 73 tests passed.
-The MySQL integration result is 2 suites passed and 9 tests passed against a
+Current unit/HTTP Jest result: 17 test suites passed and 82 tests passed.
+The MySQL integration result is 3 suites passed and 12 tests passed against a
 disposable MySQL 8 test database.
 The integration suite was run against a disposable MySQL 8 instance with
 explicit `MYSQL_TEST_*` settings; no local database files were retained.
 
 The current integration command ran with the dedicated `MYSQL_TEST_*`
-configuration and passed, including database-backed Track Progress and
-Recommendation HTTP end-to-end scenarios.
+configuration and passed, including database-backed Track Progress,
+Recommendation, and Notification Preferences HTTP end-to-end scenarios.
 
 The migration runner and index migration were applied successfully to a blank
 isolated MySQL 8 database, and a second run was verified as a no-op.
@@ -201,7 +211,7 @@ isolated MySQL 8 database, and a second run was verified as a no-op.
 | 5 | Implement external generator boundaries | Done |
 | 6 | Implement Track Progress and Summary | Done |
 | 7 | Implement recommendations | Done |
-| 8 | Implement notification preferences | Pending |
+| 8 | Implement notification preferences | Done |
 | 9 | Implement data ingestion | Pending |
 | 10 | Implement the notification worker | Pending |
 | 11 | Connect real providers | Pending |
@@ -281,3 +291,14 @@ isolated MySQL 8 database, and a second run was verified as a no-op.
 | 4 | Compose the external recommendation generator | Done |
 | 5 | Persist recommendations with their basis summary | Done |
 | 6 | Add application, HTTP, and database-backed end-to-end tests | Done |
+
+## Phase 8 Step Tracking
+
+| Step | Description | Status |
+| --- | --- | --- |
+| 1 | Add preference application models for reads and updates | Done |
+| 2 | Validate parent IDs and preference request fields | Done |
+| 3 | Add preference controllers, response mapping, and routes | Done |
+| 4 | Compose the MySQL preference repository for production | Done |
+| 5 | Test missing preferences, updates, normalization, and invalid data | Done |
+| 6 | Run database-backed preference end-to-end verification | Done |

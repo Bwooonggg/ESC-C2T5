@@ -22,17 +22,24 @@ import { TrackProgressModel } from '../modules/track-progress/application/track-
 import { RecommendationModel } from '../modules/track-progress/application/recommendation.model.js'
 import type { SummaryGeneratorClientRequest } from '../adapters/generators/summary-generator.client.js'
 import type { RecommendationGeneratorClientRequest } from '../adapters/generators/recommendation-generator.client.js'
+import { GetPreferencesModel } from '../modules/preferences/application/get-preferences.js'
+import { SavePreferencesModel } from '../modules/preferences/application/save-preferences.js'
+import { MySqlNotificationPreferenceRepository } from '../infrastructure/mysql/repositories/mysql-notification-preference.repository.js'
 
 export interface ApiContainer {
     readonly config: AppConfig
     readonly trackProgressModel?: TrackProgressModel
     readonly recommendationModel?: RecommendationModel
+    readonly getPreferencesModel?: GetPreferencesModel
+    readonly savePreferencesModel?: SavePreferencesModel
     readonly close: () => Promise<void>
 }
 
 export interface ApiContainerOptions {
     readonly trackProgressModel?: TrackProgressModel
     readonly recommendationModel?: RecommendationModel
+    readonly getPreferencesModel?: GetPreferencesModel
+    readonly savePreferencesModel?: SavePreferencesModel
     readonly close?: () => Promise<void>
 }
 
@@ -44,6 +51,8 @@ export function createApiContainer(
         config,
         trackProgressModel: options.trackProgressModel,
         recommendationModel: options.recommendationModel,
+        getPreferencesModel: options.getPreferencesModel,
+        savePreferencesModel: options.savePreferencesModel,
         close: options.close ?? (async () => undefined),
     }
 }
@@ -55,6 +64,8 @@ export function createProductionApiContainer(
     const summaryGenerator = createSummaryGenerator(config)
     const recommendationGenerator = createRecommendationGenerator(config)
     const summaryRepository = new MySqlSummaryRepository(pool)
+    const notificationPreferenceRepository =
+        new MySqlNotificationPreferenceRepository(pool)
     const trackProgressModel = new TrackProgressModel({
         studentRepository: new MySqlStudentRepository(pool),
         progressRecordRepository: new MySqlProgressRecordRepository(pool),
@@ -66,11 +77,19 @@ export function createProductionApiContainer(
         recommendationRepository: new MySqlRecommendationRepository(pool),
         recommendationGenerator,
     })
+    const getPreferencesModel = new GetPreferencesModel({
+        notificationPreferenceRepository,
+    })
+    const savePreferencesModel = new SavePreferencesModel({
+        notificationPreferenceRepository,
+    })
 
     return {
         config,
         trackProgressModel,
         recommendationModel,
+        getPreferencesModel,
+        savePreferencesModel,
         close: () => pool.end(),
     }
 }

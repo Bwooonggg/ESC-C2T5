@@ -1,6 +1,6 @@
 # DAS 7 Backend Implementation Plan
 
-**Status:** Approved implementation sequence; Phase 7 complete; Phase 8 next
+**Status:** Approved implementation sequence; Phase 8 complete; Phase 9 next
 
 **Testing stack:** Jest, `ts-jest`, and Supertest
 
@@ -262,7 +262,7 @@ Phase 11 controlled-provider test work.
 
 **Done when:** recommendations are generated only after an explicit parent request and always reference their basis summary.
 
-## Phase 8: Implement Notification Preferences
+## Phase 8: Implement Notification Preferences — DONE
 
 Implement:
 
@@ -271,10 +271,16 @@ Implement:
 
 Validate enabled state, notification frequency, and recipient email. Parent
 ownership and cross-parent access checks are added in the final authentication
-and authorization phase. Test defaults, updates, and invalid data now; add
-access-control tests when that phase is integrated.
+and authorization phase. Test missing preferences, updates, normalized email,
+and invalid data now; add access-control tests when that phase is integrated.
 
-**Done when:** preference data validates and persists correctly; parent ownership checks are added in the final authentication and authorization phase.
+The preference application models, controller, response mapping, route wiring,
+production MySQL composition, and database-backed end-to-end tests are
+implemented. A missing preference returns `preferencesUnavailable` with HTTP
+404; authentication and authorization remain deferred to Phase 13.
+
+**DONE:** Preference data validates and persists correctly; parent ownership
+checks are added in the final authentication and authorization phase.
 
 ## Phase 9: Implement Data Ingestion
 

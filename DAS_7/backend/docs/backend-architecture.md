@@ -132,6 +132,13 @@ optional idempotency header, call their application models, and map domain
 entities to the frontend's existing JSON shapes. Authentication and guardian
 authorization remain an explicit middleware seam for Phase 13.
 
+The notification-preference routes use the same container-backed composition.
+`GetPreferencesModel` reads one parent preference through the repository, while
+`SavePreferencesModel` constructs a validated `NotificationPreference`,
+normalizes the email value through the domain value object, and persists it.
+Missing preferences return `preferencesUnavailable` with HTTP 404. Parent
+ownership checks remain deferred to Phase 13.
+
 ### 3.3 Notify Parent flow
 
 The backend follows this sequence:
@@ -294,6 +301,24 @@ The recommendation's `studentId` is retained by the domain and persistence
 layers but omitted from the transport response because it is not part of the
 current frontend type. `summaryId` is the explicit basis relationship.
 
+The implemented Notification Preferences response is:
+
+```json
+{
+  "ok": true,
+  "data": {
+    "parentId": "parent-1",
+    "enabled": true,
+    "frequency": "Weekly",
+    "recipientEmail": "parent@example.com"
+  }
+}
+```
+
+`PUT /api/parents/:parentId/preferences` accepts `enabled`, `frequency`, and
+`recipientEmail` in the request body. The returned email is normalized to
+lowercase and trimmed by the `EmailAddress` value object.
+
 ### 5.3 Future data-entry routes
 
 Staff and trusted-system accounts may use versioned routes such as:
@@ -453,7 +478,8 @@ backend/
 |   |   |   |-- http/
 |   |   |   |   |-- preference.routes.ts
 |   |   |   |   |-- preference.controller.ts
-|   |   |   |   `-- preference.schemas.ts
+|   |   |   |   |-- preference.schemas.ts
+|   |   |   |   `-- preference.responses.ts
 |   |   |   |-- application/
 |   |   |   |   |-- get-preferences.ts
 |   |   |   |   `-- save-preferences.ts
@@ -564,7 +590,8 @@ backend/
     |-- integration/
     |   |-- mysql/
     |   |   |-- schema.test.ts
-    |   |   `-- track-progress.e2e.test.ts
+    |   |   |-- track-progress.e2e.test.ts
+    |   |   `-- preferences.e2e.test.ts
     |   |-- generator-adapters/
     |   `-- email-adapter/
     |-- contract/

@@ -108,10 +108,13 @@ the existing Vite proxy to preserve that behavior.
 - `POST /api/students/:studentId/recommendations` loads the latest persisted
   summary, generates a recommendation through the configured external service,
   persists its summary basis, and returns the frontend-compatible response.
+- `GET /api/parents/:parentId/preferences` reads the persisted notification
+  preference, while `PUT /api/parents/:parentId/preferences` validates,
+  normalizes, persists, and returns the updated preference.
 - Overlapping summary requests for the same student progress version share one
   in-flight generation operation.
 - Existing frontend and future ingestion routes are registered, but business
   handlers currently return a JSON `501 Not implemented` envelope.
-- Notification-preference, ingestion, email-delivery, and worker-job workflows
-  remain reserved for their respective implementation phases. Authentication
-  routes and authorization middleware remain unmounted until the final phase.
+- Ingestion, email-delivery, and worker-job workflows remain reserved for their
+  respective implementation phases. Authentication routes and authorization
+  middleware remain unmounted until the final phase.
