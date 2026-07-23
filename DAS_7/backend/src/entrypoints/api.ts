@@ -7,7 +7,7 @@ const app = createApiApp(container)
 const server = app.listen(container.config.api.port, () => {
     const port = container.config.api.port
     console.log(`[server] DAS 7 backend listening on http://localhost:${port}`)
-    console.log(`[server] health: http://localhost:${port}/api/health`)
+    console.log(`[server] health: http://localhost:${port}/health`)
 })
 
 installShutdownHandlers(server, container.close)

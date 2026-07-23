@@ -1,6 +1,7 @@
 # DAS 7 Backend Architecture
 
-**Status:** Approved target architecture; revision R1-R5 implemented, R6 onward pending
+**Status:** Approved target architecture; revision R1-R6A implemented. R6B is
+next; platform-auth integration is deferred to R6C.
 
 **Scope:** DAS 7 Insight backend only
 
@@ -58,9 +59,11 @@ The implementation checkpoint now includes the hosted-development Supabase
 CLI configuration, the committed PostgreSQL migration chain for the `insight`
 schema, its generated TypeScript database types, the verified RLS/grant
 boundary, Supabase clients, mappers, repositories, RPC wrappers, and a bounded
-readiness probe. Identity ownership is complete; gateway-aligned routing,
-workflow composition, provider integration, and MySQL removal remain in the
-later revision phases described by [`revision-plan.md`](revision-plan.md).
+readiness probe. Identity ownership and gateway-aligned routing are complete.
+The immediate implementation work is reversible hosted-development Supabase
+smoke validation; platform-auth integration, workflow composition, provider
+integration, and MySQL removal remain in the later revision phases described by
+[`revision-plan.md`](revision-plan.md).
 
 ## 3. System Context and Ownership
 
@@ -155,6 +158,11 @@ The API process:
 
 The API process uses a Supabase publishable key plus the caller's JWT. It must
 not receive the worker's secret key.
+
+This is the target behavior after the platform-auth contract is available.
+During revision R6A/R6B, the API only adopts the service-local route shape and
+validates hosted-development Supabase infrastructure; it does not add a
+development-only authentication bypass.
 
 ### 4.2 Worker process
 
@@ -339,8 +347,10 @@ The target public routes are:
 | `PUT /api/insights/parents/:parentId/preferences` | `PUT /parents/:parentId/preferences` | Update preferences |
 | `/api/insights/v1/*` | `/v1/*` | Versioned data ingestion |
 
-Health endpoints are public. Functional routes require a valid bearer token.
-Authorization of rows is enforced by the platform-supplied RLS contract.
+Health endpoints are public. In the target integration, functional routes
+require a valid bearer token and row authorization is enforced by the
+platform-supplied RLS contract. That token/RLS integration is deferred until
+R6C; R6A/R6B do not weaken the boundary with a temporary bypass.
 
 ### 6.3 Response envelope
 
@@ -744,7 +754,7 @@ the diagram.
 | `app/` | Composition roots. App factories create Express or the worker loop, while containers connect application ports to concrete Supabase, LLM, email, and clock adapters. |
 | `config/` | The only production area that reads environment variables. It validates raw values and returns typed API, Supabase, LLM, email, and notification settings. |
 | `domain/` | Pure DAS 7 entities, value objects, invariants, and business errors. It has no Express, Supabase, SQL, provider SDK, or environment dependency. |
-| `http/` | HTTP behavior shared across features, including the combined router, health routes, global middleware, verified request-principal handling, response envelopes, and error mapping. Its `principal/` boundary contains framework-neutral claims, principal, and verifier types; the Supabase-backed verifier is added in R6. |
+| `http/` | HTTP behavior shared across features, including the combined router, health routes, global middleware, verified request-principal handling, response envelopes, and error mapping. Its `principal/` boundary contains framework-neutral claims, principal, and verifier types; the Supabase-backed verifier is deferred to R6C. |
 | `modules/` | Feature-oriented application code for parents, progress tracking, preferences, ingestion, and notifications. Modules coordinate domain objects through ports without knowing the concrete infrastructure. |
 | `infrastructure/` | Technical implementations of application ports: Supabase clients and repositories, PostgreSQL RPC wrappers, LLM adapters, email adapters, and the real system clock. |
 | `infrastructure/supabase/clients/` | Typed `supabase-js` factories. The request factory carries a verified caller token; the worker factory is the only secret-key construction path. |

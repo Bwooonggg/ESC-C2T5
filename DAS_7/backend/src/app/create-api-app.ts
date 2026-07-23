@@ -14,7 +14,10 @@ export function createApiApp(
     app.use(express.json({ limit: '1mb' }))
     app.use(requestId)
 
-    app.use('/api', createApiRouter(container))
+    // Traefik owns the public /api/insights prefix and strips it before the
+    // request reaches this service. Express therefore exposes service-local
+    // paths directly at the application root.
+    app.use(createApiRouter(container))
 
     app.use(notFound)
     app.use(errorHandler)

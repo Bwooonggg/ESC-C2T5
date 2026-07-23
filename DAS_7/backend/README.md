@@ -10,9 +10,9 @@ npm install
 npm run dev
 ```
 
-The API listens on `http://localhost:4000` by default. The final deployment
-uses service-local routes behind Traefik's `/api/insights` prefix; the current
-baseline still exposes its historical `/api` mount until revision R6 completes.
+The API listens on `http://localhost:4000` by default. Express exposes
+service-local routes; the final deployment uses Traefik's `/api/insights`
+prefix, which is stripped before forwarding the request to this service.
 
 Useful checks:
 
@@ -122,29 +122,29 @@ stripping that prefix. No CORS configuration is required for the browser.
 
 ## Current scaffold behavior
 
-The following `/api` paths describe the historical baseline while R6 changes
-the service-local mount and R7 composes Supabase repositories into the feature
-models:
+The following service-local paths are currently registered. In deployment,
+Traefik exposes the same routes under `/api/insights`:
 
-- `GET /api/health` returns a liveness response.
-- `GET /api/health/ready` reports that the transitional database readiness
+- `GET /health` returns a liveness response.
+- `GET /health/ready` reports that the transitional database readiness
   dependency is not configured unless a probe is injected.
 - The historical workflow routes currently load persistence through MySQL;
   their Supabase repository equivalents and bounded readiness probe are now
   implemented under `src/infrastructure/supabase/` and are composed in later
   revision phases.
-- `GET /api/students/:studentId/summary` runs the same summary workflow and
+- `GET /students/:studentId/summary` runs the same summary workflow and
   returns only the summary object in the standard envelope.
-- `POST /api/students/:studentId/recommendations` loads the latest persisted
+- `POST /students/:studentId/recommendations` loads the latest persisted
   summary, generates a recommendation through the configured external service,
   persists its summary basis, and returns the frontend-compatible response.
-- `GET /api/parents/:parentId/preferences` reads the persisted notification
-  preference, while `PUT /api/parents/:parentId/preferences` validates,
+- `GET /parents/:parentId/preferences` reads the persisted notification
+  preference, while `PUT /parents/:parentId/preferences` validates,
   normalizes, persists, and returns the updated preference.
 - Overlapping summary requests for the same student progress version share one
   in-flight generation operation.
 - Existing frontend and future ingestion routes are registered, but business
   handlers currently return a JSON `501 Not implemented` envelope.
 - Ingestion, email-delivery, and worker-job workflows remain reserved for their
-  respective implementation phases. JWT verification and gateway-aligned
-  routing are next; DAS7 will not mount login or signup routes.
+  respective implementation phases. JWT verification remains deferred until
+  the platform-auth contract is available; DAS 7 does not mount login or
+  signup routes.

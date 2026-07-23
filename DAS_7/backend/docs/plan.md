@@ -1,6 +1,8 @@
 # DAS 7 Backend Implementation Plan
 
-**Status:** Paused until [`revision-plan.md`](revision-plan.md) is complete
+**Status:** Paused until [`revision-plan.md`](revision-plan.md) is complete.
+The immediate revision work is R6B; R6A is complete. Platform-auth
+integration is deferred to R6C.
 
 **Architecture:** [`backend-architecture.md`](backend-architecture.md)
 
@@ -15,15 +17,28 @@ implemented.
 The original implementation completed Phases 0 through 8 against MySQL. The
 project architecture has since changed to Supabase and platform-owned identity.
 
-Do not continue with the next feature phase yet.
+Do not continue with the next feature phase yet. First complete the
+non-authentication revision work that can be performed against the hosted
+development Supabase project:
+
+- R6B: run temporary, reversible Supabase connectivity and persistence smoke
+  checks without adding permanent test files.
+
+Do not begin R6C or the feature phases until the platform/authentication team
+provides the token and claims contract. A testing Supabase project does not
+replace that external contract and must not be used to create an authentication
+bypass.
 
 Execute [`revision-plan.md`](revision-plan.md) from beginning to end first. That
 revision will:
 
 - Replace MySQL with Supabase.
 - Remove DAS 7-owned credential and session concepts.
-- Integrate Supabase JWT verification without implementing Auth flows.
+- Prepare the service boundary for Supabase JWT verification without
+  implementing Auth flows; the actual token integration is deferred to R6C.
 - Align internal routes with the `/api/insights` gateway prefix.
+- Validate the existing Supabase clients, repositories, and RPCs against the
+  hosted development project.
 - Replace the two generator-service clients with a provider-neutral LLM
   boundary.
 - Restore the already implemented DAS 7 workflows on the hosted development
@@ -90,9 +105,11 @@ The exact OpenAPI contract must be committed before controller implementation.
 
 ### Authorization boundary
 
-DAS 7 verifies the token and passes trusted claims to Supabase. Staff/system
-claim assignment and the RLS policies that allow ingestion are owned by the
-platform/authentication team.
+After R6C is completed, DAS 7 will verify the platform token and pass trusted
+claims to Supabase. Staff/system claim assignment and the RLS policies that
+allow ingestion are owned by the platform/authentication team. Until then,
+ingestion remains a planned contract and is not enabled through a development
+authentication shortcut.
 
 ### Deferred testing backlog
 
@@ -393,6 +410,8 @@ documented testing backlog and use hosted-development smoke checks.
 - Supabase Auth is platform-owned.
 - DAS 7 verifies incoming Supabase access tokens but does not issue or manage
   them.
+- R6A and R6B intentionally stop before that token integration; they use only
+  service-local routing and hosted-development Supabase smoke checks.
 - Authorization claim creation and RLS policy design are external
   responsibilities.
 - The frontend is external to DAS 7.

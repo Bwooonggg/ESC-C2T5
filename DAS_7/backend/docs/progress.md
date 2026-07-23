@@ -2,14 +2,20 @@
 
 ## Current Status
 
-**Architecture revision:** R1 through R5 complete; R6 next
+**Architecture revision:** R1 through R6A complete; R6B next
 
-**Next work:** Revision Phase R6 in [`revision-plan.md`](revision-plan.md)
+Platform-auth integration (R6C) is intentionally deferred until the
+platform/authentication team supplies its token and claims contract.
+
+**Next work:** Revision Phase R6B in
+[`revision-plan.md`](revision-plan.md)
 
 **Feature plan:** Paused until the complete revision plan passes
 
-The target architecture now uses Supabase for PostgreSQL and Auth integration,
-a provider-neutral online LLM boundary, and a separate DAS 7 API and worker.
+The target architecture now uses Supabase for PostgreSQL and platform-owned
+Auth integration, a provider-neutral online LLM boundary, and a separate DAS 7
+API and worker. The current implementation sequence intentionally pauses
+before the Auth integration boundary.
 
 Implementation and the later dedicated testing phase use a Supabase-hosted
 development project. No local Supabase database is planned. The production
@@ -21,9 +27,10 @@ implementation phases are complete.
 
 The version-controlled Supabase CLI foundation and the first hosted `insight`
 schema migration chain and Supabase persistence boundary are now present.
-Identity ownership has been refactored; JWT verification, gateway-aligned
-routing, workflow composition, LLM consolidation, and final MySQL removal
-remain in later revision phases.
+Identity ownership and gateway-aligned routing are complete. Reversible
+hosted-development Supabase smoke checks are next; JWT verification,
+workflow composition, LLM consolidation, and final MySQL removal remain in
+later revision phases.
 
 ## Why the Plan Is Paused
 
@@ -32,13 +39,16 @@ valid:
 
 - DAS 7 uses MySQL and a custom MySQL migration runner.
 - Credential-related fields and repository contracts are modeled locally.
-- Express mounts an internal `/api` prefix.
+- Express previously mounted an internal `/api` prefix; R6A now exposes
+  service-local paths for the Traefik gateway.
 - Summary and recommendation generation are configured as two external
   generator services.
 - The old remaining plan included a DAS 7-owned authentication phase.
 
 Continuing directly with ingestion or notifications would add new work to an
-infrastructure and ownership model that is being replaced.
+infrastructure and ownership model that is being replaced. The next safe
+implementation step is R6B's hosted-development Supabase smoke validation;
+platform-auth integration remains deferred to R6C.
 
 Complete [`revision-plan.md`](revision-plan.md) before resuming
 [`plan.md`](plan.md) at Phase 9.
@@ -227,7 +237,7 @@ hosted development project:
   owner-checked completion/failure transitions.
 - RLS is enabled on every `insight` table. The schema and explicit role grants
   are in place, while ownership and ingestion policies remain deliberately
-  absent until the platform/Auth team supplies the claims contract in R6.
+  absent until the platform/Auth team supplies the claims contract in R6C.
 - The `insight` schema is exposed through the hosted project's Data API, and
   generated TypeScript definitions are stored under
   `src/infrastructure/supabase/generated/database.types.ts`.
@@ -356,6 +366,37 @@ Results:
   mapper, repository, RPC, readiness, and client-separation cases remain in
   the dedicated testing backlog.
 
+## Revision R6A Progress
+
+Service-local routing is complete without integrating platform
+authentication:
+
+- `createApiApp()` now mounts the API router at the service root instead of
+  under `/api`.
+- The API entrypoint reports the local `/health` URL.
+- The README documents the service-local paths and Traefik's external
+  `/api/insights` prefix.
+- No JWT middleware, authentication bypass, login route, or signup route was
+  added.
+
+### R6A verification
+
+```powershell
+npm run typecheck
+npm run build
+```
+
+Results:
+
+- Typecheck passed.
+- Build passed.
+- A temporary root-route smoke check returned 200 for `/health`, 503 for
+  `/health/ready`, 404 for the historical `/api/health`, and 404 for
+  `/auth/login`.
+- Existing HTTP Jest files still target the historical `/api` paths. They
+  were not rewritten during implementation and remain in the dedicated test
+  backlog.
+
 ## Documentation Pivot
 
 | Document | Status |
@@ -375,8 +416,10 @@ Results:
 | R3 | Create the PostgreSQL `insight` schema and RPCs | Done |
 | R4 | Refactor identity ownership and the domain boundary | Done |
 | R5 | Implement Supabase clients, mappers, repositories, and readiness | Done |
-| R6 | Integrate JWT verification and gateway-aligned routing | Next |
-| R7 | Restore existing workflows on Supabase | Pending |
+| R6A | Align service-local routing without platform-auth integration | Done |
+| R6B | Validate hosted-development Supabase connectivity without platform-auth integration | Next |
+| R6C | Integrate the deferred platform token boundary | Blocked by external contract |
+| R7 | Restore existing workflows on Supabase after R6C | Pending |
 | R8 | Refactor generator infrastructure to the shared LLM boundary | Pending |
 | R9 | Remove MySQL and obsolete authentication infrastructure | Pending |
 | R10 | Complete revision verification and documentation | Pending |

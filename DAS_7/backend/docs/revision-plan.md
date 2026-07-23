@@ -1,6 +1,7 @@
 # DAS 7 Supabase Architecture Revision Plan
 
-**Status:** R1 through R5 complete; R6 next
+**Status:** R1 through R5 complete; R6A and R6B next. Platform-auth
+integration (R6C) is intentionally deferred.
 
 **Start here:** Complete R1 through R10 before returning to
 [`plan.md`](plan.md)
@@ -38,6 +39,20 @@ At the end of this revision:
   phase in [`plan.md`](plan.md).
 - The remaining feature plan can resume at Phase 9.
 
+### Current sequencing decision
+
+The next implementation work deliberately does not integrate DAS 7 with the
+platform authentication boundary. We will first align Express with the
+Traefik gateway and validate the existing Supabase infrastructure against the
+hosted development project. The platform token contract, token verification,
+protected-route enforcement, and RLS-dependent user workflows remain a later
+integration step after the platform/authentication team supplies its contract.
+
+The hosted development project is suitable for temporary, reversible
+connectivity and persistence smoke checks. It is not a substitute for the
+platform-auth integration contract and it must not be used to justify a
+development-only authentication bypass.
+
 ## 2. Execution Rules
 
 1. Complete phases in order.
@@ -50,24 +65,30 @@ At the end of this revision:
    recorded for the dedicated testing phase.
 5. Do not attempt to migrate existing MySQL data.
 6. Do not implement platform-owned Auth flows or authorization policy logic.
-7. Do not add frontend code.
-8. Do not call or query another DAS subsystem.
-9. Use four spaces for indentation.
-10. Pin Supabase package versions exactly and commit the lockfile.
-11. Use the Supabase CLI through the project package runner; do not depend on a
+7. Until R6C is explicitly opened, do not integrate the platform token
+   verifier, require JWTs on functional routes, or add an authentication
+   bypass. Keep only the existing framework-neutral principal/verifier seams.
+8. R6A and R6B may use only the hosted development Supabase project for
+   non-production, reversible smoke checks. Never put the worker secret key in
+   the API route graph.
+9. Do not add frontend code.
+10. Do not call or query another DAS subsystem.
+11. Use four spaces for indentation.
+12. Pin Supabase package versions exactly and commit the lockfile.
+13. Use the Supabase CLI through the project package runner; do not depend on a
     globally installed CLI.
-12. Use CLI `--help` before relying on a Supabase command or option.
-13. Link only the hosted development project during implementation. If the
+14. Use CLI `--help` before relying on a Supabase command or option.
+15. Link only the hosted development project during implementation. If the
     linked project contains migrations owned by another project or subsystem,
     stop and obtain an explicit repurposing decision before reconciling history
     or pushing. Do not use production project credentials or references.
-14. Preview every remote migration push before applying it. Keep remote checks
+16. Preview every remote migration push before applying it. Keep remote checks
     read-only or dry-run until the dedicated project is confirmed.
-15. Do not use `supabase start`, local database reset commands, or destructive
+17. Do not use `supabase start`, local database reset commands, or destructive
     linked-project resets as part of the normal workflow.
-16. Keep private environment files and Supabase CLI temporary/link state
+18. Keep private environment files and Supabase CLI temporary/link state
     ignored.
-17. Update [`progress.md`](progress.md) after each completed revision phase.
+19. Update [`progress.md`](progress.md) after each completed revision phase.
 
 ## 3. Compatibility Strategy
 
@@ -410,7 +431,7 @@ R3 is complete. The four CLI-created migrations are applied and aligned with
 the linked hosted development project. The `insight` schema, constraints,
 indexes, worker RPCs, RLS enablement, explicit grants, and generated TypeScript
 types have been verified. RLS policies remain intentionally deferred until the
-platform/Auth team supplies the claims and ownership contract in R6. No local
+platform/Auth team supplies the claims and ownership contract in R6C. No local
 Supabase service, seed data, reset, or production project linkage was used.
 
 ## Phase R4: Refactor Identity Ownership and Domain Boundaries
@@ -598,7 +619,7 @@ R5 is implemented under `src/infrastructure/supabase/`:
 - `npm run test:http -- --runInBand` passes the existing four HTTP suites (16
   tests); no permanent R5 test files were added.
 - Hosted repository/RPC smoke operations requiring the final claims and RLS
-  policy contract remain an R6/R7 integration gate; no remote data was reset.
+  policy contract remain an R6C/R7 integration gate; no remote data was reset.
 - Existing repository behavior has a Supabase equivalent.
 - Deferred cases are recorded without adding new permanent test files.
 
@@ -606,37 +627,18 @@ R5 is implemented under `src/infrastructure/supabase/`:
 workflows are available through Supabase adapters.
 
 **R5 status:** Done. The hosted-development smoke operations that require the
-platform claims and final RLS policies remain part of R6/R7; they are not
+platform claims and final RLS policies remain part of R6C/R7; they are not
 silently treated as complete by this implementation checkpoint.
 
-## Phase R6: Integrate JWT Verification and Gateway-Aligned Routing
+## Phase R6A: Align Service-Local Routing (No Platform Auth Integration)
 
 ### Purpose
 
-Integrate DAS 7 into the platform request boundary without implementing the
-platform's authentication lifecycle or authorization policies.
+Align Express with the platform gateway without requiring a token contract or
+changing authentication behavior. Traefik will own the public
+`/api/insights` prefix and strip it before the request reaches DAS 7.
 
-### JWT verification
-
-1. Read the bearer token from the `Authorization` header.
-2. Reject missing, malformed, invalid, or expired tokens on protected routes.
-3. Verify Supabase-issued access tokens with `supabase.auth.getClaims()`.
-4. Validate the required claim shape.
-5. Create the immutable request principal.
-6. Pass the verified token to the request-scoped Supabase client.
-7. Never trust `user_metadata` for authorization.
-8. Never log the token.
-
-Do not add:
-
-- Login or signup routes.
-- Password handling.
-- Refresh-token handling.
-- Logout or token revocation.
-- DAS 7 role assignment.
-- DAS 7 authorization policies that duplicate platform RLS.
-
-### Routing revision
+### Work
 
 1. Stop mounting the Express API under `/api`.
 2. Register service-local routes:
@@ -648,10 +650,119 @@ Do not add:
    - `/parents/*`
    - `/v1/*`
 
-3. Document `/api/insights` as the external Traefik prefix.
+3. Document the public `/api/insights` prefix and the prefix-stripping
+   expectation.
 4. Keep health and readiness public.
-5. Protect functional routes with token verification.
+5. Keep functional-route behavior unchanged for now; do not add a temporary
+   authentication bypass or pretend that platform claims are available.
 6. Keep CORS absent.
+
+### Verification
+
+- Existing HTTP requests use the service-local paths after the internal mount
+  is removed.
+- The public-to-service route mapping is recorded for the gateway team.
+- Typecheck and build pass.
+- The temporary route smoke check confirms `/health` and `/health/ready`
+  resolve at the service root, the historical `/api` path is not mounted, and
+  the deferred authentication route remains absent.
+- Existing HTTP Jest files still call the historical `/api` paths. They are
+  retained as a behavioral baseline and remain in the dedicated testing
+  backlog rather than being rewritten during implementation.
+
+**Done when:** Express serves service-local routes that can be published under
+`/api/insights` by Traefik, without introducing any platform-auth behavior.
+
+### R6A implementation checkpoint
+
+R6A is complete. `createApiApp()` now mounts the router at the service root,
+the API entrypoint logs `/health`, and the README documents service-local paths
+behind Traefik's `/api/insights` prefix. Typecheck and build pass. A temporary
+smoke check confirmed the root health routes return their expected envelopes,
+the legacy `/api/health` path returns 404, and `/auth/login` remains unmounted.
+The existing HTTP Jest files still use the historical prefix and were not
+rewritten, consistent with the deferred permanent-test policy.
+
+## Phase R6B: Validate Hosted Supabase Connectivity (No Platform Auth Integration)
+
+### Purpose
+
+Use the designated Supabase-hosted development project to validate the
+infrastructure already implemented in R5. This phase proves connectivity and
+database behavior without switching user-facing workflows to an unapproved
+authorization model.
+
+### Work
+
+1. Point development environment values only at the hosted development
+   project.
+2. Verify that the request-scoped publishable-key client can be constructed
+   with the `insight` schema and cannot access the worker secret.
+3. Verify the bounded readiness probe against the development project.
+4. Use the worker-only secret client, only through worker-scoped composition,
+   for controlled repository and RPC smoke checks where RLS policies are not
+   yet supplied.
+5. Exercise read/write and RPC checks with unique temporary records, then
+   remove only the records created by the check. Do not reset or wipe the
+   hosted project.
+6. Confirm generated types, row mappers, deterministic repository reads, and
+   notification/progress RPC wrappers match the linked schema.
+7. Record any RLS or claim-dependent operation as an R6C external gate rather
+   than weakening the schema or adding a bypass.
+
+### Boundaries
+
+- Do not add JWT middleware or protected-route enforcement in this phase.
+- Do not compose the API's user-facing workflows with the worker secret.
+- Do not use development smoke credentials as a production deployment model.
+- Do not add permanent test files; record cases for the dedicated testing
+  phase instead.
+
+### Verification
+
+- Readiness and controlled Supabase infrastructure smoke checks pass against
+  the hosted development project.
+- Temporary records are uniquely identified and selectively cleaned up.
+- No local Supabase service, production project, or API secret-key path is
+  used.
+- Typecheck and build pass.
+
+**Done when:** the R5 clients, mappers, repositories, and RPC wrappers have a
+reversible hosted-development connectivity result, while user-facing
+authorization remains intentionally unintegrated.
+
+## Deferred Phase R6C: Integrate the Platform Token Boundary
+
+### Purpose
+
+Integrate the platform request boundary only after the platform/authentication
+team supplies its claims and verifier contract. This is an integration seam,
+not an implementation of login, signup, passwords, sessions, or role
+assignment.
+
+### External prerequisites
+
+- Final custom claim names and trusted claim sources.
+- Parent-to-Auth-user mapping.
+- Staff/system ingestion claims, where required.
+- RLS policy predicates for the `insight` schema.
+- Representative development identities and tokens.
+- Confirmed Traefik prefix stripping and service registration.
+
+### JWT integration work
+
+1. Read the bearer token from the `Authorization` header.
+2. Verify Supabase-issued access tokens through the approved verifier (using
+   `supabase.auth.getClaims()` where that is the agreed integration).
+3. Validate the supplied claim shape and create the immutable request
+   principal.
+4. Pass the verified token to the request-scoped Supabase client.
+5. Protect functional routes while leaving health and readiness public.
+6. Never trust `user_metadata` for authorization or log the token.
+
+Do not add login/signup routes, password handling, refresh-token handling,
+logout, token revocation, DAS 7 role assignment, or duplicate RLS policy
+logic.
 
 ### Deferred testing backlog
 
@@ -665,27 +776,18 @@ Record these cases for the dedicated testing phase:
 - Service-local routes and the public gateway path contract.
 - Confirmation that no login/auth router is mounted.
 
-During implementation, perform only the minimum hosted-development smoke calls
-needed to confirm valid and invalid token paths.
+**Done when:** the approved platform contract is available and DAS 7 verifies
+platform tokens, creates a trusted principal, and passes it to the Supabase
+request boundary.
 
-### External gate
-
-Record but do not silently implement missing platform deliverables:
-
-- Final custom claim names.
-- Parent-to-Auth-user mapping.
-- Staff/system ingestion claims.
-- RLS policy predicates.
-
-**Done when:** DAS 7 verifies platform tokens, creates a trusted principal, and
-serves service-local routes compatible with `/api/insights` prefix stripping.
-
-## Phase R7: Restore Completed Workflows on Supabase
+## Phase R7: Restore Completed Workflows on Supabase (After R6C)
 
 ### Purpose
 
-Prove that changing infrastructure and identity ownership did not regress the
-completed DAS 7 functionality.
+After the platform token and RLS contract is available, prove that changing
+infrastructure and identity ownership did not regress the completed DAS 7
+functionality. R7 must not begin by introducing a development-only auth
+shortcut.
 
 ### Track Progress and Summary
 
