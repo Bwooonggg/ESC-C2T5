@@ -1,6 +1,6 @@
 # DAS 7 Supabase Architecture Revision Plan
 
-**Status:** R1 and R2 complete; R3 next
+**Status:** R1, R2, and R3 complete; R4 next
 
 **Start here:** Complete R1 through R10 before returning to
 [`plan.md`](plan.md)
@@ -403,6 +403,15 @@ Also verify:
 **Done when:** the complete committed migration chain has been previewed and
 applied to the hosted development project, its schema and grants are verified,
 and generated types match that linked schema.
+
+### R3 implementation checkpoint
+
+R3 is complete. The four CLI-created migrations are applied and aligned with
+the linked hosted development project. The `insight` schema, constraints,
+indexes, worker RPCs, RLS enablement, explicit grants, and generated TypeScript
+types have been verified. RLS policies remain intentionally deferred until the
+platform/Auth team supplies the claims and ownership contract in R6. No local
+Supabase service, seed data, reset, or production project linkage was used.
 
 ## Phase R4: Refactor Identity Ownership and Domain Boundaries
 

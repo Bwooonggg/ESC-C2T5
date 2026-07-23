@@ -1,6 +1,6 @@
 # DAS 7 Backend Architecture
 
-**Status:** Approved target architecture; revision not yet implemented
+**Status:** Approved target architecture; revision R1-R3 implemented, R4 onward pending
 
 **Scope:** DAS 7 Insight backend only
 
@@ -53,6 +53,13 @@ dependencies.
 - Do not migrate existing MySQL development data.
 - Preserve the existing test baseline, but defer new or rewritten permanent
   test files until the dedicated testing phase after feature implementation.
+
+The first implementation checkpoint now includes the hosted-development
+Supabase CLI configuration, the committed PostgreSQL migration chain for the
+`insight` schema, its generated TypeScript database types, and the verified
+RLS/grant boundary. Identity ownership, gateway-aligned routing, Supabase
+repositories, provider integration, and MySQL removal remain in the later
+revision phases described by [`revision-plan.md`](revision-plan.md).
 
 ## 3. System Context and Ownership
 

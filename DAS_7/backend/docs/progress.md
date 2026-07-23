@@ -2,9 +2,9 @@
 
 ## Current Status
 
-**Architecture revision:** R1 and R2 complete; R3 next
+**Architecture revision:** R1, R2, and R3 complete; R4 next
 
-**Next work:** Revision Phase R3 in [`revision-plan.md`](revision-plan.md)
+**Next work:** Revision Phase R4 in [`revision-plan.md`](revision-plan.md)
 
 **Feature plan:** Paused until the complete revision plan passes
 
@@ -19,9 +19,9 @@ Existing tests remain as the pre-revision baseline. New or substantially
 rewritten permanent test files are deferred until all revision and feature
 implementation phases are complete.
 
-The version-controlled Supabase CLI foundation is now present. No Supabase
-project has been linked, no remote migration has been pushed, and MySQL
-removal, identity refactoring, and routing changes have not started.
+The version-controlled Supabase CLI foundation and the first hosted `insight`
+schema migration chain are now present. MySQL removal, identity refactoring,
+and routing changes have not started.
 
 ## Why the Plan Is Paused
 
@@ -194,12 +194,74 @@ The implementation portion of R2 is complete:
 - Supabase environment fields and hosted-project CLI scripts are available.
 - The existing typecheck, build, and 82-test Jest baseline still pass.
 
-The CLI is authenticated and linked to the hosted project now designated for
-DAS7. The eight migration records from the previous project were repaired as
-reverted in the migration-history table only. The old `private` and `test`
-tables remain untouched and have zero estimated rows. Linked migration status
-and the dry-run push both succeed; no DAS7 migration, schema, or data has been
-applied yet.
+At the completion of R2, the CLI was authenticated and linked to the hosted
+project now designated for DAS7. The eight migration records from the previous
+project were repaired as reverted in the migration-history table only. The old
+`private` and `test` tables remain untouched and have zero estimated rows.
+Linked migration status and the dry-run push both succeeded; no DAS7
+migration, schema, or data had been applied at that checkpoint.
+
+## Revision R3 Progress
+
+The PostgreSQL schema and database boundary implementation is complete for the
+hosted development project:
+
+- Four imperative migrations were created with the project-pinned Supabase
+  CLI and applied after a successful linked dry run.
+- The `insight` schema contains the parent/student projections, guardian
+  relationships, progress records, summaries, recommendations, notification
+  preferences, email notifications, durable notification jobs, idempotency
+  records, and audit events required by the approved diagrams.
+- PostgreSQL constraints preserve required identifiers and text, score and
+  version ranges, allowed skill areas and notification frequencies, normalized
+  email addresses, correction provenance, summary/recommendation ownership,
+  notification state transitions, scoped idempotency, and append-only audit
+  behavior.
+- Query-driven indexes cover guardian lookup, ordered progress, latest
+  summaries, recommendation history, pending/leased jobs, delivery history,
+  audit investigation, idempotency cleanup, and source-record deduplication.
+- `SECURITY INVOKER` RPCs provide atomic progress insertion/correction with
+  version advancement and idempotency, plus notification-job claiming and
+  owner-checked completion/failure transitions.
+- RLS is enabled on every `insight` table. The schema and explicit role grants
+  are in place, while ownership and ingestion policies remain deliberately
+  absent until the platform/Auth team supplies the claims contract in R6.
+- The `insight` schema is exposed through the hosted project's Data API, and
+  generated TypeScript definitions are stored under
+  `src/infrastructure/supabase/generated/database.types.ts`.
+- The initial config push was reviewed and the final hosted configuration
+  preserves the project's existing Auth and Storage settings; only the
+  approved `insight` Data API exposure was added.
+
+### R3 verification
+
+The following checks passed after the migrations and generated types were
+applied:
+
+```powershell
+npm run supabase:db:push:dry-run
+npm run supabase:db:push
+npm run supabase:migrations
+npm run supabase:types
+npm run typecheck
+npm run build
+npm test -- --runInBand
+npx supabase db advisors --linked --type all --level warn --fail-on error
+```
+
+Results:
+
+- Four local and remote migration versions are aligned.
+- All 11 expected tables exist with RLS enabled.
+- All seven expected functions are `SECURITY INVOKER`.
+- Only the three worker job-transition functions have service-role execute
+  grants; no anonymous function grants were added.
+- Existing Jest verification remains green: 17 suites and 82 tests passed.
+- Database advisors reported no revision-owned errors. The remaining warning
+  belongs to a legacy `public` function from the repurposed development
+  project, outside the new `insight` schema.
+- No local Supabase service, reset, seed data, or production project linkage
+  was used.
 
 ## Documentation Pivot
 
@@ -217,8 +279,8 @@ applied yet.
 | --- | --- | --- |
 | R1 | Capture the baseline and establish revision safety gates | Done |
 | R2 | Add the hosted Supabase development foundation and configuration | Done |
-| R3 | Create the PostgreSQL `insight` schema and RPCs | Pending |
-| R4 | Refactor identity ownership and the domain boundary | Pending |
+| R3 | Create the PostgreSQL `insight` schema and RPCs | Done |
+| R4 | Refactor identity ownership and the domain boundary | Next |
 | R5 | Implement Supabase clients, mappers, repositories, and readiness | Pending |
 | R6 | Integrate JWT verification and gateway-aligned routing | Pending |
 | R7 | Restore existing workflows on Supabase | Pending |
