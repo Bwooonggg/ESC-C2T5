@@ -8,7 +8,6 @@ export { MySqlProgressRecordRepository } from './mysql-progress-record.repositor
 export { MySqlRecommendationRepository } from './mysql-recommendation.repository.js'
 export { MySqlStudentRepository } from './mysql-student.repository.js'
 export { MySqlSummaryRepository } from './mysql-summary.repository.js'
-export { MySqlUserRepository } from './mysql-user.repository.js'
 export {
     asMysqlRow,
     executeRows,

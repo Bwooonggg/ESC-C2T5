@@ -1,6 +1,6 @@
 # DAS 7 Backend Architecture
 
-**Status:** Approved target architecture; revision R1-R3 implemented, R4 onward pending
+**Status:** Approved target architecture; revision R1-R4 implemented, R5 onward pending
 
 **Scope:** DAS 7 Insight backend only
 
@@ -738,7 +738,7 @@ the diagram.
 | `app/` | Composition roots. App factories create Express or the worker loop, while containers connect application ports to concrete Supabase, LLM, email, and clock adapters. |
 | `config/` | The only production area that reads environment variables. It validates raw values and returns typed API, Supabase, LLM, email, and notification settings. |
 | `domain/` | Pure DAS 7 entities, value objects, invariants, and business errors. It has no Express, Supabase, SQL, provider SDK, or environment dependency. |
-| `http/` | HTTP behavior shared across features, including the combined router, health routes, global middleware, verified request-principal handling, response envelopes, and error mapping. |
+| `http/` | HTTP behavior shared across features, including the combined router, health routes, global middleware, verified request-principal handling, response envelopes, and error mapping. Its `principal/` boundary contains framework-neutral claims, principal, and verifier types; the Supabase-backed verifier is added in R6. |
 | `modules/` | Feature-oriented application code for parents, progress tracking, preferences, ingestion, and notifications. Modules coordinate domain objects through ports without knowing the concrete infrastructure. |
 | `infrastructure/` | Technical implementations of application ports: Supabase clients and repositories, PostgreSQL RPC wrappers, LLM adapters, email adapters, and the real system clock. |
 | `shared/` | Small technical utilities genuinely reused across multiple areas, such as identifier helpers, structured logging primitives, and generic validation helpers. It is not a miscellaneous business-logic folder. |

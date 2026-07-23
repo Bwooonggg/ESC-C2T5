@@ -1,7 +1,14 @@
 # DAS 7 Database Schema
 
-This document records the relational design for the initial MySQL schema. The
-SQL definitions live in `backend/db/migrations/` and use MySQL 8 with InnoDB.
+> **Historical reference:** This document records the superseded initial MySQL
+> schema. The approved runtime schema is the hosted Supabase PostgreSQL
+> `insight` schema defined by `backend/supabase/migrations/`. The MySQL design
+> remains here only while the adapter is removed in revision phase R9.
+
+The current Supabase schema deliberately has no local `users` table, password
+fields, verification fields, session tables, or local role-assignment table.
+Supabase Auth owns canonical identity; DAS7 stores only parent/student
+projections and trusted platform subject values needed by its workflows.
 
 ## Design decisions
 
@@ -12,9 +19,10 @@ SQL definitions live in `backend/db/migrations/` and use MySQL 8 with InnoDB.
 - `DATE` is used for assessment and birth dates without a time component.
 - UTC `DATETIME(3)` values are used for generated, delivery, scheduling, and
   audit timestamps. The application is responsible for writing UTC values.
-- `password_hash` and `is_verified` remain structural `User` fields. Password
-  hashing, login, verification, sessions, and authorization are deferred to the
-  final authentication phase.
+- The initial MySQL design included `password_hash` and `is_verified` on
+  `users`. Those fields are superseded and are not part of the DAS7 domain or
+  Supabase schema. Password hashing, login, verification, sessions, and
+  authorization remain platform-owned.
 - Progress scores are limited to two decimal places in both the domain and
   database.
 - `students.current_progress_version` is updated in the same transaction as a
@@ -35,8 +43,8 @@ SQL definitions live in `backend/db/migrations/` and use MySQL 8 with InnoDB.
 
 | Table | Domain mapping | Main constraints |
 | --- | --- | --- |
-| `users` | `User` | Unique normalized email; account type is `parent`, `staff`, or `system`. |
-| `parents` | `Parent` specialization of `User` | One parent row per user. |
+| `users` | Legacy identity table | Retained only as historical MySQL context; not a DAS7 target entity. |
+| `parents` | Legacy parent specialization | Superseded by the independent `insight.parent_profiles` projection. |
 | `students` | `Student` | Required name, date of birth, band level, and current progress version. |
 | `parent_students` | Guardian relationship | Composite primary key prevents duplicate guardian assignments; the logical `1..*` minimum is enforced by application workflows. |
 | `progress_records` | `ProgressRecord` | Student foreign key; skill-area allow-list; score from 0 to 100 with at most two decimal places. |
@@ -45,7 +53,7 @@ SQL definitions live in `backend/db/migrations/` and use MySQL 8 with InnoDB.
 | `notification_preferences` | `NotificationPreference` | One preference row per parent; normalized recipient email; frequency allow-list. |
 | `email_notifications` | `EmailNotification` | Parent and summary foreign keys; normalized recipient email; sent and `sent_at` must agree. |
 | `notification_jobs` | Worker scheduling support | Only guardian pairs can receive jobs; each job links to its generated summary/email; status, lease, retry, and terminal timestamps are constrained. |
-| `audit_events` | Ingestion/audit support | Optional actor user; JSON metadata; immutable event identity. |
+| `audit_events` | Ingestion/audit support | Optional platform actor subject; JSON metadata; immutable event identity. |
 | `idempotency_records` | Ingestion safety support | One request key per scope and operation; terminal results retain status and completion/failure timestamps. |
 
 ## Secondary indexes
@@ -72,7 +80,7 @@ table definitions remain easy to review.
 ## Relationship rules
 
 ```text
-users 1 ---- 0..1 parents
+users 1 ---- 0..1 parents (legacy MySQL design)
 parents 1..* ---- 1..* students  (parent_students)
 students 1 ---- 0..* progress_records
 students 1 ---- 0..* summaries
@@ -81,7 +89,7 @@ parents 1 ---- 0..* email_notifications
 summaries 1 ---- 0..* email_notifications
 parents 1 ---- 0..1 notification_preferences
 parent_students 1 ---- 0..* notification_jobs
-users 0..1 ---- 0..* audit_events
+users 0..1 ---- 0..* audit_events (legacy MySQL design)
 ```
 
 The guardian association is many-to-many as shown in the class diagram. The
@@ -98,7 +106,7 @@ Idempotency keys are scoped by the caller/client scope and operation. There is
 no `operations` table; `scope` and `operation` are stored strings used to form
 the idempotency key.
 
-## Migration order
+## Historical MySQL migration order
 
 1. Users and parents
 2. Students and guardian relationships
@@ -112,8 +120,9 @@ the idempotency key.
 10. Idempotency records
 11. Query-driven secondary indexes
 
-Authentication session/verification tables are intentionally absent and will be
-added during the final authentication integration phase.
+Authentication session/verification tables are intentionally absent. They are
+owned by the platform's Supabase Auth integration and will not be added to the
+DAS7 schema.
 
 The migration runner also creates `schema_migrations` as operational metadata.
 The MySQL integration suite applies the migrations to a dedicated test

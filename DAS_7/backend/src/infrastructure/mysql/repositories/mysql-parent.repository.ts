@@ -17,9 +17,7 @@ interface ExistsRow extends RowDataPacket {
 }
 
 const parentColumns = `
-    p.parent_id, p.name,
-    u.user_id, u.email, u.mobile_number, u.password_hash,
-    u.account_type, u.is_verified
+    p.parent_id, p.name, u.user_id AS auth_user_id
 `
 
 export class MySqlParentRepository implements ParentRepository {
@@ -43,17 +41,17 @@ export class MySqlParentRepository implements ParentRepository {
             : mapParentRow(asMysqlRow(rows[0]))
     }
 
-    async findByUserId(userId: string): Promise<Parent | null> {
+    async findByAuthUserId(authUserId: string): Promise<Parent | null> {
         const rows = await executeRows<ParentRow>(
             this.executor,
             `
                 SELECT ${parentColumns}
                 FROM parents p
                 INNER JOIN users u ON u.user_id = p.user_id
-                WHERE p.user_id = ?
+                WHERE u.user_id = ?
                 LIMIT 1
             `,
-            [userId],
+            [authUserId],
         )
 
         return rows[0] === undefined
@@ -98,35 +96,13 @@ export class MySqlParentRepository implements ParentRepository {
         await executeStatement(
             this.executor,
             `
-                INSERT INTO users
-                    (user_id, email, mobile_number, password_hash, account_type, is_verified)
-                VALUES (?, ?, ?, ?, ?, ?)
-                ON DUPLICATE KEY UPDATE
-                    email = VALUES(email),
-                    mobile_number = VALUES(mobile_number),
-                    password_hash = VALUES(password_hash),
-                    account_type = VALUES(account_type),
-                    is_verified = VALUES(is_verified)
-            `,
-            [
-                parent.userId,
-                parent.email.value,
-                parent.mobileNumber,
-                parent.passwordHash,
-                parent.accountType.value,
-                parent.isVerified,
-            ],
-        )
-        await executeStatement(
-            this.executor,
-            `
                 INSERT INTO parents (parent_id, user_id, name)
                 VALUES (?, ?, ?)
                 ON DUPLICATE KEY UPDATE
                     user_id = VALUES(user_id),
                     name = VALUES(name)
             `,
-            [parent.parentId, parent.userId, parent.name],
+            [parent.parentId, parent.authUserId, parent.name],
         )
     }
 

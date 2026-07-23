@@ -20,7 +20,7 @@ export class MySqlAuditRepository implements AuditRepository {
             `,
             [
                 event.eventId,
-                event.actorUserId,
+                event.actorSubject,
                 event.action,
                 event.entityType,
                 event.entityId,

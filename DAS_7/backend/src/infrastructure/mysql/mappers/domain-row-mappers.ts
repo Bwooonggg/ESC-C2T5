@@ -5,9 +5,6 @@ import { ProgressRecord } from '../../../domain/entities/progress-record.js'
 import { Recommendation } from '../../../domain/entities/recommendation.js'
 import { Student } from '../../../domain/entities/student.js'
 import { Summary } from '../../../domain/entities/summary.js'
-import { User } from '../../../domain/entities/user.js'
-import type { UserProps } from '../../../domain/entities/user.js'
-import { AccountType } from '../../../domain/value-objects/account-type.js'
 import { EmailAddress } from '../../../domain/value-objects/email-address.js'
 import { NotificationFrequency } from '../../../domain/value-objects/notification-frequency.js'
 import { SkillArea } from '../../../domain/value-objects/skill-area.js'
@@ -21,16 +18,15 @@ import {
     readString,
 } from './database-row.js'
 
-/** Maps a row containing the selected columns from `users`. */
-export function mapUserRow(row: MysqlRow): User {
-    return new User(mapUserProps(row))
-}
-
-/** Maps a parent row joined with its corresponding `users` row. */
+/**
+ * Maps the transitional MySQL parent join into the platform-owned projection.
+ * The legacy `users` row contributes only its opaque identity identifier;
+ * credentials and local role state are intentionally ignored.
+ */
 export function mapParentRow(row: MysqlRow): Parent {
     return new Parent({
-        ...mapUserProps(row),
         parentId: readString(row, 'parent_id'),
+        authUserId: readAuthUserId(row),
         name: readString(row, 'name'),
         studentIds: readOptionalStringArray(row, 'student_ids'),
     })
@@ -112,13 +108,10 @@ export function mapEmailNotificationRow(
     })
 }
 
-function mapUserProps(row: MysqlRow): UserProps {
-    return {
-        userId: readString(row, 'user_id'),
-        email: new EmailAddress(readString(row, 'email')),
-        mobileNumber: readString(row, 'mobile_number'),
-        passwordHash: readString(row, 'password_hash'),
-        accountType: new AccountType(readString(row, 'account_type')),
-        isVerified: readBoolean(row, 'is_verified'),
+function readAuthUserId(row: MysqlRow): string {
+    if (row.auth_user_id !== undefined) {
+        return readString(row, 'auth_user_id')
     }
+
+    return readString(row, 'user_id')
 }

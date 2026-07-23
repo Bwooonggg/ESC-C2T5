@@ -2,9 +2,9 @@
 
 ## Current Status
 
-**Architecture revision:** R1, R2, and R3 complete; R4 next
+**Architecture revision:** R1, R2, R3, and R4 complete; R5 next
 
-**Next work:** Revision Phase R4 in [`revision-plan.md`](revision-plan.md)
+**Next work:** Revision Phase R5 in [`revision-plan.md`](revision-plan.md)
 
 **Feature plan:** Paused until the complete revision plan passes
 
@@ -20,8 +20,9 @@ rewritten permanent test files are deferred until all revision and feature
 implementation phases are complete.
 
 The version-controlled Supabase CLI foundation and the first hosted `insight`
-schema migration chain are now present. MySQL removal, identity refactoring,
-and routing changes have not started.
+schema migration chain are now present. Identity ownership has been refactored;
+Supabase repositories, JWT verification, gateway-aligned routing, and final
+MySQL removal remain in later revision phases.
 
 ## Why the Plan Is Paused
 
@@ -263,6 +264,50 @@ Results:
 - No local Supabase service, reset, seed data, or production project linkage
   was used.
 
+## Revision R4 Progress
+
+The identity ownership and domain-boundary refactor is complete:
+
+- Removed the DAS7 `User` entity, `AccountType` value object, auth router
+  placeholder, user repository port, session repository port, and transitional
+  MySQL user repository.
+- `Parent` is now an independent projection with `parentId`, opaque
+  platform-issued `authUserId`, display name, and guardian student IDs. It no
+  longer inherits credential or platform-role state.
+- Renamed the parent lookup port to `findByAuthUserId` and changed audit events
+  from `actorUserId` to an opaque `actorSubject`.
+- Added framework-neutral platform integration seams under
+  `src/http/principal/`: verified access-token claims, an immutable
+  `RequestPrincipal`, and an `AccessTokenVerifier` interface. These define the
+  R6 boundary but do not verify tokens or implement authentication flows.
+- Updated the transitional MySQL parent and audit adapters to ignore local
+  credentials and map only projection/subject data. MySQL removal remains
+  intentionally deferred to R9.
+- Marked `docs/database-schema.md` as historical MySQL documentation and
+  pointed it to the Supabase `insight` schema as the current source of truth.
+
+### R4 verification
+
+```powershell
+npm run typecheck
+npm run build
+npm test -- --runInBand
+```
+
+Results:
+
+- Typecheck and build passed.
+- 13 existing suites and 51 tests passed unchanged.
+- Four historical suites did not compile because they still import the removed
+  credential model or MySQL user repository. They are recorded as deferred
+  identity-refactor cases (`domain/entities`, `domain/value-objects`,
+  `mysql-row-mappers`, and `mysql-repositories`); no permanent test files were
+  changed.
+- A source search found no DAS7 `User`, `AccountType`, password-hash,
+  verification-state, session-port, or user-repository implementation.
+- No Supabase Auth SDK types or authentication lifecycle implementation were
+  added.
+
 ## Documentation Pivot
 
 | Document | Status |
@@ -280,8 +325,8 @@ Results:
 | R1 | Capture the baseline and establish revision safety gates | Done |
 | R2 | Add the hosted Supabase development foundation and configuration | Done |
 | R3 | Create the PostgreSQL `insight` schema and RPCs | Done |
-| R4 | Refactor identity ownership and the domain boundary | Next |
-| R5 | Implement Supabase clients, mappers, repositories, and readiness | Pending |
+| R4 | Refactor identity ownership and the domain boundary | Done |
+| R5 | Implement Supabase clients, mappers, repositories, and readiness | Next |
 | R6 | Integrate JWT verification and gateway-aligned routing | Pending |
 | R7 | Restore existing workflows on Supabase | Pending |
 | R8 | Refactor generator infrastructure to the shared LLM boundary | Pending |

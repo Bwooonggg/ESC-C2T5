@@ -1,6 +1,6 @@
 # DAS 7 Supabase Architecture Revision Plan
 
-**Status:** R1, R2, and R3 complete; R4 next
+**Status:** R1, R2, R3, and R4 complete; R5 next
 
 **Start here:** Complete R1 through R10 before returning to
 [`plan.md`](plan.md)
@@ -471,6 +471,17 @@ Record these cases for the dedicated testing phase:
 
 **Done when:** identity is represented only as the projection and trusted
 principal DAS 7 needs.
+
+### R4 implementation checkpoint
+
+R4 is complete. DAS7 no longer contains a credential-owning `User`,
+`AccountType`, session repository, user repository, or authentication router.
+`Parent` is an independent platform-identity projection, audit actors are
+opaque platform subjects, and the HTTP principal/verifier interfaces define the
+future R6 boundary without implementing authentication. Transitional MySQL
+adapters contain no credential mapping; their complete removal remains an R9
+task. Existing credential-focused tests were not rewritten and remain in the
+dedicated testing backlog.
 
 ## Phase R5: Implement the Supabase Infrastructure Boundary
 

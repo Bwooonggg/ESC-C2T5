@@ -59,7 +59,7 @@ export function mapNotificationJobRow(row: MysqlRow): NotificationJob {
 export function mapAuditEventRow(row: MysqlRow): AuditEvent {
     return {
         eventId: readString(row, 'event_id'),
-        actorUserId: readNullableString(row, 'actor_user_id'),
+        actorSubject: readNullableString(row, 'actor_user_id'),
         action: readString(row, 'action'),
         entityType: readString(row, 'entity_type'),
         entityId: readString(row, 'entity_id'),

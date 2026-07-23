@@ -20,7 +20,6 @@ export {
     mapRecommendationRow,
     mapStudentRow,
     mapSummaryRow,
-    mapUserRow,
 } from './domain-row-mappers.js'
 export {
     mapAuditEventRow,

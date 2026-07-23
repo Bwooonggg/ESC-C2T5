@@ -1,6 +1,7 @@
 export interface AuditEvent {
     readonly eventId: string
-    readonly actorUserId: string | null
+    /** Opaque platform identity subject; not a DAS7 user-table foreign key. */
+    readonly actorSubject: string | null
     readonly action: string
     readonly entityType: string
     readonly entityId: string
