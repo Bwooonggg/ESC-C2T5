@@ -1,4 +1,5 @@
 import type { ProgressRecord } from '../../../domain/entities/progress-record.js'
+import type { Recommendation } from '../../../domain/entities/recommendation.js'
 import type { Summary } from '../../../domain/entities/summary.js'
 
 export interface TrackProgressResponse {
@@ -18,6 +19,13 @@ export interface ProgressRecordResponse {
 export interface SummaryResponse {
     readonly summaryId: string
     readonly studentId: string
+    readonly content: string
+    readonly generatedAt: string
+}
+
+export interface RecommendationResponse {
+    readonly recommendationId: string
+    readonly summaryId: string
     readonly content: string
     readonly generatedAt: string
 }
@@ -51,6 +59,17 @@ export function toSummaryResponse(summary: Summary): SummaryResponse {
         studentId: summary.studentId,
         content: summary.content,
         generatedAt: summary.generatedAt.toISOString(),
+    }
+}
+
+export function toRecommendationResponse(
+    recommendation: Recommendation,
+): RecommendationResponse {
+    return {
+        recommendationId: recommendation.recommendationId,
+        summaryId: recommendation.summaryId,
+        content: recommendation.content,
+        generatedAt: recommendation.generatedAt.toISOString(),
     }
 }
 

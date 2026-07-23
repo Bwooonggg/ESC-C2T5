@@ -80,8 +80,8 @@ The integration suite applies the same migrations to the configured test
 database, verifies migration replay, checks the expected InnoDB tables and
 indexes, exercises key foreign-key and value constraints, and verifies the
 non-authentication repository read/write and notification-job claim paths. The
-database-backed Track Progress API workflow is also exercised with a
-controlled summary generator. The test database must be isolated from
+database-backed Track Progress and Recommendation API workflows are also
+exercised with controlled generator services. The test database must be isolated from
 development and production data; its name must identify it as a test database,
 such as `das7_integration_test`.
 
@@ -105,11 +105,13 @@ the existing Vite proxy to preserve that behavior.
   service, and returns the frontend-compatible progress/summary envelope.
 - `GET /api/students/:studentId/summary` runs the same summary workflow and
   returns only the summary object in the standard envelope.
+- `POST /api/students/:studentId/recommendations` loads the latest persisted
+  summary, generates a recommendation through the configured external service,
+  persists its summary basis, and returns the frontend-compatible response.
 - Overlapping summary requests for the same student progress version share one
   in-flight generation operation.
 - Existing frontend and future ingestion routes are registered, but business
   handlers currently return a JSON `501 Not implemented` envelope.
-- Recommendation, notification-preference, ingestion, email-delivery, and
-  worker-job workflows remain reserved for their respective implementation
-  phases. Authentication routes and authorization middleware remain unmounted
-  until the final phase.
+- Notification-preference, ingestion, email-delivery, and worker-job workflows
+  remain reserved for their respective implementation phases. Authentication
+  routes and authorization middleware remain unmounted until the final phase.

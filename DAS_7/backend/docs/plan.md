@@ -1,6 +1,6 @@
 # DAS 7 Backend Implementation Plan
 
-**Status:** Approved implementation sequence; Phase 6 complete; Phase 7 next
+**Status:** Approved implementation sequence; Phase 7 complete; Phase 8 next
 
 **Testing stack:** Jest, `ts-jest`, and Supertest
 
@@ -240,20 +240,25 @@ provider credentials are not required for this phase.
 
 **Done when:** the success and `progressUnavailable` branches from the Track Child's Progress diagram pass HTTP and database-backed end-to-end tests.
 
-## Phase 7: Implement Recommendations
+## Phase 7: Implement Recommendations — DONE
 
 Implement `POST /api/students/:studentId/recommendations`:
 
-1. Resolve the student context through the application boundary. Production authentication and authorization are added in the final phase.
-2. Load the student's latest summary.
-3. Return a public error when no summary exists.
-4. Generate recommendations through the external-service adapter.
-5. Persist the recommendation with its basis summary.
-6. Return it in the standard response envelope.
+1. **DONE:** Resolve the student context through the application boundary. Production authentication and authorization are added in the final phase.
+2. **DONE:** Load the student's latest summary.
+3. **DONE:** Return a public error when no summary exists.
+4. **DONE:** Generate recommendations through the external-service adapter.
+5. **DONE:** Persist the recommendation with its basis summary.
+6. **DONE:** Return it in the standard response envelope.
 
-Complete application-level Jest tests with injected fakes for missing summaries,
+**DONE:** Complete application-level Jest tests with injected fakes for missing summaries,
 generator failures, summary-basis selection, recommendation persistence, and
 stable invocation context reuse.
+
+The recommendation route, production MySQL/recommendation-generator
+composition, public error mapping, HTTP tests, and database-backed end-to-end
+tests are implemented. Provider-specific HTTP behavior remains covered by the
+Phase 11 controlled-provider test work.
 
 **Done when:** recommendations are generated only after an explicit parent request and always reference their basis summary.
 

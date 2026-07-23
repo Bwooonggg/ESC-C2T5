@@ -125,12 +125,12 @@ and verifies the marker has not changed before persisting the result. If a
 progress mutation wins the race while the external generator is running, the
 stale result is discarded or regenerated for the new version.
 
-The current implementation exposes the two read routes through a
-container-backed router factory. The controller validates `studentId`, creates
-the generator invocation context from the request ID and optional idempotency
-header, calls `TrackProgressModel`, and maps domain entities to the frontend's
-existing JSON shape. Authentication and guardian authorization remain an
-explicit middleware seam for Phase 13.
+The current implementation exposes the progress, summary, and recommendation
+routes through a container-backed router factory. The controllers validate
+`studentId`, create the generator invocation context from the request ID and
+optional idempotency header, call their application models, and map domain
+entities to the frontend's existing JSON shapes. Authentication and guardian
+authorization remain an explicit middleware seam for Phase 13.
 
 ### 3.3 Notify Parent flow
 
@@ -275,6 +275,24 @@ The implemented Track Progress response is:
 The Summary route returns the same `summary` object as its `data` value. The
 internal `sourceProgressVersion` is persisted for consistency checks but is
 not exposed because it is not part of the current frontend type.
+
+The implemented Recommendation response is:
+
+```json
+{
+  "ok": true,
+  "data": {
+    "recommendationId": "recommendation-1",
+    "summaryId": "summary-1",
+    "content": "Practice decoding multisyllabic words.",
+    "generatedAt": "2026-07-23T12:30:00.000Z"
+  }
+}
+```
+
+The recommendation's `studentId` is retained by the domain and persistence
+layers but omitted from the transport response because it is not part of the
+current frontend type. `summaryId` is the explicit basis relationship.
 
 ### 5.3 Future data-entry routes
 

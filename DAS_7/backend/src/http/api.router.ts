@@ -11,7 +11,13 @@ export function createApiRouter(container: ApiContainer): Router {
 
     router.use('/health', healthRouter)
     router.use('/', parentRouter)
-    router.use('/students', createTrackProgressRouter(container.trackProgressModel))
+    router.use(
+        '/students',
+        createTrackProgressRouter(
+            container.trackProgressModel,
+            container.recommendationModel,
+        ),
+    )
     router.use('/parents', preferenceRouter)
     router.use('/v1', ingestionRouter)
 

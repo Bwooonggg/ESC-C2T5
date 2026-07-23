@@ -6,6 +6,7 @@ import {
     beforeAll,
     describe,
     expect,
+    jest,
     test,
 } from '@jest/globals'
 import request from 'supertest'
@@ -18,6 +19,8 @@ import { ProgressRecord } from '../../../src/domain/entities/progress-record.js'
 import { Student } from '../../../src/domain/entities/student.js'
 import { SkillArea } from '../../../src/domain/value-objects/skill-area.js'
 import { TrackProgressModel } from '../../../src/modules/track-progress/application/track-progress.model.js'
+import { RecommendationModel } from '../../../src/modules/track-progress/application/recommendation.model.js'
+import type { RecommendationGeneratorPort } from '../../../src/modules/track-progress/ports/recommendation-generator.js'
 import type { SummaryGeneratorPort } from '../../../src/modules/track-progress/ports/summary-generator.js'
 import { createMySqlPool } from '../../../src/infrastructure/mysql/pool.js'
 import {
@@ -27,6 +30,7 @@ import {
 } from '../../../src/infrastructure/mysql/migration-runner.js'
 import {
     MySqlProgressRecordRepository,
+    MySqlRecommendationRepository,
     MySqlStudentRepository,
     MySqlSummaryRepository,
 } from '../../../src/infrastructure/mysql/repositories/index.js'
@@ -53,7 +57,7 @@ let app: Express
 let studentId: string
 let recordId: string
 
-describe('Track Progress API end-to-end', () => {
+describe('Track Progress and Recommendation API end-to-end', () => {
     beforeAll(async () => {
         const config = readIntegrationDatabaseConfig()
         pool = createMySqlPool(config, {
@@ -78,6 +82,9 @@ describe('Track Progress API end-to-end', () => {
             pool,
         )
         const summaryRepository = new MySqlSummaryRepository(pool)
+        const recommendationRepository = new MySqlRecommendationRepository(
+            pool,
+        )
         const student = new Student({
             studentId,
             name: 'E2E Student',
@@ -100,6 +107,13 @@ describe('Track Progress API end-to-end', () => {
                 }
             },
         }
+        const recommendationGenerator: RecommendationGeneratorPort = {
+            async generate({ summary }) {
+                return {
+                    content: `Generated recommendation for ${summary.studentId}.`,
+                }
+            },
+        }
 
         await studentRepository.save(student)
         await progressRecordRepository.save(record)
@@ -112,10 +126,18 @@ describe('Track Progress API end-to-end', () => {
             now: () => new Date('2026-07-23T12:00:00.000Z'),
             createId: () => `e2e-summary-${randomUUID()}`,
         })
+        const recommendationModel = new RecommendationModel({
+            summaryRepository,
+            recommendationRepository,
+            recommendationGenerator,
+            now: () => new Date('2026-07-23T12:30:00.000Z'),
+            createId: () => `e2e-recommendation-${randomUUID()}`,
+        })
 
         app = createApiApp(
             createApiContainer(loadConfig({ NODE_ENV: 'test' }), {
                 trackProgressModel: model,
+                recommendationModel,
             }),
         )
     })
@@ -132,6 +154,10 @@ describe('Track Progress API end-to-end', () => {
             const cleanupConnection = await pool.getConnection()
 
             try {
+                await cleanupConnection.execute(
+                    'DELETE FROM recommendations WHERE student_id = ?',
+                    [studentId],
+                )
                 await cleanupConnection.execute(
                     'DELETE FROM summaries WHERE student_id = ?',
                     [studentId],
@@ -197,6 +223,7 @@ describe('Track Progress API end-to-end', () => {
     })
 
     test('returns progressUnavailable when the student cannot be found', async () => {
+        jest.spyOn(console, 'error').mockImplementation(() => undefined)
         const response = await request(app).get(
             `/api/students/missing-${randomUUID()}/track-progress`,
         )
@@ -205,6 +232,54 @@ describe('Track Progress API end-to-end', () => {
         expect(response.body).toEqual({
             ok: false,
             error: 'progressUnavailable',
+        })
+    })
+
+    test('generates a recommendation from the persisted latest summary', async () => {
+        const response = await request(app).post(
+            `/api/students/${studentId}/recommendations`,
+        )
+
+        expect(response.status).toBe(200)
+        expect(response.body).toMatchObject({
+            ok: true,
+            data: {
+                recommendationId: expect.any(String),
+                summaryId: expect.any(String),
+                content: `Generated recommendation for ${studentId}.`,
+                generatedAt: '2026-07-23T12:30:00.000Z',
+            },
+        })
+
+        const [rows] = await pool!.query<RecommendationContentRow[]>(
+            `
+                SELECT summary_id, content
+                FROM recommendations
+                WHERE student_id = ?
+                ORDER BY generated_at DESC, recommendation_id DESC
+                LIMIT 1
+            `,
+            [studentId],
+        )
+
+        expect(rows).toEqual([
+            {
+                summary_id: response.body.data.summaryId,
+                content: `Generated recommendation for ${studentId}.`,
+            },
+        ])
+    })
+
+    test('returns summaryUnavailable when no summary exists', async () => {
+        jest.spyOn(console, 'error').mockImplementation(() => undefined)
+        const response = await request(app).post(
+            `/api/students/missing-${randomUUID()}/recommendations`,
+        )
+
+        expect(response.status).toBe(404)
+        expect(response.body).toEqual({
+            ok: false,
+            error: 'summaryUnavailable',
         })
     })
 })
@@ -253,5 +328,10 @@ function readIntegrationDatabaseConfig(): IntegrationDatabaseConfig {
 }
 
 interface SummaryContentRow extends RowDataPacket {
+    readonly content: string
+}
+
+interface RecommendationContentRow extends RowDataPacket {
+    readonly summary_id: string
     readonly content: string
 }

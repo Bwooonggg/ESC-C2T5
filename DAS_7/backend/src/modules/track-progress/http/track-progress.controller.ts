@@ -1,10 +1,12 @@
 import { randomUUID } from 'node:crypto'
 import type { NextFunction, Request, RequestHandler, Response } from 'express'
+import type { RecommendationModel } from '../application/recommendation.model.js'
 import type { TrackProgressModel } from '../application/track-progress.model.js'
 import { createGeneratorInvocationContext } from '../../../shared/generator-context.js'
 import { ok } from '../../../http/responses/api-envelope.js'
 import { parseStudentId } from './track-progress.schemas.js'
 import {
+    toRecommendationResponse,
     toSummaryResponse,
     toTrackProgressResponse,
 } from './track-progress.responses.js'
@@ -20,6 +22,28 @@ export function createTrackProgressController(
     return {
         trackProgress: createTrackProgressHandler(model, false),
         getSummary: createTrackProgressHandler(model, true),
+    }
+}
+
+export function createRecommendationController(
+    model: RecommendationModel,
+): RequestHandler {
+    return async (
+        request: Request,
+        response: Response,
+        next: NextFunction,
+    ): Promise<void> => {
+        try {
+            const studentId = parseStudentId(request.params)
+            const recommendation = await model.requestRecommendations(
+                studentId,
+                createRequestGeneratorContext(request, response),
+            )
+
+            ok(response, toRecommendationResponse(recommendation))
+        } catch (error) {
+            next(error)
+        }
     }
 }
 

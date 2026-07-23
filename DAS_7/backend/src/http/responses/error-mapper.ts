@@ -19,7 +19,12 @@ export function mapError(error: unknown): MappedHttpError {
     }
 
     if (error instanceof GeneratorServiceError) {
-        return { message: 'summaryUnavailable', status: 503 }
+        return {
+            message: /recommendation/i.test(error.serviceName)
+                ? 'recommendationUnavailable'
+                : 'summaryUnavailable',
+            status: 503,
+        }
     }
 
     if (error instanceof ZodError) {

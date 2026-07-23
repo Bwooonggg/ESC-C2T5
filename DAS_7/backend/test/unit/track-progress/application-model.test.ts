@@ -234,6 +234,23 @@ describe('RecommendationModel', () => {
         expect(recommendationRepository.saved).toEqual([result])
     })
 
+    it('does not persist a recommendation when the generator fails', async () => {
+        const failure = new Error('recommendation generator unavailable')
+        const recommendationGenerator = new FakeRecommendationGenerator()
+        recommendationGenerator.error = failure
+        const recommendationRepository = new FakeRecommendationRepository()
+        const model = new RecommendationModel({
+            summaryRepository: new FakeSummaryRepository(makeSummary()),
+            recommendationRepository,
+            recommendationGenerator,
+        })
+
+        await expect(
+            model.requestRecommendations('student-1', context),
+        ).rejects.toBe(failure)
+        expect(recommendationRepository.saved).toHaveLength(0)
+    })
+
     it('does not call the generator when no summary exists', async () => {
         const recommendationGenerator = new FakeRecommendationGenerator()
         const recommendationRepository = new FakeRecommendationRepository()

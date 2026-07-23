@@ -1,16 +1,20 @@
 import { Router } from 'express'
-import { notImplemented } from '../../../http/responses/not-implemented.js'
 import { notConfigured } from '../../../http/responses/not-configured.js'
+import type { RecommendationModel } from '../application/recommendation.model.js'
 import type { TrackProgressModel } from '../application/track-progress.model.js'
-import { createTrackProgressController } from './track-progress.controller.js'
+import {
+    createRecommendationController,
+    createTrackProgressController,
+} from './track-progress.controller.js'
 
 export function createTrackProgressRouter(
-    model?: TrackProgressModel,
+    trackProgressModel?: TrackProgressModel,
+    recommendationModel?: RecommendationModel,
 ): Router {
     const router = Router()
 
-    if (model) {
-        const controller = createTrackProgressController(model)
+    if (trackProgressModel) {
+        const controller = createTrackProgressController(trackProgressModel)
         router.get('/:studentId/track-progress', controller.trackProgress)
         router.get('/:studentId/summary', controller.getSummary)
     } else {
@@ -18,7 +22,14 @@ export function createTrackProgressRouter(
         router.get('/:studentId/summary', notConfigured)
     }
 
-    router.post('/:studentId/recommendations', notImplemented)
+    if (recommendationModel) {
+        router.post(
+            '/:studentId/recommendations',
+            createRecommendationController(recommendationModel),
+        )
+    } else {
+        router.post('/:studentId/recommendations', notConfigured)
+    }
 
     return router
 }
