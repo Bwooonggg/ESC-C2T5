@@ -1,6 +1,6 @@
 # DAS 7 Supabase Architecture Revision Plan
 
-**Status:** R1, R2, R3, and R4 complete; R5 next
+**Status:** R1 through R5 complete; R6 next
 
 **Start here:** Complete R1 through R10 before returning to
 [`plan.md`](plan.md)
@@ -565,18 +565,49 @@ Record these cases for the dedicated testing phase:
 - Concurrent job claiming.
 - Request-client and worker-client separation.
 
+### R5 implementation result
+
+R5 is implemented under `src/infrastructure/supabase/`:
+
+- `clients/` contains separate request-scoped publishable-key and worker-only
+  secret-key factories. The request factory uses the verified token through
+  the SDK `accessToken` callback and disables session persistence. The worker
+  factory is constructed only from `worker-container.ts`.
+- `mappers/` contains timestamp/date conversions, runtime schemas for all
+  `insight` rows, row-to-domain mappers, and domain-to-insert/update mappers.
+- `repositories/` implements every persistence port required by the current
+  workflows, with explicit deterministic ordering and centralized Supabase
+  error translation.
+- `rpc/` wraps progress insertion/correction and notification-job claim,
+  completion, and failure functions. The adapters do not recreate a client
+  side transaction manager.
+- `readiness.ts` provides a bounded `student_profiles` metadata-only probe.
+  The API container accepts this probe by dependency injection and has no path
+  to construct a secret-key client.
+- `worker-container.ts` constructs the worker-only Supabase repository graph
+  (including the lease-owned notification-job repository) only when the
+  worker secret client is configured.
+- `EmailNotification` now carries `studentId`, the local projection required
+  by the Supabase composite relationships.
+
 ### Verification
 
 - Application code imports only repository ports.
 - The API dependency graph cannot resolve a secret-key client.
 - Typecheck and build pass.
-- Narrow smoke operations against the hosted development project confirm the
-  required repository and RPC paths without resetting the project.
+- `npm run test:http -- --runInBand` passes the existing four HTTP suites (16
+  tests); no permanent R5 test files were added.
+- Hosted repository/RPC smoke operations requiring the final claims and RLS
+  policy contract remain an R6/R7 integration gate; no remote data was reset.
 - Existing repository behavior has a Supabase equivalent.
 - Deferred cases are recorded without adding new permanent test files.
 
 **Done when:** all persistence capabilities needed by the already implemented
 workflows are available through Supabase adapters.
+
+**R5 status:** Done. The hosted-development smoke operations that require the
+platform claims and final RLS policies remain part of R6/R7; they are not
+silently treated as complete by this implementation checkpoint.
 
 ## Phase R6: Integrate JWT Verification and Gateway-Aligned Routing
 

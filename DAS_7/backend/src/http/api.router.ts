@@ -4,12 +4,12 @@ import { ingestionRouter } from '../modules/ingestion/http/ingestion.routes.js'
 import { parentRouter } from '../modules/parents/http/parent.routes.js'
 import { createPreferenceRouter } from '../modules/preferences/http/preference.routes.js'
 import { createTrackProgressRouter } from '../modules/track-progress/http/track-progress.routes.js'
-import { healthRouter } from './health/health.routes.js'
+import { createHealthRouter } from './health/health.routes.js'
 
 export function createApiRouter(container: ApiContainer): Router {
     const router = Router()
 
-    router.use('/health', healthRouter)
+    router.use('/health', createHealthRouter(container.readiness))
     router.use('/', parentRouter)
     router.use(
         '/students',

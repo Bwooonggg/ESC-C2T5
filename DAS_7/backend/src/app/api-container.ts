@@ -25,6 +25,7 @@ import type { RecommendationGeneratorClientRequest } from '../adapters/generator
 import { GetPreferencesModel } from '../modules/preferences/application/get-preferences.js'
 import { SavePreferencesModel } from '../modules/preferences/application/save-preferences.js'
 import { MySqlNotificationPreferenceRepository } from '../infrastructure/mysql/repositories/mysql-notification-preference.repository.js'
+import type { ReadinessProbe } from '../shared/readiness.js'
 
 export interface ApiContainer {
     readonly config: AppConfig
@@ -32,6 +33,8 @@ export interface ApiContainer {
     readonly recommendationModel?: RecommendationModel
     readonly getPreferencesModel?: GetPreferencesModel
     readonly savePreferencesModel?: SavePreferencesModel
+    /** Optional platform-backed readiness check; no secret client is created here. */
+    readonly readiness?: ReadinessProbe
     readonly close: () => Promise<void>
 }
 
@@ -40,6 +43,7 @@ export interface ApiContainerOptions {
     readonly recommendationModel?: RecommendationModel
     readonly getPreferencesModel?: GetPreferencesModel
     readonly savePreferencesModel?: SavePreferencesModel
+    readonly readiness?: ReadinessProbe
     readonly close?: () => Promise<void>
 }
 
@@ -53,6 +57,7 @@ export function createApiContainer(
         recommendationModel: options.recommendationModel,
         getPreferencesModel: options.getPreferencesModel,
         savePreferencesModel: options.savePreferencesModel,
+        readiness: options.readiness,
         close: options.close ?? (async () => undefined),
     }
 }

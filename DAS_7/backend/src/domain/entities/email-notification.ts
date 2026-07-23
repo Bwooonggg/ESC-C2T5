@@ -9,6 +9,11 @@ import { EmailAddress } from '../value-objects/email-address.js'
 export interface EmailNotificationProps {
     readonly notificationId: string
     readonly parentId: string
+    /**
+     * Persistence ownership projection used to enforce the guardian and
+     * summary relationships in the Supabase schema.
+     */
+    readonly studentId: string
     readonly summaryId: string
     readonly recipientEmail: EmailAddress
     readonly subject: string
@@ -20,6 +25,7 @@ export interface EmailNotificationProps {
 export class EmailNotification {
     readonly notificationId: string
     readonly parentId: string
+    readonly studentId: string
     readonly summaryId: string
     readonly recipientEmail: EmailAddress
     readonly subject: string
@@ -33,6 +39,7 @@ export class EmailNotification {
             'notificationId',
         )
         this.parentId = requireText(props.parentId, 'parentId')
+        this.studentId = requireText(props.studentId, 'studentId')
         this.summaryId = requireText(props.summaryId, 'summaryId')
 
         if (!(props.recipientEmail instanceof EmailAddress)) {

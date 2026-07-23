@@ -97,6 +97,7 @@ export function mapEmailNotificationRow(
     return new EmailNotification({
         notificationId: readString(row, 'notification_id'),
         parentId: readString(row, 'parent_id'),
+        studentId: readString(row, 'student_id'),
         summaryId: readString(row, 'summary_id'),
         recipientEmail: new EmailAddress(
             readString(row, 'recipient_email'),

@@ -23,7 +23,7 @@ export class MySqlEmailNotificationRepository
             this.executor,
             `
                 SELECT
-                    notification_id, parent_id, summary_id, recipient_email,
+                    notification_id, parent_id, student_id, summary_id, recipient_email,
                     subject, body, sent_at, sent
                 FROM email_notifications
                 WHERE notification_id = ?
@@ -50,7 +50,7 @@ export class MySqlEmailNotificationRepository
             this.executor,
             `
                 SELECT
-                    notification_id, parent_id, summary_id, recipient_email,
+                    notification_id, parent_id, student_id, summary_id, recipient_email,
                     subject, body, sent_at, sent
                 FROM email_notifications
                 WHERE sent = FALSE
@@ -68,12 +68,13 @@ export class MySqlEmailNotificationRepository
             `
                 INSERT INTO email_notifications
                     (
-                        notification_id, parent_id, summary_id, recipient_email,
-                        subject, body, sent_at, sent
+                        notification_id, parent_id, student_id, summary_id,
+                        recipient_email, subject, body, sent_at, sent
                     )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON DUPLICATE KEY UPDATE
                     parent_id = VALUES(parent_id),
+                    student_id = VALUES(student_id),
                     summary_id = VALUES(summary_id),
                     recipient_email = VALUES(recipient_email),
                     subject = VALUES(subject),
@@ -84,6 +85,7 @@ export class MySqlEmailNotificationRepository
             [
                 notification.notificationId,
                 notification.parentId,
+                notification.studentId,
                 notification.summaryId,
                 notification.recipientEmail.value,
                 notification.subject,

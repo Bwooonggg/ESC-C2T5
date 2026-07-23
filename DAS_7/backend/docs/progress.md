@@ -2,9 +2,9 @@
 
 ## Current Status
 
-**Architecture revision:** R1, R2, R3, and R4 complete; R5 next
+**Architecture revision:** R1 through R5 complete; R6 next
 
-**Next work:** Revision Phase R5 in [`revision-plan.md`](revision-plan.md)
+**Next work:** Revision Phase R6 in [`revision-plan.md`](revision-plan.md)
 
 **Feature plan:** Paused until the complete revision plan passes
 
@@ -20,9 +20,10 @@ rewritten permanent test files are deferred until all revision and feature
 implementation phases are complete.
 
 The version-controlled Supabase CLI foundation and the first hosted `insight`
-schema migration chain are now present. Identity ownership has been refactored;
-Supabase repositories, JWT verification, gateway-aligned routing, and final
-MySQL removal remain in later revision phases.
+schema migration chain and Supabase persistence boundary are now present.
+Identity ownership has been refactored; JWT verification, gateway-aligned
+routing, workflow composition, LLM consolidation, and final MySQL removal
+remain in later revision phases.
 
 ## Why the Plan Is Paused
 
@@ -308,6 +309,53 @@ Results:
 - No Supabase Auth SDK types or authentication lifecycle implementation were
   added.
 
+## Revision R5 Progress
+
+The Supabase infrastructure boundary is complete without moving authentication
+or authorization ownership into DAS7:
+
+- Added separate request-scoped publishable-key and worker-only secret-key
+  Supabase client factories. The API container accepts an injected readiness
+  probe but cannot construct the worker secret client.
+- Added typed runtime row schemas and strict row-to-domain mappers for the
+  `insight` tables, plus domain-to-insert/update mappers for persistence.
+- Added Supabase repository adapters for parents, guardian relationships,
+  students, progress records, summaries, recommendations, notification
+  preferences, email notifications, notification jobs, audit events, and
+  idempotency records.
+- Added wrappers for the R3 progress-record and notification-job RPCs. Progress
+  writes use the RPC so version advancement, audit, and idempotency remain one
+  database operation; job claiming and state transitions remain lease-owned.
+- Added deterministic ordering to list/latest queries and a bounded Supabase
+  readiness probe that returns no protected data.
+- Added the worker-only Supabase persistence graph, including a process-scoped
+  lease owner for notification-job RPCs. The API container has no secret-key
+  client or worker persistence property.
+- Added the required `studentId` persistence projection to
+  `EmailNotification`, matching the Supabase composite foreign keys. The
+  transitional MySQL adapter was updated only enough to keep the source
+  boundary compiling; MySQL remains historical until R9.
+
+### R5 verification
+
+```powershell
+npm run typecheck
+npm run build
+npm run test:http -- --runInBand
+```
+
+Results:
+
+- Typecheck passed with the generated hosted-project database types.
+- Build passed.
+- Four HTTP Jest suites and 16 tests passed.
+- The full Jest command still stops at the same four historical identity/MySQL
+  suites recorded under R4; the failures are stale imports and fixtures, not
+  Supabase R5 failures.
+- No permanent Supabase repository or provider test files were added; the
+  mapper, repository, RPC, readiness, and client-separation cases remain in
+  the dedicated testing backlog.
+
 ## Documentation Pivot
 
 | Document | Status |
@@ -326,8 +374,8 @@ Results:
 | R2 | Add the hosted Supabase development foundation and configuration | Done |
 | R3 | Create the PostgreSQL `insight` schema and RPCs | Done |
 | R4 | Refactor identity ownership and the domain boundary | Done |
-| R5 | Implement Supabase clients, mappers, repositories, and readiness | Next |
-| R6 | Integrate JWT verification and gateway-aligned routing | Pending |
+| R5 | Implement Supabase clients, mappers, repositories, and readiness | Done |
+| R6 | Integrate JWT verification and gateway-aligned routing | Next |
 | R7 | Restore existing workflows on Supabase | Pending |
 | R8 | Refactor generator infrastructure to the shared LLM boundary | Pending |
 | R9 | Remove MySQL and obsolete authentication infrastructure | Pending |

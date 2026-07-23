@@ -10,16 +10,16 @@ npm install
 npm run dev
 ```
 
-The API listens on `http://localhost:4000` by default. The frontend's Vite
-configuration proxies `/api` to this port, so browser requests remain on the
-frontend's local origin.
+The API listens on `http://localhost:4000` by default. The final deployment
+uses service-local routes behind Traefik's `/api/insights` prefix; the current
+baseline still exposes its historical `/api` mount until revision R6 completes.
 
 Useful checks:
 
 ```powershell
 npm run typecheck
 npm run build
-npm test
+npm run test:http -- --runInBand
 ```
 
 ## Testing
@@ -40,13 +40,13 @@ npm run test:contract
 npm run test:e2e
 ```
 
-Unit, HTTP, and contract suites must not require a running MySQL instance.
-The default `npm test` command excludes the integration directory. The
-integration suite runs serially against a dedicated MySQL test database and
-requires `MYSQL_TEST_HOST`, `MYSQL_TEST_PORT`, `MYSQL_TEST_DATABASE`,
-`MYSQL_TEST_USER`, and `MYSQL_TEST_PASSWORD`. Copy
-`.env.integration.example` to `.env.integration` or export those variables
-before running `npm run test:integration`.
+The existing MySQL suites are a historical baseline and are being replaced by
+hosted-Supabase verification. New Supabase repository, RPC, provider, and
+end-to-end test files are intentionally deferred to the dedicated testing
+phase; the implementation phases run only applicable existing tests.
+The full `npm test` command may therefore stop at the four deferred identity
+and MySQL suites until the dedicated testing phase updates those historical
+fixtures.
 
 The ordered implementation plan is recorded in [`docs/plan.md`](docs/plan.md).
 Current phase status is tracked in [`docs/progress.md`](docs/progress.md).
@@ -57,17 +57,19 @@ Copy `.env.example` to `.env` for local development. The backend loads and
 validates environment values at process startup through
 `src/config/environment.ts`.
 
-Development and test runs use safe local defaults. Production requires explicit
-values for the MySQL connection, summary generator, recommendation generator,
-and email provider. Authentication configuration is introduced with the final
-authentication and authorization phase.
+Development and test runs use safe defaults. The current transitional
+composition still accepts MySQL settings, while the target runtime uses
+`SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, and `SUPABASE_SCHEMA` for API
+requests and a worker-only `SUPABASE_SECRET_KEY`. DAS7 does not implement
+login, signup, password security, session management, or token issuance; those
+remain platform/Auth responsibilities.
 
 MySQL remains a transitional development dependency while the hosted Supabase
-migration is completed. Supabase configuration is currently optional so the
-existing backend can still start during the transition. The intended database
-workflow uses the hosted development project through the Supabase CLI; this
-repository does not require `supabase start`, `supabase stop`, or a local
-Supabase database.
+workflow is composed into the existing feature models. Supabase configuration
+is currently optional so the historical baseline can still start during the
+transition. The intended database workflow uses the hosted development project
+through the Supabase CLI; this repository does not require `supabase start`,
+`supabase stop`, or a local Supabase database.
 
 ## Hosted Supabase development
 
@@ -91,13 +93,12 @@ The migration push and generated-type commands operate on the linked hosted
 development project. Do not link this checkout to production until the final
 production handoff phase.
 
-The migration runner reads the `MYSQL_*` values from the same environment,
-resolves `db/migrations/` relative to its entrypoint, records applied
-migrations in `schema_migrations`, and does not depend on a developer-specific
-filesystem path:
+The legacy MySQL migration runner still reads the `MYSQL_*` values from the
+same environment and is retained only until revision R9. The current database
+source of truth is the hosted Supabase migration chain under `supabase/`:
 
 ```powershell
-# Development entrypoint
+# Legacy transitional runner
 npm run migrate
 
 # Compiled/deployment entrypoint
@@ -105,14 +106,9 @@ npm run build
 npm run migrate:compiled
 ```
 
-The integration suite applies the same migrations to the configured test
-database, verifies migration replay, checks the expected InnoDB tables and
-indexes, exercises key foreign-key and value constraints, and verifies the
-non-authentication repository read/write and notification-job claim paths. The
-database-backed Track Progress and Recommendation API workflows are also
-exercised with controlled generator services. The test database must be isolated from
-development and production data; its name must identify it as a test database,
-such as `das7_integration_test`.
+Do not use the legacy MySQL integration workflow as evidence for the Supabase
+target. Hosted Supabase smoke and integration checks will use unique development
+records and will be added during the dedicated testing phase.
 
 The API and worker read the same validated configuration through separate
 composition containers. The worker is disabled by default until notification
@@ -121,17 +117,22 @@ processing is implemented.
 ## Deployment model
 
 The React application and API use one public domain. The public web host serves
-the frontend at `/` and forwards `/api/*` to the Express process. The browser
-therefore calls relative `/api` URLs on the same origin. Local development uses
-the existing Vite proxy to preserve that behavior.
+the frontend at `/` and Traefik forwards `/api/insights/*` to the service after
+stripping that prefix. No CORS configuration is required for the browser.
 
 ## Current scaffold behavior
 
+The following `/api` paths describe the historical baseline while R6 changes
+the service-local mount and R7 composes Supabase repositories into the feature
+models:
+
 - `GET /api/health` returns a liveness response.
-- `GET /api/health/ready` reports that database readiness is not wired yet.
-- `GET /api/students/:studentId/track-progress` loads progress from MySQL,
-  generates and persists a summary through the configured external summary
-  service, and returns the frontend-compatible progress/summary envelope.
+- `GET /api/health/ready` reports that the transitional database readiness
+  dependency is not configured unless a probe is injected.
+- The historical workflow routes currently load persistence through MySQL;
+  their Supabase repository equivalents and bounded readiness probe are now
+  implemented under `src/infrastructure/supabase/` and are composed in later
+  revision phases.
 - `GET /api/students/:studentId/summary` runs the same summary workflow and
   returns only the summary object in the standard envelope.
 - `POST /api/students/:studentId/recommendations` loads the latest persisted
@@ -145,5 +146,5 @@ the existing Vite proxy to preserve that behavior.
 - Existing frontend and future ingestion routes are registered, but business
   handlers currently return a JSON `501 Not implemented` envelope.
 - Ingestion, email-delivery, and worker-job workflows remain reserved for their
-  respective implementation phases. Authentication routes and authorization
-  middleware remain unmounted until the final phase.
+  respective implementation phases. JWT verification and gateway-aligned
+  routing are next; DAS7 will not mount login or signup routes.

@@ -1,6 +1,6 @@
 # DAS 7 Backend Architecture
 
-**Status:** Approved target architecture; revision R1-R4 implemented, R5 onward pending
+**Status:** Approved target architecture; revision R1-R5 implemented, R6 onward pending
 
 **Scope:** DAS 7 Insight backend only
 
@@ -54,12 +54,13 @@ dependencies.
 - Preserve the existing test baseline, but defer new or rewritten permanent
   test files until the dedicated testing phase after feature implementation.
 
-The first implementation checkpoint now includes the hosted-development
-Supabase CLI configuration, the committed PostgreSQL migration chain for the
-`insight` schema, its generated TypeScript database types, and the verified
-RLS/grant boundary. Identity ownership, gateway-aligned routing, Supabase
-repositories, provider integration, and MySQL removal remain in the later
-revision phases described by [`revision-plan.md`](revision-plan.md).
+The implementation checkpoint now includes the hosted-development Supabase
+CLI configuration, the committed PostgreSQL migration chain for the `insight`
+schema, its generated TypeScript database types, the verified RLS/grant
+boundary, Supabase clients, mappers, repositories, RPC wrappers, and a bounded
+readiness probe. Identity ownership is complete; gateway-aligned routing,
+workflow composition, provider integration, and MySQL removal remain in the
+later revision phases described by [`revision-plan.md`](revision-plan.md).
 
 ## 3. System Context and Ownership
 
@@ -408,8 +409,9 @@ Protected API requests use a request-scoped Supabase client configured with:
 - `SUPABASE_PUBLISHABLE_KEY`
 - An `accessToken` callback returning the incoming verified token
 
-Repositories call `.schema('insight')`. Supabase then evaluates RLS using the
-same end-user identity.
+The client factory selects the `insight` schema through the SDK database
+configuration; repositories then use ordinary `.from(...)` calls. Supabase
+evaluates RLS using the same end-user identity.
 
 ### 7.4 System client
 
@@ -690,12 +692,16 @@ backend/
 |   |   |   |-- generated/
 |   |   |   |-- mappers/
 |   |   |   |-- repositories/
-|   |   |   `-- rpc/
+|   |   |   |-- rpc/
+|   |   |   |-- errors.ts
+|   |   |   |-- readiness.ts
+|   |   |   `-- index.ts
 |   |   |-- llm/
 |   |   |-- email/
 |   |   `-- time/
 |   |
 |   `-- shared/
+|       |-- readiness.ts
 |       |-- ids/
 |       |-- logging/
 |       `-- validation/
@@ -741,7 +747,14 @@ the diagram.
 | `http/` | HTTP behavior shared across features, including the combined router, health routes, global middleware, verified request-principal handling, response envelopes, and error mapping. Its `principal/` boundary contains framework-neutral claims, principal, and verifier types; the Supabase-backed verifier is added in R6. |
 | `modules/` | Feature-oriented application code for parents, progress tracking, preferences, ingestion, and notifications. Modules coordinate domain objects through ports without knowing the concrete infrastructure. |
 | `infrastructure/` | Technical implementations of application ports: Supabase clients and repositories, PostgreSQL RPC wrappers, LLM adapters, email adapters, and the real system clock. |
-| `shared/` | Small technical utilities genuinely reused across multiple areas, such as identifier helpers, structured logging primitives, and generic validation helpers. It is not a miscellaneous business-logic folder. |
+| `infrastructure/supabase/clients/` | Typed `supabase-js` factories. The request factory carries a verified caller token; the worker factory is the only secret-key construction path. |
+| `infrastructure/supabase/generated/` | CLI-generated `Database` types for the exposed `insight` schema. Regenerate them from the linked hosted project; do not hand-edit them. |
+| `infrastructure/supabase/mappers/` | Runtime row schemas, PostgreSQL date/JSON conversions, row-to-domain mappers, and domain-to-insert/update mappers. Invalid rows stop here. |
+| `infrastructure/supabase/repositories/` | Concrete implementations of the feature-owned repository ports. They own Data API queries, deterministic ordering, and Supabase error translation. |
+| `infrastructure/supabase/rpc/` | Thin wrappers over reviewed PostgreSQL functions for progress writes and notification-job lease transitions. These preserve database-side atomicity. |
+| `infrastructure/supabase/readiness.ts` | Bounded metadata-only reachability probe used through API dependency injection; it never returns protected rows. |
+| `app/worker-container.ts` `persistence` | Worker-only repository graph built from the secret-key client. The API container has no equivalent property. |
+| `shared/` | Small technical contracts and utilities genuinely reused across multiple areas, such as the readiness capability, identifier helpers, structured logging primitives, and generic validation helpers. It is not a miscellaneous business-logic folder. |
 
 ### 11.3 Module convention
 

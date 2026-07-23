@@ -1,7 +1,17 @@
 import { Router } from 'express'
-import { getHealth, getReadiness } from './health.controller.js'
+import {
+    createReadinessHandler,
+    getHealth,
+} from './health.controller.js'
+import type { ReadinessProbe } from '../../shared/readiness.js'
 
-export const healthRouter = Router()
+export function createHealthRouter(probe?: ReadinessProbe): Router {
+    const router = Router()
 
-healthRouter.get('/', getHealth)
-healthRouter.get('/ready', getReadiness)
+    router.get('/', getHealth)
+    router.get('/ready', createReadinessHandler(probe))
+
+    return router
+}
+
+export const healthRouter = createHealthRouter()
