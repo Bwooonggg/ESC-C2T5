@@ -90,6 +90,11 @@ The following behavior exists and should be preserved during the revision.
 - Existing unit and HTTP test scenarios.
 - Existing database-backed behavior tests as behavioral specifications.
 
+`TrackProgressModel`'s snapshot revalidation and coalescing are reusable
+behavior, but R8 relocates them into the shared `modules/summaries/` capability
+so the Phase 11 notification worker can call them instead of reimplementing
+them. The behavior is preserved; only its owner changes.
+
 ## Work That Will Be Superseded
 
 - `mysql2` and MySQL configuration.
@@ -465,7 +470,7 @@ hosted project and does not run Docker or a local Supabase database.
 | R6B | Validate hosted-development Supabase connectivity without platform-auth integration | Done |
 | R6C | Integrate the deferred platform token boundary | Blocked by external contract |
 | R7 | Restore existing workflows on Supabase after R6C | Pending |
-| R8 | Refactor generator infrastructure to the shared LLM boundary | Pending |
+| R8 | Refactor generator infrastructure to the shared LLM boundary and extract shared summary generation from `TrackProgressModel` | Pending |
 | R9 | Remove MySQL and obsolete authentication infrastructure | Pending |
 | R10 | Complete revision verification and documentation | Pending |
 

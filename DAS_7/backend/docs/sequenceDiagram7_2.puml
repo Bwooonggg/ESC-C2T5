@@ -1,0 +1,49 @@
+@startuml
+title Use Case DAS 7 - Notify Parent
+
+hide footbox
+autoactivate off
+skinparam backgroundColor white
+
+actor Clock
+participant NotificationController
+participant NotifierModel
+participant GeneratorServiceAdapter
+participant EmailServiceAdapter
+actor SummaryGeneratorService as SummaryService <<Secondary Actor>>
+actor EmailProvider <<Secondary Actor>>
+
+Clock -> NotificationController : timerExpired()
+activate NotificationController
+NotificationController -> NotifierModel : notifyParent(student)
+activate NotifierModel
+
+NotifierModel -> GeneratorServiceAdapter : generateSummary(records)
+activate GeneratorServiceAdapter
+GeneratorServiceAdapter -> SummaryService : generate(records)
+activate SummaryService
+SummaryService --> GeneratorServiceAdapter -- : Summary
+GeneratorServiceAdapter --> NotifierModel -- : Summary
+
+NotifierModel -> EmailServiceAdapter : sendNotification(summary, recipient)
+activate EmailServiceAdapter
+EmailServiceAdapter -> EmailProvider : send(notification)
+activate EmailProvider
+
+alt Email sent successfully
+  EmailProvider --> EmailServiceAdapter -- : sent
+  EmailServiceAdapter --> NotifierModel -- : notificationSent
+  NotifierModel --> NotificationController -- : parentNotified
+  NotificationController --> Clock -- : parentNotified
+else Email provider does not send the email
+  activate EmailProvider
+  EmailProvider --> EmailServiceAdapter -- : sendFailed
+  activate EmailServiceAdapter
+  EmailServiceAdapter --> NotifierModel -- : notificationFailed
+  activate NotifierModel
+  NotifierModel --> NotificationController -- : notificationFailed
+  activate NotificationController
+  NotificationController --> Clock -- : notificationFailed
+end
+
+@enduml

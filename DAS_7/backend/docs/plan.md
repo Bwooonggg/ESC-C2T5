@@ -171,19 +171,34 @@ Complete the Notify Parent sequence diagram with durable scheduling, fresh
 summary generation, replaceable email delivery, and safe recovery from
 failures.
 
+### Application objects
+
+Implement the two application objects named by `sequenceDiagram7_2.puml`:
+
+- The worker loop plays `NotificationController` and the `Clock` actor. It has
+  no HTTP surface, so `modules/notifications/` gains an `application/`
+  directory but no `http/` directory.
+- `NotifierModel` owns `notifyParent(student)`: job lease, summary generation,
+  email-notification record, delivery, and terminal state.
+
+`NotifierModel` must not duplicate the snapshot-consistency logic that already
+exists in `TrackProgressModel`. It obtains its summary through the shared
+`GenerateStudentSummary` capability extracted in revision phase R8
+(`modules/summaries/`). This phase is blocked until that extraction is done.
+
 ### Worker behavior
 
 1. Calculate due work from parent notification preferences.
 2. Create or reuse one job for each parent-student schedule occurrence.
 3. Atomically claim jobs through the Supabase job-claim RPC.
-4. Load the student's progress snapshot.
-5. Generate a fresh summary through `SummaryGeneratorPort`.
-6. Revalidate the progress version before persisting the summary.
-7. Persist the summary, email-notification record, and job linkage atomically.
-8. Send through `EmailProviderPort` outside the database transaction.
-9. Record sent or failed state.
-10. Retry only transient failures with capped backoff.
-11. Recover expired leases without running two workers on the same active job.
+4. Call `GenerateStudentSummary`, which loads the student's progress snapshot,
+   generates through `SummaryGeneratorPort`, revalidates the progress version,
+   and persists the summary.
+5. Persist the email-notification record and job linkage atomically.
+6. Send through `EmailProviderPort` outside the database transaction.
+7. Record sent or failed state.
+8. Retry only transient failures with capped backoff.
+9. Recover expired leases without running two workers on the same active job.
 
 A parent with multiple children receives one email per child. There is no
 public notification-trigger endpoint.

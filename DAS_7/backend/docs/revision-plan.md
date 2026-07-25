@@ -35,6 +35,8 @@ At the end of this revision:
   `/api/insights` prefix.
 - Summary and recommendation adapters share a provider-neutral LLM client
   boundary.
+- Snapshot-consistent summary generation is one shared application capability
+  used by both the request path and the notification worker.
 - MySQL code, dependencies, migrations, settings, and tests are removed.
 - New and rewritten permanent test files are deferred to the dedicated testing
   phase in [`plan.md`](plan.md).
@@ -112,6 +114,8 @@ Change:
 - Identity ownership.
 - Internal route prefixes.
 - Generator infrastructure configuration.
+- Application-layer ownership of summary generation. The logic moves from
+  `TrackProgressModel` into a shared capability; its behavior is preserved.
 - Transaction implementation.
 - Development and testing environment.
 
@@ -875,12 +879,15 @@ workflows can execute against the hosted development project.
 **Done when:** Phases 6 through 8 of the original feature baseline have
 behavioral parity on Supabase.
 
-## Phase R8: Refactor to the Shared LLM Boundary
+## Phase R8: Refactor to the Shared Generation Boundaries
 
 ### Purpose
 
 Prepare the generation infrastructure for one online LLM provider while
-keeping summary and recommendation application contracts independent.
+keeping summary and recommendation application contracts independent, and
+extract the snapshot-consistent summary step from the already implemented
+`TrackProgressModel` so the Notify Parent workflow can reuse it instead of
+duplicating it.
 
 ### Port design
 
@@ -928,6 +935,46 @@ The real provider implementation remains Phase 10 in [`plan.md`](plan.md).
 During the revision, use a controlled or fake LLM client to prove the
 architecture.
 
+### Revise the implemented `TrackProgressModel`
+
+`TrackProgressModel` was completed in the original Phase 6 and currently owns
+the only snapshot-consistent summary-generation logic in the codebase: student
+lookup, ordered progress load, generation through `SummaryGeneratorPort`,
+progress-version revalidation with bounded retry, persistence, and in-flight
+request coalescing. Phase 11 of [`plan.md`](plan.md) needs exactly that
+behavior for `NotifierModel`, so it must be extracted rather than reimplemented
+in the worker.
+
+Create a capability module `src/modules/summaries/`:
+
+1. Add `modules/summaries/application/generate-student-summary.ts` containing
+   the snapshot read, generation call, version revalidation loop, persistence,
+   and coalescing currently in `TrackProgressModel.generateTrackProgress`.
+2. Move the four ports that capability owns from
+   `modules/track-progress/ports/` to `modules/summaries/ports/`:
+   `student.repository.ts`, `progress-record.repository.ts`,
+   `summary.repository.ts`, and `summary-generator.ts`.
+3. Reduce `TrackProgressModel` to the Track Child's Progress use case: call
+   `GenerateStudentSummary` and return the existing
+   `{ student, records, summary }` result shape.
+4. Update `RecommendationModel` to import `SummaryRepository` from
+   `modules/summaries/ports/`. Leave its behavior unchanged; it is a peer
+   application model, not a variant of `TrackProgressModel`.
+5. Update `api-container.ts` and `worker-container.ts` so both graphs can build
+   the capability. The worker builds it from the secret-key repositories; the
+   API builds it from request-scoped repositories. No client crosses over.
+6. Do not give `modules/notifications/` a dependency on
+   `modules/track-progress/`.
+
+Behavior that must not change:
+
+- `ProgressUnavailableError` on missing student, unreadable records, empty
+  records, records belonging to another student, and exhausted snapshot
+  attempts.
+- The bounded `maxSnapshotAttempts` retry and its stale-version message.
+- Coalescing keyed on student ID plus current progress version.
+- The existing Track Progress and Recommendation response data shapes.
+
 ### Deferred testing backlog
 
 Record these cases for the dedicated testing phase:
@@ -939,12 +986,29 @@ Record these cases for the dedicated testing phase:
 - Correlation metadata.
 - Sensitive-data redaction.
 - Existing Track Progress and Recommendation fake behavior.
+- `GenerateStudentSummary` snapshot revalidation, bounded retry, and coalescing
+  invoked from both the request path and a worker-shaped caller.
+- Confirmation that `TrackProgressModel` and `RecommendationModel` preserve
+  their existing errors and response shapes after the extraction.
 
 Use only temporary or manual controlled inputs during implementation; do not
 add new permanent adapter test files.
 
+### Verification
+
+- Typecheck and build pass.
+- Existing applicable Jest suites still pass; no permanent test file is
+  rewritten in this phase.
+- A source search confirms `modules/notifications/` does not import
+  `modules/track-progress/`.
+- A source search confirms the snapshot revalidation loop exists in exactly one
+  place.
+- The API dependency graph still cannot resolve a secret-key client.
+
 **Done when:** both generator adapters operate through one provider-neutral LLM
-client seam without selecting the production provider.
+client seam without selecting the production provider, and snapshot-consistent
+summary generation exists once in `modules/summaries/` with `TrackProgressModel`
+reduced to its use case.
 
 ## Phase R9: Remove Superseded MySQL and Authentication Infrastructure
 
@@ -1121,6 +1185,10 @@ The revision is complete only when all of the following are true:
 - [ ] Service-local Express routes match `/api/insights` prefix stripping.
 - [ ] No CORS configuration is present.
 - [ ] Summary and recommendation adapters share one LLM client boundary.
+- [ ] Snapshot-consistent summary generation exists once, in
+      `modules/summaries/`, and is reachable from both the API and worker
+      dependency graphs.
+- [ ] `modules/notifications/` does not depend on `modules/track-progress/`.
 - [ ] No production LLM provider has been prematurely coupled to domain or
       application code.
 - [ ] No MySQL dependency, code, migration, test environment, or configuration
@@ -1156,6 +1224,8 @@ Treat these as DAS 7 revision failures:
 - MySQL or local-authentication code remains after R9.
 - Internal paths still contain an extra `/api` prefix.
 - LLM provider details leak into domain or application code.
+- Summary snapshot revalidation or coalescing is duplicated between the request
+  path and the worker instead of shared.
 - The deferred testing backlog or documentation contradicts the approved
   target architecture.
 

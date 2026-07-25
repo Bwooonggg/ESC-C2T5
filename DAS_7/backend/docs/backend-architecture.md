@@ -7,6 +7,10 @@ Platform-auth integration is deferred to R6C.
 
 **Related documents:** [`overall-architecture.md`](overall-architecture.md), [`revision-plan.md`](revision-plan.md), and [`plan.md`](plan.md)
 
+**Source diagrams:** `DAS7 Solution Class Diagram.jpg`,
+[`sequenceDiagram7_1.puml`](sequenceDiagram7_1.puml) (Track Child's Progress),
+and [`sequenceDiagram7_2.puml`](sequenceDiagram7_2.puml) (Notify Parent)
+
 ## 1. Purpose
 
 This document defines the target architecture for the DAS 7 backend after the
@@ -171,11 +175,11 @@ It:
 
 1. Finds due notification work.
 2. Atomically claims jobs through a PostgreSQL RPC function.
-3. Loads the applicable progress snapshot.
-4. Generates and persists a fresh summary.
-5. Creates an email-notification record.
-6. Sends through the email-provider port.
-7. Records success, failure, retry, and lease state.
+3. Loads the applicable progress snapshot, generates a fresh summary, and
+   persists it through the shared `GenerateStudentSummary` capability (§9.1).
+4. Creates an email-notification record.
+5. Sends through the email-provider port.
+6. Records success, failure, retry, and lease state.
 
 The worker has no public HTTP trigger. It uses a server-only Supabase secret
 key because it performs system work without an end-user request. That secret
@@ -270,6 +274,11 @@ Contains the use cases represented by the supplied sequence diagrams:
 - Read and update notification preferences.
 - Ingest and correct platform data.
 - Schedule and deliver notifications.
+
+Track child progress and scheduled notification both need a snapshot-consistent
+summary, so that step is one shared application service
+(`GenerateStudentSummary`) rather than logic duplicated per entrypoint. See
+§9.1.
 
 Application code depends on repository and provider interfaces rather than
 concrete Supabase, LLM, or email implementations.
@@ -548,14 +557,20 @@ grants.
 ### 9.1 Port hierarchy
 
 ```text
-TrackProgressModel --------> SummaryGeneratorPort
-RecommendationModel -------> RecommendationGeneratorPort
-                                      |
-                                      v
-                         provider-neutral LLM client
-                                      |
-                                      v
-                             selected online LLM API
+Track Child's Progress (sequenceDiagram7_1)
+    TrackProgressModel  --> GenerateStudentSummary --> SummaryGeneratorPort
+    RecommendationModel ------------------------------> RecommendationGeneratorPort
+
+Notify Parent (sequenceDiagram7_2)
+    NotifierModel       --> GenerateStudentSummary --> SummaryGeneratorPort
+
+Both generator ports
+                        |
+                        v
+            provider-neutral LLM client
+                        |
+                        v
+                selected online LLM API
 ```
 
 `SummaryGeneratorPort` and `RecommendationGeneratorPort` remain the application
@@ -569,6 +584,35 @@ Their infrastructure adapters may share:
 - Provider error classification
 - Structured-output parsing
 - Invocation metadata
+
+`GenerateStudentSummary` is the shared application service behind the
+`generateSummary` message in both sequence diagrams. It reads a student's
+ordered progress together with its version marker, invokes
+`SummaryGeneratorPort`, revalidates the version, and persists the resulting
+summary. The request path (§4.1) and the worker path (§4.2 step 3, §10) both
+require exactly this snapshot-consistent behavior, so it is defined once
+instead of duplicated. It is an internal application collaborator, not a port.
+
+#### Diagram alignment
+
+Every application object above appears in the sequence diagrams:
+
+- `TrackProgressModel` and `RecommendationModel` are peer lifelines in
+  `sequenceDiagram7_1.puml`. They share no logic: they take different inputs (a
+  live progress snapshot versus the latest persisted summary), raise different
+  domain errors (`ProgressUnavailableError` versus `SummaryUnavailableError`),
+  and only the progress path carries version revalidation and request
+  coalescing. The recommendation flow does not pass through
+  `TrackProgressModel`.
+- `NotifierModel` (`sequenceDiagram7_2.puml`) is distinct from
+  `TrackProgressModel` because it owns job leases, delivery, and retry state
+  that must not reach the request-scoped path, and it runs on the worker's
+  secret-key client rather than a request-scoped one (§7.3, §7.4).
+- `GeneratorAdapter` (7_1) and `GeneratorServiceAdapter` (7_2) are the same
+  boundary; both are realized by the adapters under `infrastructure/llm/`.
+- `GenerateStudentSummary` is the one element without its own lifeline. It sits
+  behind the `generateSummary` message in both diagrams as an internal
+  application collaborator rather than a distinct participant.
 
 ### 9.2 Structured output
 
@@ -691,6 +735,7 @@ backend/
 |   |
 |   |-- modules/
 |   |   |-- parents/
+|   |   |-- summaries/
 |   |   |-- track-progress/
 |   |   |-- preferences/
 |   |   |-- ingestion/
@@ -755,7 +800,8 @@ the diagram.
 | `config/` | The only production area that reads environment variables. It validates raw values and returns typed API, Supabase, LLM, email, and notification settings. |
 | `domain/` | Pure DAS 7 entities, value objects, invariants, and business errors. It has no Express, Supabase, SQL, provider SDK, or environment dependency. |
 | `http/` | HTTP behavior shared across features, including the combined router, health routes, global middleware, verified request-principal handling, response envelopes, and error mapping. Its `principal/` boundary contains framework-neutral claims, principal, and verifier types; the Supabase-backed verifier is deferred to R6C. |
-| `modules/` | Feature-oriented application code for parents, progress tracking, preferences, ingestion, and notifications. Modules coordinate domain objects through ports without knowing the concrete infrastructure. |
+| `modules/` | Feature-oriented application code for parents, summary generation, progress tracking, preferences, ingestion, and notifications. Modules coordinate domain objects through ports without knowing the concrete infrastructure. |
+| `modules/summaries/` | The shared `GenerateStudentSummary` capability and the four ports it owns (student, progress-record, summary, and `SummaryGeneratorPort`). It has no `http/` directory; `track-progress` and `notifications` both depend on it. |
 | `infrastructure/` | Technical implementations of application ports: Supabase clients and repositories, PostgreSQL RPC wrappers, LLM adapters, email adapters, and the real system clock. |
 | `infrastructure/supabase/clients/` | Typed `supabase-js` factories. The request factory carries a verified caller token; the worker factory is the only secret-key construction path. |
 | `infrastructure/supabase/generated/` | CLI-generated `Database` types for the exposed `insight` schema. Regenerate them from the linked hosted project; do not hand-edit them. |
@@ -779,6 +825,13 @@ modules/<feature>/
 
 The notification module normally has no public `http/` directory because its
 workflow begins with the worker clock rather than an HTTP request.
+
+A capability module is the same shape without `http/`. `modules/summaries/`
+holds `GenerateStudentSummary` and its ports because more than one entrypoint
+needs snapshot-consistent summary generation. Depending on a capability module
+is allowed; depending on another feature's `http/` or use cases is not, so
+`notifications` reaches summary generation through `modules/summaries/` rather
+than through `modules/track-progress/`.
 
 Repository interfaces live with the application capability that requires them.
 Concrete Supabase repository classes live under
