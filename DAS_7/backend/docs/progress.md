@@ -2,13 +2,14 @@
 
 ## Current Status
 
-**Architecture revision:** R1 through R6A complete; R6B next
+**Architecture revision:** R1 through R6B complete
 
 Platform-auth integration (R6C) is intentionally deferred until the
 platform/authentication team supplies its token and claims contract.
 
-**Next work:** Revision Phase R6B in
-[`revision-plan.md`](revision-plan.md)
+**Next work:** Wait for the platform/authentication team to provide the R6C
+token and claims contract. Feature implementation remains paused until the
+complete revision plan passes.
 
 **Feature plan:** Paused until the complete revision plan passes
 
@@ -27,10 +28,10 @@ implementation phases are complete.
 
 The version-controlled Supabase CLI foundation and the first hosted `insight`
 schema migration chain and Supabase persistence boundary are now present.
-Identity ownership and gateway-aligned routing are complete. Reversible
-hosted-development Supabase smoke checks are next; JWT verification,
-workflow composition, LLM consolidation, and final MySQL removal remain in
-later revision phases.
+Identity ownership, gateway-aligned routing, and reversible hosted-development
+Supabase smoke checks are complete for the available worker-authorized paths.
+JWT verification, trusted progress ingestion, workflow composition, LLM
+consolidation, and final MySQL removal remain in later revision phases.
 
 ## Why the Plan Is Paused
 
@@ -45,10 +46,10 @@ valid:
   generator services.
 - The old remaining plan included a DAS 7-owned authentication phase.
 
-Continuing directly with ingestion or notifications would add new work to an
-infrastructure and ownership model that is being replaced. The next safe
-implementation step is R6B's hosted-development Supabase smoke validation;
-platform-auth integration remains deferred to R6C.
+Continuing directly with ingestion or notifications would add new work before
+the platform ownership boundary is available. R6B's hosted-development
+Supabase smoke validation is complete; platform-auth integration remains
+deferred to R6C.
 
 Complete [`revision-plan.md`](revision-plan.md) before resuming
 [`plan.md`](plan.md) at Phase 9.
@@ -397,6 +398,50 @@ Results:
   were not rewritten during implementation and remain in the dedicated test
   backlog.
 
+## Revision R6B Progress
+
+Hosted-development Supabase validation is complete without integrating
+platform authentication:
+
+- The hosted development project is healthy and contains all five DAS 7
+  migrations, all 11 `insight` tables, enabled RLS, and the reviewed
+  `SECURITY INVOKER` RPC functions.
+- `supabase/config.toml` now preserves the existing `api` schema and adds the
+  DAS 7 `insight` schema to the API schema list.
+- The hosted `authenticator` role's overriding `pgrst.db_schemas=api` setting
+  was updated to `api,insight`, and PostgREST was asked to reload its schema.
+- A publishable-key read-only client now reaches the `insight` schema and is
+  denied at the schema-permission boundary without a JWT, as expected while
+  RLS policies and the platform claims contract are deferred.
+- A worker-only smoke check passed for parent/student projections, guardian
+  relationships, summaries, notification preferences, email notifications,
+  notification-job claim/complete, audit events, and idempotency. Its unique
+  temporary records were removed and a follow-up query confirmed zero rows
+  remained.
+- The email-domain constraint correction migration accepts normalized ordinary
+  addresses such as `x@example.com` without weakening normalization rules.
+- Progress insertion/correction remains denied until R6C supplies the trusted
+  ingestion claims and RLS contract. No development-only authorization bypass
+  or permissive policy was added.
+- No permanent test files were added; the worker smoke was an ephemeral
+  command and the existing historical HTTP tests remain in the deferred test
+  backlog.
+
+### R6B verification
+
+The following checks completed successfully:
+
+```powershell
+npm run typecheck
+npm run build
+npx supabase db push --linked --dry-run
+npx supabase db push --linked --yes
+```
+
+The linked migration list contains five DAS 7 migrations. The only CLI warning
+was a non-blocking local pg-delta cache message because this workflow uses the
+hosted project and does not run Docker or a local Supabase database.
+
 ## Documentation Pivot
 
 | Document | Status |
@@ -417,7 +462,7 @@ Results:
 | R4 | Refactor identity ownership and the domain boundary | Done |
 | R5 | Implement Supabase clients, mappers, repositories, and readiness | Done |
 | R6A | Align service-local routing without platform-auth integration | Done |
-| R6B | Validate hosted-development Supabase connectivity without platform-auth integration | Next |
+| R6B | Validate hosted-development Supabase connectivity without platform-auth integration | Done |
 | R6C | Integrate the deferred platform token boundary | Blocked by external contract |
 | R7 | Restore existing workflows on Supabase after R6C | Pending |
 | R8 | Refactor generator infrastructure to the shared LLM boundary | Pending |

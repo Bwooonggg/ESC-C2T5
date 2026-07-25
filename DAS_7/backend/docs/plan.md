@@ -1,8 +1,7 @@
 # DAS 7 Backend Implementation Plan
 
 **Status:** Paused until [`revision-plan.md`](revision-plan.md) is complete.
-The immediate revision work is R6B; R6A is complete. Platform-auth
-integration is deferred to R6C.
+R6A and R6B are complete; platform-auth integration is deferred to R6C.
 
 **Architecture:** [`backend-architecture.md`](backend-architecture.md)
 
@@ -17,12 +16,11 @@ implemented.
 The original implementation completed Phases 0 through 8 against MySQL. The
 project architecture has since changed to Supabase and platform-owned identity.
 
-Do not continue with the next feature phase yet. First complete the
-non-authentication revision work that can be performed against the hosted
-development Supabase project:
-
-- R6B: run temporary, reversible Supabase connectivity and persistence smoke
-  checks without adding permanent test files.
+Do not continue with the next feature phase yet. R6B's non-authentication
+connectivity and persistence smoke checks against the hosted development
+Supabase project are complete. The next revision gate is R6C, which cannot
+start until the platform/authentication team provides the token and claims
+contract.
 
 Do not begin R6C or the feature phases until the platform/authentication team
 provides the token and claims contract. A testing Supabase project does not

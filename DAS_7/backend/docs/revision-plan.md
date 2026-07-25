@@ -1,7 +1,8 @@
 # DAS 7 Supabase Architecture Revision Plan
 
-**Status:** R1 through R5 complete; R6A and R6B next. Platform-auth
-integration (R6C) is intentionally deferred.
+**Status:** R1 through R6B complete. Platform-auth integration (R6C) is
+intentionally deferred until the external token and claims contract is
+available.
 
 **Start here:** Complete R1 through R10 before returning to
 [`plan.md`](plan.md)
@@ -41,10 +42,10 @@ At the end of this revision:
 
 ### Current sequencing decision
 
-The next implementation work deliberately does not integrate DAS 7 with the
-platform authentication boundary. We will first align Express with the
-Traefik gateway and validate the existing Supabase infrastructure against the
-hosted development project. The platform token contract, token verification,
+R6A and R6B deliberately did not integrate DAS 7 with the platform
+authentication boundary. Express is aligned with the Traefik gateway and the
+existing Supabase infrastructure has been validated against the hosted
+development project. The platform token contract, token verification,
 protected-route enforcement, and RLS-dependent user workflows remain a later
 integration step after the platform/authentication team supplies its contract.
 
@@ -727,9 +728,37 @@ authorization model.
   used.
 - Typecheck and build pass.
 
-**Done when:** the R5 clients, mappers, repositories, and RPC wrappers have a
-reversible hosted-development connectivity result, while user-facing
-authorization remains intentionally unintegrated.
+### R6B implementation checkpoint (complete)
+
+- The hosted development project is `vylnbquecvqjzltsjqgh` and is healthy.
+- The linked migration history contains the five DAS 7 migrations,
+  including the email-domain constraint correction
+  `20260723183444_fix_email_domain_constraints.sql`.
+- The project contains all 11 `insight` tables, every table has RLS enabled,
+  and the reviewed RPC functions are present as `SECURITY INVOKER` functions.
+- The version-controlled CLI configuration preserves the existing `api`
+  schema and adds `insight` to the Data API schema list.
+- The hosted project's `authenticator` role had an overriding
+  `pgrst.db_schemas=api` setting. It was updated in the development project to
+  `api,insight`, followed by a PostgREST schema reload.
+- A publishable-key client now reaches the `insight` schema. It receives the
+  expected schema-permission denial without a caller JWT because end-user
+  grants and RLS policies are intentionally not available before R6C.
+- A worker-only smoke check successfully exercised parent and student
+  projections, guardian relationships, summaries, notification preferences,
+  email notifications, notification-job claim/complete, audit events, and
+  idempotency. All temporary records were selectively removed and the cleanup
+  verification returned zero remaining rows.
+- The progress insertion/correction RPCs still deny the worker role by design;
+  their trusted ingestion grant and RLS policy depend on the external R6C
+  claims contract. No grant or development-only bypass was added.
+- The linked migration applied successfully. The Supabase CLI emitted only a
+  non-blocking local pg-delta cache warning because Docker is not part of this
+  hosted-development workflow.
+
+**R6B status:** Done for the worker-authorized infrastructure boundary. User
+authorization and trusted progress ingestion remain intentionally unintegrated
+and are R6C gates.
 
 ## Deferred Phase R6C: Integrate the Platform Token Boundary
 

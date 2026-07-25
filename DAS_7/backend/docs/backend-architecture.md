@@ -1,7 +1,7 @@
 # DAS 7 Backend Architecture
 
-**Status:** Approved target architecture; revision R1-R6A implemented. R6B is
-next; platform-auth integration is deferred to R6C.
+**Status:** Approved target architecture; revision R1-R6B implemented.
+Platform-auth integration is deferred to R6C.
 
 **Scope:** DAS 7 Insight backend only
 
@@ -55,14 +55,14 @@ dependencies.
 - Preserve the existing test baseline, but defer new or rewritten permanent
   test files until the dedicated testing phase after feature implementation.
 
-The implementation checkpoint now includes the hosted-development Supabase
+The implementation checkpoint includes the hosted-development Supabase
 CLI configuration, the committed PostgreSQL migration chain for the `insight`
 schema, its generated TypeScript database types, the verified RLS/grant
 boundary, Supabase clients, mappers, repositories, RPC wrappers, and a bounded
-readiness probe. Identity ownership and gateway-aligned routing are complete.
-The immediate implementation work is reversible hosted-development Supabase
-smoke validation; platform-auth integration, workflow composition, provider
-integration, and MySQL removal remain in the later revision phases described by
+readiness probe. Identity ownership, gateway-aligned routing, and the
+worker-authorized hosted-development smoke validation are complete.
+Platform-auth integration, workflow composition, provider integration, and
+MySQL removal remain in the later revision phases described by
 [`revision-plan.md`](revision-plan.md).
 
 ## 3. System Context and Ownership
