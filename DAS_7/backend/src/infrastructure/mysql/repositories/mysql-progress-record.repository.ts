@@ -1,6 +1,6 @@
 import type { RowDataPacket } from 'mysql2/promise'
 import type { ProgressRecord } from '../../../domain/entities/progress-record.js'
-import type { ProgressRecordRepository } from '../../../modules/track-progress/ports/progress-record.repository.js'
+import type { ProgressRecordRepository } from '../../../modules/summaries/ports/progress-record.repository.js'
 import { mapProgressRecordRow } from '../mappers/index.js'
 import {
     asMysqlRow,

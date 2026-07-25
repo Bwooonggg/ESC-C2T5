@@ -23,13 +23,12 @@ export interface AppConfig {
         readonly secretKey?: string
         readonly schema: string
     }
-    readonly generators: {
-        readonly summaryUrl?: string
-        readonly recommendationUrl?: string
-        readonly summaryApiKey?: string
-        readonly recommendationApiKey?: string
-        readonly summaryTimeoutMs: number
-        readonly recommendationTimeoutMs: number
+    readonly llm: {
+        readonly provider?: string
+        readonly apiBaseUrl?: string
+        readonly apiKey?: string
+        readonly model?: string
+        readonly timeoutMs: number
     }
     readonly email: {
         readonly providerUrl?: string
@@ -133,17 +132,11 @@ const rawEnvironmentSchema = z.object({
     SUPABASE_PUBLISHABLE_KEY: optionalStringSchema,
     SUPABASE_SECRET_KEY: optionalStringSchema,
     SUPABASE_SCHEMA: z.string().trim().min(1).default('insight'),
-    SUMMARY_GENERATOR_URL: optionalUrlSchema,
-    RECOMMENDATION_GENERATOR_URL: optionalUrlSchema,
-    SUMMARY_GENERATOR_API_KEY: optionalStringSchema,
-    RECOMMENDATION_GENERATOR_API_KEY: optionalStringSchema,
-    SUMMARY_GENERATOR_TIMEOUT_MS: z.coerce
-        .number()
-        .int()
-        .min(100)
-        .max(120_000)
-        .default(10_000),
-    RECOMMENDATION_GENERATOR_TIMEOUT_MS: z.coerce
+    LLM_PROVIDER: optionalStringSchema,
+    LLM_API_BASE_URL: optionalUrlSchema,
+    LLM_API_KEY: optionalStringSchema,
+    LLM_MODEL: optionalStringSchema,
+    LLM_TIMEOUT_MS: z.coerce
         .number()
         .int()
         .min(100)
@@ -200,8 +193,10 @@ function getProductionIssues(
         'MYSQL_DATABASE',
         'MYSQL_USER',
         'MYSQL_PASSWORD',
-        'SUMMARY_GENERATOR_URL',
-        'RECOMMENDATION_GENERATOR_URL',
+        'LLM_PROVIDER',
+        'LLM_API_BASE_URL',
+        'LLM_API_KEY',
+        'LLM_MODEL',
         'EMAIL_PROVIDER_URL',
     ] as const
 
@@ -236,13 +231,12 @@ function toAppConfig(raw: RawEnvironment): AppConfig {
             secretKey: raw.SUPABASE_SECRET_KEY,
             schema: raw.SUPABASE_SCHEMA,
         },
-        generators: {
-            summaryUrl: raw.SUMMARY_GENERATOR_URL,
-            recommendationUrl: raw.RECOMMENDATION_GENERATOR_URL,
-            summaryApiKey: raw.SUMMARY_GENERATOR_API_KEY,
-            recommendationApiKey: raw.RECOMMENDATION_GENERATOR_API_KEY,
-            summaryTimeoutMs: raw.SUMMARY_GENERATOR_TIMEOUT_MS,
-            recommendationTimeoutMs: raw.RECOMMENDATION_GENERATOR_TIMEOUT_MS,
+        llm: {
+            provider: raw.LLM_PROVIDER,
+            apiBaseUrl: raw.LLM_API_BASE_URL,
+            apiKey: raw.LLM_API_KEY,
+            model: raw.LLM_MODEL,
+            timeoutMs: raw.LLM_TIMEOUT_MS,
         },
         email: {
             providerUrl: raw.EMAIL_PROVIDER_URL,

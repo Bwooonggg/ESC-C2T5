@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto'
 import type { ProgressRecord } from '../../../domain/entities/progress-record.js'
-import type { ProgressRecordRepository } from '../../../modules/track-progress/ports/progress-record.repository.js'
+import type { ProgressRecordRepository } from '../../../modules/summaries/ports/progress-record.repository.js'
 import type { InsightSupabaseClient } from '../clients/supabase-client.js'
 import { mapProgressRecordRow } from '../mappers/domain-mappers.js'
 import {

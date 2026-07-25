@@ -1,5 +1,5 @@
 import type { Summary } from '../../../domain/entities/summary.js'
-import type { SummaryRepository } from '../../../modules/track-progress/ports/summary.repository.js'
+import type { SummaryRepository } from '../../../modules/summaries/ports/summary.repository.js'
 import type { InsightSupabaseClient } from '../clients/supabase-client.js'
 import {
     mapSummaryRow,

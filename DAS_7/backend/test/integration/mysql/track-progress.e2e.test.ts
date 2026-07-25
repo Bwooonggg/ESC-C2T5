@@ -21,7 +21,7 @@ import { SkillArea } from '../../../src/domain/value-objects/skill-area.js'
 import { TrackProgressModel } from '../../../src/modules/track-progress/application/track-progress.model.js'
 import { RecommendationModel } from '../../../src/modules/track-progress/application/recommendation.model.js'
 import type { RecommendationGeneratorPort } from '../../../src/modules/track-progress/ports/recommendation-generator.js'
-import type { SummaryGeneratorPort } from '../../../src/modules/track-progress/ports/summary-generator.js'
+import type { SummaryGeneratorPort } from '../../../src/modules/summaries/ports/summary-generator.js'
 import { createMySqlPool } from '../../../src/infrastructure/mysql/pool.js'
 import {
     discoverMigrationFiles,

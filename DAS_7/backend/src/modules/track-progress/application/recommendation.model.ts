@@ -5,7 +5,7 @@ import type { GeneratorInvocationContext } from '../../../shared/generator-conte
 import { createGeneratorInvocationContext } from '../../../shared/generator-context.js'
 import type { RecommendationGeneratorPort } from '../ports/recommendation-generator.js'
 import type { RecommendationRepository } from '../ports/recommendation.repository.js'
-import type { SummaryRepository } from '../ports/summary.repository.js'
+import type { SummaryRepository } from '../../summaries/ports/summary.repository.js'
 
 export interface RecommendationModelDependencies {
     readonly summaryRepository: SummaryRepository

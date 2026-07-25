@@ -16,16 +16,21 @@ import {
     SupabaseStudentRepository,
     SupabaseSummaryRepository,
 } from '../infrastructure/supabase/repositories/index.js'
+import {
+    createLlmClient,
+    SummaryGeneratorAdapter,
+} from '../infrastructure/llm/index.js'
+import { GenerateStudentSummary } from '../modules/summaries/application/generate-student-summary.js'
 import type { AuditRepository } from '../modules/ingestion/ports/audit.repository.js'
 import type { IdempotencyRepository } from '../modules/ingestion/ports/idempotency.repository.js'
 import type { EmailNotificationRepository } from '../modules/notifications/ports/email-notification.repository.js'
 import type { NotificationJobRepository } from '../modules/notifications/ports/notification-job.repository.js'
 import type { NotificationPreferenceRepository } from '../modules/preferences/ports/notification-preference.repository.js'
 import type { ParentRepository } from '../modules/parents/ports/parent.repository.js'
-import type { ProgressRecordRepository } from '../modules/track-progress/ports/progress-record.repository.js'
+import type { ProgressRecordRepository } from '../modules/summaries/ports/progress-record.repository.js'
 import type { RecommendationRepository } from '../modules/track-progress/ports/recommendation.repository.js'
-import type { StudentRepository } from '../modules/track-progress/ports/student.repository.js'
-import type { SummaryRepository } from '../modules/track-progress/ports/summary.repository.js'
+import type { StudentRepository } from '../modules/summaries/ports/student.repository.js'
+import type { SummaryRepository } from '../modules/summaries/ports/summary.repository.js'
 
 export interface WorkerContainer {
     readonly config: AppConfig
@@ -33,6 +38,12 @@ export interface WorkerContainer {
     readonly supabaseClient?: InsightSupabaseClient
     /** Worker-only persistence graph built from the secret-key client. */
     readonly persistence?: WorkerPersistence
+    /**
+     * The same snapshot-consistent capability the request path uses, built
+     * here from the worker's secret-key repositories. Notify Parent reuses it
+     * instead of reimplementing snapshot revalidation.
+     */
+    readonly generateStudentSummary?: GenerateStudentSummary
 }
 
 export interface WorkerPersistence {
@@ -61,13 +72,27 @@ export function createWorkerContainer(
               })
             : undefined
 
+    const persistence =
+        supabaseClient === undefined
+            ? undefined
+            : createWorkerPersistence(supabaseClient)
+
     return {
         config,
         supabaseClient,
-        persistence:
-            supabaseClient === undefined
+        persistence,
+        generateStudentSummary:
+            persistence === undefined
                 ? undefined
-                : createWorkerPersistence(supabaseClient),
+                : new GenerateStudentSummary({
+                      studentRepository: persistence.studentRepository,
+                      progressRecordRepository:
+                          persistence.progressRecordRepository,
+                      summaryRepository: persistence.summaryRepository,
+                      summaryGenerator: new SummaryGeneratorAdapter(
+                          createLlmClient(config.llm),
+                      ),
+                  }),
     }
 }
 

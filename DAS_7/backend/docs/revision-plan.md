@@ -1,8 +1,9 @@
 # DAS 7 Supabase Architecture Revision Plan
 
-**Status:** R1 through R6B complete. Platform-auth integration (R6C) is
+**Status:** R1 through R6B and R8 complete. Platform-auth integration (R6C) is
 intentionally deferred until the external token and claims contract is
-available.
+available, and R7 is blocked behind it. R8 was executed out of order because it
+has no dependency on the token boundary.
 
 **Start here:** Complete R1 through R10 before returning to
 [`plan.md`](plan.md)
@@ -1009,6 +1010,45 @@ add new permanent adapter test files.
 client seam without selecting the production provider, and snapshot-consistent
 summary generation exists once in `modules/summaries/` with `TrackProgressModel`
 reduced to its use case.
+
+### R8 implementation checkpoint
+
+R8 is complete.
+
+- `src/adapters/generators/` is removed. `src/infrastructure/llm/` now holds
+  `LlmClientPort`, provider-neutral completion request/response types,
+  provider-neutral `LlmError` categories, one `HttpLlmClient` transport, an
+  `UnconfiguredLlmClient`, per-operation prompts and Zod output schemas, and
+  the two peer generator adapters.
+- `SummaryGeneratorPort` and `RecommendationGeneratorPort` are unchanged
+  application contracts. Their adapters share only the LLM client; neither
+  builds on the other. Generated results now carry provider, model, prompt
+  version, provider request ID, and generation timestamp.
+- `SUMMARY_GENERATOR_URL`, `RECOMMENDATION_GENERATOR_URL`, their API keys, and
+  their separate timeouts are replaced by `LLM_PROVIDER`, `LLM_API_BASE_URL`,
+  `LLM_API_KEY`, `LLM_MODEL`, and `LLM_TIMEOUT_MS`. No production provider is
+  selected; an unconfigured boundary fails fast as `UNAVAILABLE`.
+- `modules/summaries/` owns the four moved ports and
+  `GenerateStudentSummary`, which holds the snapshot read, generation call,
+  bounded version-revalidation retry, persistence, and coalescing.
+  `TrackProgressModel` now only calls it and returns the unchanged
+  `{ student, records, summary }` shape. `RecommendationModel` imports
+  `SummaryRepository` from `modules/summaries/ports/`.
+- Both `api-container.ts` and `worker-container.ts` build the capability; the
+  worker builds it from its secret-key repositories and the API still has no
+  path to a secret-key client.
+- The HTTP error mapper now switches on the provider-neutral `LlmError`
+  operation instead of matching a service name, preserving the existing
+  `summaryUnavailable` and `recommendationUnavailable` 503 responses.
+
+Two suites that asserted the superseded two-generator-service transport
+(`test/unit/adapters/generator-adapters.test.ts` and
+`test/unit/adapters/generator-http-client.test.ts`) and the generator-URL
+configuration case in `test/unit/config/environment.test.ts` no longer apply.
+They were not rewritten; their replacements are recorded in the deferred
+testing backlog. Rewording `contracts/summary-generator.contract.md` and
+`contracts/recommendation-generator.contract.md` as LLM prompt/input/output
+contracts remains the R9 task that already owns it.
 
 ## Phase R9: Remove Superseded MySQL and Authentication Infrastructure
 

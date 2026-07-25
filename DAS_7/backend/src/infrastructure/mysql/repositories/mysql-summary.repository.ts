@@ -1,6 +1,6 @@
 import type { RowDataPacket } from 'mysql2/promise'
 import type { Summary } from '../../../domain/entities/summary.js'
-import type { SummaryRepository } from '../../../modules/track-progress/ports/summary.repository.js'
+import type { SummaryRepository } from '../../../modules/summaries/ports/summary.repository.js'
 import { mapSummaryRow } from '../mappers/index.js'
 import {
     asMysqlRow,
