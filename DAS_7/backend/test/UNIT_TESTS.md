@@ -2,13 +2,23 @@
 
 Unit test cases in `test/unit/`, grouped by module. Run with `npm run test:unit`.
 
-## Adapters — generator integration
-- Tested the summary and recommendation adapters mapping a domain progress snapshot / persisted summary onto their generator clients.
-- Tested that a replaceable client failure is propagated unchanged.
-- Tested `GeneratorHttpClient` with a well-formed request (JSON body plus correlation and idempotency headers), a malformed provider response (rejected without leaking the payload), provider status failures (mapped to provider-neutral errors), and a request that exceeds the timeout (aborted and normalized).
+For the core features, [UNIT_TEST_CASES.md](UNIT_TEST_CASES.md) documents the same tests as a formal case table (precondition, input, expected output, expected postcondition).
+
+## Infrastructure — LLM generator adapters
+- Tested `SummaryGeneratorAdapter` and `RecommendationGeneratorAdapter` sending their own operation, prompt version, and output name over the shared LLM client, with the rendered input matching the prompt builder.
+- Tested privacy minimization: neither prompt carries identifiers, the date of birth, or the progress version.
+- Tested each operation's structured output independently — valid content returned with the provider metadata, and blank, wrong-shaped, or non-object payloads rejected as an `INVALID_RESPONSE` `LlmError`.
+- Tested that a client failure is propagated unchanged, that a supplied invocation context is normalized, and that one is generated when omitted.
+
+## Infrastructure — LLM transport
+- Tested `HttpLlmClient` sending the neutral envelope with credential, correlation, and idempotency headers.
+- Tested generation-metadata population (provider, model, prompt version, provider request ID, timestamp), including the fallback to the configured model when the provider omits it.
+- Tested provider status codes mapping to provider-neutral error categories (`AUTHENTICATION_FAILED`, `TIMEOUT`, `RATE_LIMITED`, `UNAVAILABLE`, `REQUEST_FAILED`) with the right retryability.
+- Tested an unrecognized response envelope and invalid JSON (both rejected without echoing the payload), a request that exceeds the timeout (aborted and normalized), and an unexpected transport failure (normalized to `UNAVAILABLE`).
+- Tested the constructor guards for a non-http base URL, blank provider/model/API key, and a non-positive or fractional timeout.
 
 ## Config — environment loading
-- Tested `loadConfig` with safe development defaults, a complete production configuration, missing production values (reported together), and malformed values (rejected).
+- Tested `loadConfig` with safe development defaults (including the unconfigured `LLM_*` boundary), a complete production configuration, missing production values (reported together), malformed values (rejected), and an `LLM_API_BASE_URL` that does not use http or https.
 
 ## Application containers
 - Tested that separate API and worker containers are built from one shared configuration.
