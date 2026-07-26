@@ -1,0 +1,56 @@
+@startuml
+title Documentation of Use Cases
+left to right direction
+actor "Clock"
+actor "Student"
+actor "Teacher"
+actor "User"
+actor "Parent"
+actor "Email Server"
+actor "Supabase"
+actor "LLM Provider"
+actor "Knowledge Base Server"
+actor "Summary Generator Service"
+actor "Recommendation Generator Service"
+rectangle "DAS Web Application" {
+    "Clock" -- (Notify Parent)
+    (Notify Parent) .> (Get Summary) : <<include>>
+    (Notify Parent) -- "Email Server"
+    (Notify Parent) -- "Supabase"
+    "Student" -- (Log In)
+    "Teacher" -- (Log In)
+    "Parent" -- (Log In)
+    (Log In) -- "Email Server"
+    (Log In) -- "Supabase"
+    "Student" -- (Sign Up)
+    "Teacher" -- (Sign Up)
+    "Parent" -- (Sign Up)
+    (Sign Up) -- "Email Server"
+    (Sign Up) -- "Supabase"
+    "User" -- (ScreenUser)
+    (ScreenUser) -- "Email Server"
+    (ScreenUser) -- "Supabase"
+    "Teacher" -- (Generate Worksheet)
+    (Generate Worksheet) -- "LLM Provider"
+    (Generate Worksheet) -- "Knowledge Base Server"
+    (Generate Worksheet) -- "Supabase"
+    "Parent" -- (Track Child's Progress)
+    (Track Child's Progress) .> (Get Summary) : <<include>>
+    (Track Child's Progress) -- "Summary Generator Service"
+    (Track Child's Progress) -- "Recommendation Generator Service"
+    (Track Child's Progress) -- "Supabase"
+    (Get Recommendations) .> (Track Child's Progress) : <<extend>>
+    }
+
+' ---- layout only: keep each actor column in top-to-bottom order ----
+"Clock" -[hidden]right- "Student"
+"Student" -[hidden]right- "Teacher"
+"Teacher" -[hidden]right- "Parent"
+"Parent" -[hidden]right- "User"
+
+"Email Server" -[hidden]right- "Supabase"
+"Supabase" -[hidden]right- "LLM Provider"
+"LLM Provider" -[hidden]right- "Knowledge Base Server"
+"Knowledge Base Server" -[hidden]right- "Summary Generator Service"
+"Summary Generator Service" -[hidden]right- "Recommendation Generator Service"
+@enduml
