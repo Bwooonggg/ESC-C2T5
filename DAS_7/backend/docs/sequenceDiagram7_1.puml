@@ -16,7 +16,7 @@ actor RecommendationGeneratorService as RecommendationService <<Secondary Actor>
 
 Parent -> UI : Track child's progress
 activate UI
-UI -> Controller : trackProgress(parent, student)
+UI --> Controller : trackProgress(parent, student)
 activate Controller
 Controller -> Model : getProgress(student)
 activate Model
@@ -36,7 +36,7 @@ alt Progress data is available
   opt Parent requests recommendations
     Parent -> UI : Request recommendations
     activate UI
-    UI -> Controller : requestRecommendations(parent, student)
+    UI --> Controller : requestRecommendations(parent, student)
     activate Controller
     Controller -> RecoModel : requestRecommendations(student)
     activate RecoModel

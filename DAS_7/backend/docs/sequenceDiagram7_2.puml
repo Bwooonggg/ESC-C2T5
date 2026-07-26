@@ -31,7 +31,8 @@ EmailServiceAdapter -> EmailProvider : send(notification)
 activate EmailProvider
 
 alt Email sent successfully
-  EmailProvider --> EmailServiceAdapter -- : sent
+  EmailProvider ->x] : Email
+  EmailProvider --> EmailServiceAdapter -- : sendSuccess
   EmailServiceAdapter --> NotifierModel -- : notificationSent
   NotifierModel --> NotificationController -- : parentNotified
   NotificationController --> Clock -- : parentNotified

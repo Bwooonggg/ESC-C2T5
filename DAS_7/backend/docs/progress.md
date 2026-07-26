@@ -565,6 +565,7 @@ already an R9 task and was left there.
 | [`plan.md`](plan.md) | Updated and paused at Phase 9 |
 | `progress.md` | Updated to distinguish legacy completion from revision work |
 | [`overall-architecture.md`](overall-architecture.md) | Source platform context; reconciliation is included in the revision plan |
+| [`integration-test-plan.md`](integration-test-plan.md) | Created as the use-case integration testing backlog for the dedicated testing phase |
 
 ## Revision Tracking
 
