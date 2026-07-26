@@ -2,6 +2,8 @@
 
 Test cases for the core DAS 7 backend features, as implemented in `test/unit/`. Run with `npm run test:unit`.
 
+These 24 cases are a subset of the 130 that currently pass. The remaining 106 are supporting infrastructure and configuration, summarised as prose in [UNIT_TESTS.md](UNIT_TESTS.md) and listed under "Not covered" below.
+
 ## Track Progress — summary generation (`TrackProgressModel`)
 
 | ID | Feature / Use Case | Precondition | Input | Expected Output | Expected Postcondition |
