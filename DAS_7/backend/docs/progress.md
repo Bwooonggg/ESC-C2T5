@@ -556,6 +556,26 @@ Results:
 generator services. Rewording them as LLM prompt/input/output contracts is
 already an R9 task and was left there.
 
+### R8 backlog items since discharged
+
+The replacements for the three retired suites were written against the LLM
+boundary and the `LLM_*` configuration:
+`test/unit/infrastructure/llm-generator-adapters.test.ts` (15 cases),
+`test/unit/infrastructure/llm-http-client.test.ts` (20 cases), and a rewritten
+`test/unit/config/environment.test.ts` (5 cases). `test/unit/adapters/` is
+removed. Together they close the backlog entries for prompt/input mapping and
+privacy minimization, per-operation structured-output validation, transport
+timeout/cancellation/abort normalization, provider-neutral error-category
+mapping, correlation and idempotency propagation, and generation-metadata
+population. `test/unit/http/error-mapper.test.ts` was retargeted onto `LlmError`
+at the same time, closing the `LlmError`-to-HTTP-envelope entry for both
+operations.
+
+Still open from the backlog: `GenerateStudentSummary` snapshot revalidation,
+bounded retry, and coalescing invoked from a worker-shaped caller;
+worker-container construction of `generateStudentSummary` from the secret-key
+repository graph; and sensitive-data redaction.
+
 ## Documentation Pivot
 
 | Document | Status |
