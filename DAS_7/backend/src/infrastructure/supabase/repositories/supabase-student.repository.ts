@@ -1,5 +1,5 @@
 import type { Student } from '../../../domain/entities/student.js'
-import type { StudentRepository } from '../../../modules/track-progress/ports/student.repository.js'
+import type { StudentRepository } from '../../../modules/summaries/ports/student.repository.js'
 import type { InsightSupabaseClient } from '../clients/supabase-client.js'
 import {
     mapStudentRow,

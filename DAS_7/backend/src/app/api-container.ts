@@ -7,21 +7,13 @@ import {
     MySqlSummaryRepository,
 } from '../infrastructure/mysql/repositories/index.js'
 import {
-    GeneratorHttpClient,
-    GeneratorServiceError,
+    createLlmClient,
     RecommendationGeneratorAdapter,
     SummaryGeneratorAdapter,
-} from '../adapters/generators/index.js'
-import type { RecommendationGeneratorPort } from '../modules/track-progress/ports/recommendation-generator.js'
-import type { SummaryGeneratorPort } from '../modules/track-progress/ports/summary-generator.js'
-import {
-    createGeneratorInvocationContext,
-    type GeneratorInvocationContext,
-} from '../shared/generator-context.js'
+} from '../infrastructure/llm/index.js'
+import { GenerateStudentSummary } from '../modules/summaries/application/generate-student-summary.js'
 import { TrackProgressModel } from '../modules/track-progress/application/track-progress.model.js'
 import { RecommendationModel } from '../modules/track-progress/application/recommendation.model.js'
-import type { SummaryGeneratorClientRequest } from '../adapters/generators/summary-generator.client.js'
-import type { RecommendationGeneratorClientRequest } from '../adapters/generators/recommendation-generator.client.js'
 import { GetPreferencesModel } from '../modules/preferences/application/get-preferences.js'
 import { SavePreferencesModel } from '../modules/preferences/application/save-preferences.js'
 import { MySqlNotificationPreferenceRepository } from '../infrastructure/mysql/repositories/mysql-notification-preference.repository.js'
@@ -66,21 +58,25 @@ export function createProductionApiContainer(
     config: AppConfig = loadConfig(),
 ): ApiContainer {
     const pool = createMySqlPool(config.mysql)
-    const summaryGenerator = createSummaryGenerator(config)
-    const recommendationGenerator = createRecommendationGenerator(config)
+    const llmClient = createLlmClient(config.llm)
     const summaryRepository = new MySqlSummaryRepository(pool)
     const notificationPreferenceRepository =
         new MySqlNotificationPreferenceRepository(pool)
-    const trackProgressModel = new TrackProgressModel({
+    // The request path builds the shared capability from request-scoped
+    // repositories. The worker builds the same capability from its own graph.
+    const generateStudentSummary = new GenerateStudentSummary({
         studentRepository: new MySqlStudentRepository(pool),
         progressRecordRepository: new MySqlProgressRecordRepository(pool),
         summaryRepository,
-        summaryGenerator,
+        summaryGenerator: new SummaryGeneratorAdapter(llmClient),
+    })
+    const trackProgressModel = new TrackProgressModel({
+        generateStudentSummary,
     })
     const recommendationModel = new RecommendationModel({
         summaryRepository,
         recommendationRepository: new MySqlRecommendationRepository(pool),
-        recommendationGenerator,
+        recommendationGenerator: new RecommendationGeneratorAdapter(llmClient),
     })
     const getPreferencesModel = new GetPreferencesModel({
         notificationPreferenceRepository,
@@ -96,85 +92,5 @@ export function createProductionApiContainer(
         getPreferencesModel,
         savePreferencesModel,
         close: () => pool.end(),
-    }
-}
-
-function createSummaryGenerator(config: AppConfig): SummaryGeneratorPort {
-    const endpoint = config.generators.summaryUrl
-
-    if (!endpoint) {
-        return new UnconfiguredSummaryGenerator()
-    }
-
-    const client = new GeneratorHttpClient<SummaryGeneratorClientRequest>({
-        endpoint,
-        serviceName: 'SummaryGeneratorService',
-        timeoutMs: config.generators.summaryTimeoutMs,
-        headers: config.generators.summaryApiKey
-            ? { authorization: `Bearer ${config.generators.summaryApiKey}` }
-            : undefined,
-    })
-
-    return new SummaryGeneratorAdapter(client)
-}
-
-function createRecommendationGenerator(
-    config: AppConfig,
-): RecommendationGeneratorPort {
-    const endpoint = config.generators.recommendationUrl
-
-    if (!endpoint) {
-        return new UnconfiguredRecommendationGenerator()
-    }
-
-    const client = new GeneratorHttpClient<RecommendationGeneratorClientRequest>({
-        endpoint,
-        serviceName: 'RecommendationGeneratorService',
-        timeoutMs: config.generators.recommendationTimeoutMs,
-        headers: config.generators.recommendationApiKey
-            ? {
-                  authorization: `Bearer ${config.generators.recommendationApiKey}`,
-              }
-            : undefined,
-    })
-
-    return new RecommendationGeneratorAdapter(client)
-}
-
-class UnconfiguredSummaryGenerator implements SummaryGeneratorPort {
-    async generate(
-        _request: Parameters<SummaryGeneratorPort['generate']>[0],
-        context?: GeneratorInvocationContext,
-    ): ReturnType<SummaryGeneratorPort['generate']> {
-        const invocationContext =
-            context ?? createGeneratorInvocationContext()
-
-        throw new GeneratorServiceError({
-            code: 'UNAVAILABLE',
-            serviceName: 'SummaryGeneratorService',
-            correlationId: invocationContext.correlationId,
-            message: 'Summary generator is not configured.',
-            retryable: false,
-        })
-    }
-}
-
-class UnconfiguredRecommendationGenerator
-    implements RecommendationGeneratorPort
-{
-    async generate(
-        _request: Parameters<RecommendationGeneratorPort['generate']>[0],
-        context?: GeneratorInvocationContext,
-    ): ReturnType<RecommendationGeneratorPort['generate']> {
-        const invocationContext =
-            context ?? createGeneratorInvocationContext()
-
-        throw new GeneratorServiceError({
-            code: 'UNAVAILABLE',
-            serviceName: 'RecommendationGeneratorService',
-            correlationId: invocationContext.correlationId,
-            message: 'Recommendation generator is not configured.',
-            retryable: false,
-        })
     }
 }

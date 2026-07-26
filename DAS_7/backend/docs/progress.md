@@ -2,13 +2,17 @@
 
 ## Current Status
 
-**Architecture revision:** R1 through R6A complete; R6B next
+**Architecture revision:** R1 through R6B complete, plus R8
 
 Platform-auth integration (R6C) is intentionally deferred until the
-platform/authentication team supplies its token and claims contract.
+platform/authentication team supplies its token and claims contract. R7 depends
+on R6C and is blocked with it. R8 was taken out of order because the shared
+generation boundary has no dependency on the token contract; R9 and R10 still
+follow R7.
 
-**Next work:** Revision Phase R6B in
-[`revision-plan.md`](revision-plan.md)
+**Next work:** Wait for the platform/authentication team to provide the R6C
+token and claims contract, then run R7. Feature implementation remains paused
+until the complete revision plan passes.
 
 **Feature plan:** Paused until the complete revision plan passes
 
@@ -27,10 +31,10 @@ implementation phases are complete.
 
 The version-controlled Supabase CLI foundation and the first hosted `insight`
 schema migration chain and Supabase persistence boundary are now present.
-Identity ownership and gateway-aligned routing are complete. Reversible
-hosted-development Supabase smoke checks are next; JWT verification,
-workflow composition, LLM consolidation, and final MySQL removal remain in
-later revision phases.
+Identity ownership, gateway-aligned routing, and reversible hosted-development
+Supabase smoke checks are complete for the available worker-authorized paths.
+JWT verification, trusted progress ingestion, workflow composition, LLM
+consolidation, and final MySQL removal remain in later revision phases.
 
 ## Why the Plan Is Paused
 
@@ -41,14 +45,14 @@ valid:
 - Credential-related fields and repository contracts are modeled locally.
 - Express previously mounted an internal `/api` prefix; R6A now exposes
   service-local paths for the Traefik gateway.
-- Summary and recommendation generation are configured as two external
-  generator services.
+- Summary and recommendation generation were configured as two external
+  generator services; R8 replaced that with one provider-neutral LLM boundary.
 - The old remaining plan included a DAS 7-owned authentication phase.
 
-Continuing directly with ingestion or notifications would add new work to an
-infrastructure and ownership model that is being replaced. The next safe
-implementation step is R6B's hosted-development Supabase smoke validation;
-platform-auth integration remains deferred to R6C.
+Continuing directly with ingestion or notifications would add new work before
+the platform ownership boundary is available. R6B's hosted-development
+Supabase smoke validation is complete; platform-auth integration remains
+deferred to R6C.
 
 Complete [`revision-plan.md`](revision-plan.md) before resuming
 [`plan.md`](plan.md) at Phase 9.
@@ -88,6 +92,11 @@ The following behavior exists and should be preserved during the revision.
 - Request correlation and invocation metadata.
 - Existing unit and HTTP test scenarios.
 - Existing database-backed behavior tests as behavioral specifications.
+
+`TrackProgressModel`'s snapshot revalidation and coalescing were relocated by
+R8 into the shared `modules/summaries/` capability so the Phase 11 notification
+worker can call them instead of reimplementing them. The behavior is preserved;
+only its owner changed.
 
 ## Work That Will Be Superseded
 
@@ -397,6 +406,156 @@ Results:
   were not rewritten during implementation and remain in the dedicated test
   backlog.
 
+## Revision R6B Progress
+
+Hosted-development Supabase validation is complete without integrating
+platform authentication:
+
+- The hosted development project is healthy and contains all five DAS 7
+  migrations, all 11 `insight` tables, enabled RLS, and the reviewed
+  `SECURITY INVOKER` RPC functions.
+- `supabase/config.toml` now preserves the existing `api` schema and adds the
+  DAS 7 `insight` schema to the API schema list.
+- The hosted `authenticator` role's overriding `pgrst.db_schemas=api` setting
+  was updated to `api,insight`, and PostgREST was asked to reload its schema.
+- A publishable-key read-only client now reaches the `insight` schema and is
+  denied at the schema-permission boundary without a JWT, as expected while
+  RLS policies and the platform claims contract are deferred.
+- A worker-only smoke check passed for parent/student projections, guardian
+  relationships, summaries, notification preferences, email notifications,
+  notification-job claim/complete, audit events, and idempotency. Its unique
+  temporary records were removed and a follow-up query confirmed zero rows
+  remained.
+- The email-domain constraint correction migration accepts normalized ordinary
+  addresses such as `x@example.com` without weakening normalization rules.
+- Progress insertion/correction remains denied until R6C supplies the trusted
+  ingestion claims and RLS contract. No development-only authorization bypass
+  or permissive policy was added.
+- No permanent test files were added; the worker smoke was an ephemeral
+  command and the existing historical HTTP tests remain in the deferred test
+  backlog.
+
+### R6B verification
+
+The following checks completed successfully:
+
+```powershell
+npm run typecheck
+npm run build
+npx supabase db push --linked --dry-run
+npx supabase db push --linked --yes
+```
+
+The linked migration list contains five DAS 7 migrations. The only CLI warning
+was a non-blocking local pg-delta cache message because this workflow uses the
+hosted project and does not run Docker or a local Supabase database.
+
+## Revision R8 Progress
+
+The shared generation boundary is complete without touching the deferred
+platform token boundary:
+
+- Removed `src/adapters/generators/` and its two-remote-service model. The
+  generation infrastructure now lives in `src/infrastructure/llm/`.
+- Added `LlmClientPort` with provider-neutral structured completion
+  request/response types, provider-neutral `LlmError` categories, one
+  `HttpLlmClient` that centralizes credentials, timeout, cancellation, and
+  provider error classification, and an `UnconfiguredLlmClient` that fails fast
+  while no provider is selected.
+- `SummaryGeneratorPort` and `RecommendationGeneratorPort` remain unchanged
+  peer application contracts. Each adapter owns its own prompt and its own Zod
+  output schema and shares only the LLM client.
+- Generated results now carry provider, model, prompt version, provider request
+  ID, and generation timestamp. Prompts send only the progress or summary data
+  each operation needs; no parent contact details, auth claims, identifiers, or
+  date of birth are sent.
+- Replaced `SUMMARY_GENERATOR_URL`, `RECOMMENDATION_GENERATOR_URL`, their API
+  keys, and their separate timeouts with `LLM_PROVIDER`, `LLM_API_BASE_URL`,
+  `LLM_API_KEY`, `LLM_MODEL`, and `LLM_TIMEOUT_MS` in `environment.ts` and
+  `.env.example`. No production provider is coupled; that remains Phase 10.
+- Created `src/modules/summaries/`. It owns `student.repository.ts`,
+  `progress-record.repository.ts`, `summary.repository.ts`, and
+  `summary-generator.ts`, moved from `modules/track-progress/ports/`, plus the
+  new `GenerateStudentSummary` capability holding the snapshot read, generation
+  call, bounded version-revalidation retry, persistence, and coalescing.
+- Reduced `TrackProgressModel` to the Track Child's Progress use case. It calls
+  `GenerateStudentSummary` and returns the unchanged
+  `{ student, records, summary }` shape. `RecommendationModel` now imports
+  `SummaryRepository` from `modules/summaries/ports/` and is otherwise
+  unchanged.
+- Both `api-container.ts` and `worker-container.ts` build the capability. The
+  worker builds it from its secret-key repositories and exposes
+  `generateStudentSummary`; the API builds it from its own repository graph and
+  still cannot resolve a secret-key client.
+- The HTTP error mapper now switches on the provider-neutral `LlmError`
+  operation instead of matching a service name. The existing
+  `summaryUnavailable` and `recommendationUnavailable` 503 responses are
+  unchanged.
+
+### R8 verification
+
+```powershell
+npm run typecheck
+npm run build
+npx jest --runInBand
+```
+
+Results:
+
+- Typecheck passed.
+- Build passed.
+- `test/unit/track-progress/application-model.test.ts` still passes all nine
+  `TrackProgressModel` and `RecommendationModel` cases unchanged apart from the
+  moved port import specifiers. This is the behavior-preservation evidence for
+  the extraction: generation, persistence, coalescing, empty-record and
+  stale-version handling, generator failure, and invalid content all behave as
+  before.
+- Suites passing before R8: 9 of 17 (36 tests). Suites passing after R8: 6 of
+  17 (25 tests).
+- The three newly inapplicable suites are
+  `test/unit/adapters/generator-adapters.test.ts`,
+  `test/unit/adapters/generator-http-client.test.ts`, and
+  `test/unit/config/environment.test.ts`. They assert the removed
+  two-generator-service transport and the removed generator-URL configuration.
+  They were not rewritten.
+- The eight suites already failing before R8 are unchanged: four HTTP suites
+  still call the historical `/api` prefix removed in R6A, and four
+  identity/MySQL suites still import the credential model removed in R4.
+- A source search confirms `modules/notifications/` does not import
+  `modules/track-progress/`.
+- A source search confirms `maxSnapshotAttempts` and the stale-version message
+  exist only in `modules/summaries/application/generate-student-summary.ts`.
+- A source search confirms no `SUMMARY_GENERATOR_URL`,
+  `RECOMMENDATION_GENERATOR_URL`, `GeneratorServiceError`, `config.generators`,
+  or `adapters/generators` reference remains in `src/`.
+- A source search confirms no secret-key or worker Supabase client is reachable
+  from `api-container.ts` or `src/http/`.
+
+### R8 deferred testing backlog additions
+
+- Summary and recommendation prompt/input mapping and privacy minimization.
+- Independent structured-output validation for each operation's Zod schema.
+- LLM transport timeout, cancellation, and abort normalization.
+- Provider-neutral error-category mapping from provider status codes.
+- Correlation and idempotency metadata propagation.
+- Sensitive-data redaction.
+- Generation-metadata population (provider, model, prompt version, provider
+  request ID, generation timestamp).
+- `GenerateStudentSummary` snapshot revalidation, bounded retry, and coalescing
+  invoked from both the request path and a worker-shaped caller.
+- Confirmation that `TrackProgressModel` and `RecommendationModel` preserve
+  their existing errors and response shapes after the extraction.
+- Replacements for the three suites retired above, written against the LLM
+  boundary and the `LLM_*` configuration.
+- Worker-container construction of `generateStudentSummary` from the
+  secret-key repository graph.
+- `LlmError` to HTTP envelope mapping for both operations.
+
+`contracts/summary-generator.contract.md` and
+`contracts/recommendation-generator.contract.md` still describe replaceable
+generator services. Rewording them as LLM prompt/input/output contracts is
+already an R9 task and was left there.
+
 ## Documentation Pivot
 
 | Document | Status |
@@ -417,10 +576,10 @@ Results:
 | R4 | Refactor identity ownership and the domain boundary | Done |
 | R5 | Implement Supabase clients, mappers, repositories, and readiness | Done |
 | R6A | Align service-local routing without platform-auth integration | Done |
-| R6B | Validate hosted-development Supabase connectivity without platform-auth integration | Next |
+| R6B | Validate hosted-development Supabase connectivity without platform-auth integration | Done |
 | R6C | Integrate the deferred platform token boundary | Blocked by external contract |
-| R7 | Restore existing workflows on Supabase after R6C | Pending |
-| R8 | Refactor generator infrastructure to the shared LLM boundary | Pending |
+| R7 | Restore existing workflows on Supabase after R6C | Blocked by R6C |
+| R8 | Refactor generator infrastructure to the shared LLM boundary and extract shared summary generation from `TrackProgressModel` | Done |
 | R9 | Remove MySQL and obsolete authentication infrastructure | Pending |
 | R10 | Complete revision verification and documentation | Pending |
 

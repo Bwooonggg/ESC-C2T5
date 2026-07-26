@@ -1,5 +1,5 @@
 import type { Student } from '../../../domain/entities/student.js'
-import type { StudentRepository } from '../../../modules/track-progress/ports/student.repository.js'
+import type { StudentRepository } from '../../../modules/summaries/ports/student.repository.js'
 import type { RowDataPacket } from 'mysql2/promise'
 import { mapStudentRow } from '../mappers/index.js'
 import {

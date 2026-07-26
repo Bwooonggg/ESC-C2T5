@@ -14,7 +14,7 @@ Unit test cases in `test/unit/`, grouped by module. Run with `npm run test:unit`
 - Tested that separate API and worker containers are built from one shared configuration.
 
 ## HTTP — error mapping
-- Tested `mapError` with `ProgressUnavailableError` (503 progressUnavailable), `SummaryUnavailableError` (404 summaryUnavailable), a recommendation generator failure (recommendationUnavailable) and a non-recommendation generator failure (summaryUnavailable), a `ZodError` (400 invalid request), a generic `DomainError` (400 with its own message), and an unknown error (generic 500).
+- Tested `mapError` with `ProgressUnavailableError` (503 progressUnavailable), `SummaryUnavailableError` (404 summaryUnavailable), an `LlmError` on the `recommendation` operation (recommendationUnavailable) and on the `summary` operation (summaryUnavailable), a `ZodError` (400 invalid request), a generic `DomainError` (400 with its own message), and an unknown error (generic 500).
 
 ## Infrastructure — Supabase date conversions
 - Tested `parsePostgresTimestamp` with a valid timestamp, an unparseable value (throws), and error metadata (table/field named on the error).

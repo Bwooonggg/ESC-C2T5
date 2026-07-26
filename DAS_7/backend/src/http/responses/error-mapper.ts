@@ -1,5 +1,5 @@
 import { ZodError } from 'zod'
-import { GeneratorServiceError } from '../../adapters/generators/generator-error.js'
+import { LlmError } from '../../infrastructure/llm/llm-error.js'
 import { DomainError } from '../../domain/errors/domain.error.js'
 import { ProgressUnavailableError } from '../../domain/errors/progress-unavailable.error.js'
 import { SummaryUnavailableError } from '../../domain/errors/summary-unavailable.error.js'
@@ -18,11 +18,12 @@ export function mapError(error: unknown): MappedHttpError {
         return { message: 'summaryUnavailable', status: 404 }
     }
 
-    if (error instanceof GeneratorServiceError) {
+    if (error instanceof LlmError) {
         return {
-            message: /recommendation/i.test(error.serviceName)
-                ? 'recommendationUnavailable'
-                : 'summaryUnavailable',
+            message:
+                error.operation === 'recommendation'
+                    ? 'recommendationUnavailable'
+                    : 'summaryUnavailable',
             status: 503,
         }
     }

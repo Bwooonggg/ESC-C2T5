@@ -1,0 +1,60 @@
+@startuml
+title Use Case DAS 7 - Track Child's Progress
+
+hide footbox
+autoactivate off
+skinparam backgroundColor white
+
+actor Parent
+participant TrackProgressUI as UI
+participant TrackProgressController as Controller
+participant TrackProgressModel as Model
+participant RecommendationModel as RecoModel
+participant GeneratorAdapter as Adapter
+actor SummaryGeneratorService as SummaryService <<Secondary Actor>>
+actor RecommendationGeneratorService as RecommendationService <<Secondary Actor>>
+
+Parent -> UI : Track child's progress
+activate UI
+UI -> Controller : trackProgress(parent, student)
+activate Controller
+Controller -> Model : getProgress(student)
+activate Model
+Model -> Model : getProgress()
+
+alt Progress data is available
+  Model -> Adapter : generateSummary(progress)
+  activate Adapter
+  Adapter -> SummaryService : generate(progress)
+  activate SummaryService
+  SummaryService --> Adapter -- : Summary
+  Adapter --> Model -- : Summary
+  Model --> Controller -- : ProgressRecord and Summary
+  Controller --> UI -- : ProgressRecord and Summary
+  UI --> Parent -- : display progress and summary
+
+  opt Parent requests recommendations
+    Parent -> UI : Request recommendations
+    activate UI
+    UI -> Controller : requestRecommendations(parent, student)
+    activate Controller
+    Controller -> RecoModel : requestRecommendations(student)
+    activate RecoModel
+    RecoModel -> RecoModel : getLatestSummary()
+    RecoModel -> Adapter : generateRecommendation(summary)
+    activate Adapter
+    Adapter -> RecommendationService : generate(summary)
+    activate RecommendationService
+    RecommendationService --> Adapter -- : Recommendation
+    Adapter --> RecoModel -- : Recommendation
+    RecoModel --> Controller -- : Recommendation
+    Controller --> UI -- : Recommendation
+    UI --> Parent -- : display recommendation
+  end
+else Progress data cannot be fetched
+  Model --> Controller -- : progressUnavailable
+  Controller --> UI -- : progressUnavailable
+  UI --> Parent -- : display "Try again at another time"
+end
+
+@enduml

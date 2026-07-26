@@ -11,7 +11,7 @@ import type {
     SummaryGenerationRequest,
     SummaryGenerationResult,
     SummaryGeneratorPort,
-} from '../../src/modules/track-progress/ports/summary-generator.js'
+} from '../../src/modules/summaries/ports/summary-generator.js'
 
 export interface SummaryGenerationCall {
     readonly request: SummaryGenerationRequest

@@ -1,15 +1,17 @@
 import { describe, expect, it } from '@jest/globals'
 import { ZodError } from 'zod'
 import { mapError } from '../../../src/http/responses/error-mapper.js'
-import { GeneratorServiceError } from '../../../src/adapters/generators/generator-error.js'
+import { LlmError } from '../../../src/infrastructure/llm/llm-error.js'
+import type { LlmOperation } from '../../../src/infrastructure/llm/llm-error.js'
 import { ValidationError } from '../../../src/domain/errors/domain.error.js'
 import { ProgressUnavailableError } from '../../../src/domain/errors/progress-unavailable.error.js'
 import { SummaryUnavailableError } from '../../../src/domain/errors/summary-unavailable.error.js'
 
-function generatorError(serviceName: string): GeneratorServiceError {
-    return new GeneratorServiceError({
+function llmError(operation: LlmOperation): LlmError {
+    return new LlmError({
         code: 'UNAVAILABLE',
-        serviceName,
+        operation,
+        provider: 'test-provider',
         correlationId: 'c1',
         message: 'upstream down',
         retryable: true,
@@ -31,15 +33,15 @@ describe('mapError', () => {
         })
     })
 
-    it('maps a recommendation generator failure to recommendationUnavailable', () => {
-        expect(mapError(generatorError('recommendation-service'))).toEqual({
+    it('maps a recommendation LLM failure to recommendationUnavailable', () => {
+        expect(mapError(llmError('recommendation'))).toEqual({
             message: 'recommendationUnavailable',
             status: 503,
         })
     })
 
-    it('maps a non-recommendation generator failure to summaryUnavailable', () => {
-        expect(mapError(generatorError('summary-service'))).toEqual({
+    it('maps a summary LLM failure to summaryUnavailable', () => {
+        expect(mapError(llmError('summary'))).toEqual({
             message: 'summaryUnavailable',
             status: 503,
         })
