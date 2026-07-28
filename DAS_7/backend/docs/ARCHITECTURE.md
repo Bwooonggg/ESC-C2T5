@@ -1,0 +1,414 @@
+# DAS 7 Backend Architecture — Parent Insight Dashboard
+
+> **Status:** Approved design (2026-07-28). This document is the reference for the v2 backend built on branch `DAS7_backend_v2`. It supersedes the backend on `main`, which is kept as read-only prior art.
+
+## 1. What this service does
+
+DAS 7 is the **Parent Insight Dashboard** microservice for the Dyslexia Association of Singapore (DAS) platform. It lets a parent:
+
+1. **Track progress** — view their child's scores over time across six literacy skill areas.
+2. **Read summaries** — AI-generated, parent-friendly prose describing how the child is doing.
+3. **Get recommendations** — AI-generated suggestions for how to support the child at home.
+4. **Receive email updates** — periodic summary emails (weekly / fortnightly / monthly), controlled by a notification preference.
+
+The dashboard UI lives in `../frontend` (React + Vite). This backend serves it a small JSON API and runs a background timer that sends the emails.
+
+## 2. Design stance: deliberately simple
+
+A previous backend exists on `main`. It works, but it is heavily over-abstracted for the project's scope: a 5-layer hexagonal architecture, DI containers, idempotency records, audit events, notification-job leases, and transaction managers — around 120 source files. This rewrite targets **~30 source files in 3 layers**, keeping abstraction only where something is genuinely swappable:
+
+- The **LLM provider** (undecided) → behind an interface.
+- The **email provider** (Resend today) → behind an interface.
+
+Everything else — Express, Supabase, the domain types — is a fixed decision, and abstracting fixed decisions is cost without payoff.
+
+**Deliberately excluded** (and why it's safe to exclude them):
+
+| Excluded | Why |
+|---|---|
+| `audit_events` table | Nothing reads it; no requirement asks for auditing. Console logs suffice. |
+| `idempotency_records` | The only POST creates a recommendation; a duplicate row is harmless and the frontend doesn't retry. |
+| `notification_jobs` + worker leases | Job tables coordinate multiple workers. We run one process; "who is due for an email" is *computed* from data on every tick, so a missed tick self-heals. |
+| DI container | A plain `Deps` object built in `index.ts` and passed to `createApp()` gives the same test-swappability. |
+| zod / validation library | Exactly one request body exists in the whole API; it is validated by hand. |
+| Resend SDK | Sending an email is one `fetch` call. |
+
+Runtime dependencies: `express` (v5), `@supabase/supabase-js`, `jose` (JWT verification), `dotenv`. Dev: TypeScript, Jest + ts-jest, Supertest.
+
+## 3. The big picture
+
+```mermaid
+flowchart LR
+    subgraph Browser
+        FE[React dashboard\n../frontend]
+    end
+    subgraph Backend["DAS 7 backend (one Node process)"]
+        API[Express API\n/api/*]
+        SCHED[Scheduler\nsetInterval tick]
+        SVC[Services]
+        REPOS[Repos]
+        LLM[LlmClient\nstub today]
+        MAIL[EmailProvider\nResend]
+    end
+    DB[(Supabase Postgres\nschema: insight)]
+    AUTH[Supabase Auth\nJWKS]
+    RESEND[Resend API]
+
+    FE -- "Bearer JWT" --> API
+    API --> SVC
+    SCHED --> SVC
+    SVC --> REPOS
+    SVC --> LLM
+    SVC --> MAIL
+    REPOS --> DB
+    API -. "verify token (cached keys)" .- AUTH
+    MAIL --> RESEND
+```
+
+- **One process** runs both the HTTP API and the notification scheduler. There is no separate worker deployment.
+- In the integrated platform, Traefik routes `/api/insights/*` to this service and **strips the prefix**, so the service mounts its routes at `/api/*` locally (matching the frontend's dev proxy, which forwards `/api` → `localhost:4000`).
+- The database is the **centralized Supabase instance shared by all subsystems**. DAS 7 owns its own Postgres schema (`insight`) and never touches other services' schemas (schema-per-service rule from `OVERALL_ARCHITECTURE.md`).
+
+## 4. Layers and directory structure
+
+Three layers, one responsibility each:
+
+- **Routes (controllers)** — parse the HTTP request, check authorization, call a service, wrap the result in the response envelope. No business logic.
+- **Services (models)** — the business rules: staleness, error semantics, notification outcomes. These are the `TrackProgressModel` / `RecommendationModel` / `NotifierModel` boxes from the team's sequence diagrams. Unit-testable by injecting fake repos/adapters.
+- **Repos + adapters** — repos hide supabase-js and the snake_case ⇄ camelCase mapping; adapters hide the LLM and email providers.
+
+Data shapes (`Student`, `ProgressRecord`, …) are plain TypeScript interfaces in `src/types.ts`, mirroring the frontend's `src/types/domain.ts` — they carry no behavior. (TypeScript interfaces are erased at compile time; the *behavior* half of the class diagram's model classes lives in `services/`.)
+
+```
+backend/
+├── package.json / tsconfig.json / jest.config.cjs / .env.example / Dockerfile / README.md
+├── db/migrations/0001_insight_schema.sql   # all DDL, one idempotent file
+├── scripts/seed.ts                         # demo parents/students/progress (service_role)
+├── src/
+│   ├── index.ts                # entrypoint: config → deps → createApp().listen → scheduler.start
+│   ├── config.ts               # typed env parsing, fail-fast on missing vars
+│   ├── types.ts                # domain interfaces, mirror of frontend domain.ts
+│   ├── errors.ts               # ApiError subclasses (§8)
+│   ├── app.ts                  # createApp(deps): json parser, routes, error middleware
+│   ├── http/
+│   │   ├── envelope.ts         # {ok:true,data} | {ok:false,error} helpers
+│   │   ├── auth.ts             # JWT middleware + requireOwnStudent / requireOwnParent
+│   │   ├── error-handler.ts    # single error middleware + 404 catch-all
+│   │   └── routes/
+│   │       ├── health.routes.ts
+│   │       ├── me.routes.ts
+│   │       ├── students.routes.ts      # track-progress, summary, recommendations
+│   │       └── preferences.routes.ts   # GET/PUT + inline body validation
+│   ├── services/
+│   │   ├── insight.service.ts      # ensureSummary, trackProgress, createRecommendation
+│   │   ├── preference.service.ts
+│   │   ├── notifier.service.ts     # notifyParent → 'parentNotified' | 'notificationFailed'
+│   │   └── scheduler.ts            # setInterval wrapper: start/stop, never throws
+│   ├── repos/
+│   │   ├── db.ts                   # supabase client factory + row⇄domain mappers
+│   │   ├── parent.repo.ts          # byAuthUserId, byId (+ studentIds)
+│   │   ├── student.repo.ts         # byId, isGuardian(parentId, studentId)
+│   │   ├── progress.repo.ts        # listByStudent, latestCreatedAt
+│   │   ├── summary.repo.ts         # latestByStudent, insert
+│   │   ├── recommendation.repo.ts  # insert
+│   │   ├── preference.repo.ts      # byParentId, upsert
+│   │   └── emailNotification.repo.ts  # lastSentAt(parentId), insert
+│   └── adapters/
+│       ├── llm/
+│       │   ├── llm-client.ts       # LlmClient interface + factory (switch on LLM_PROVIDER)
+│       │   └── stub-llm.ts         # deterministic stub — only implementation today
+│       └── email/
+│           ├── email-provider.ts   # EmailProvider interface + factory
+│           ├── resend-email.ts     # one fetch POST to api.resend.com/emails
+│           └── fake-email.ts       # public history[] + fail toggle (tests)
+└── test/
+    ├── unit/            # error-handler, mappers, auth, stub-llm, insight-service,
+    │                    # preference-service, fake-email, notifier-service, scheduler
+    ├── integration/     # track-progress, recommendations, auth, preferences, notifier
+    └── helpers/         # harness.ts (test app + fixtures + skip guard), test-auth.ts (mints real JWTs)
+```
+
+## 5. API contract
+
+Defined by the mock frontend (`frontend/src/api/client.ts`, `summaryApi.ts`, `recommendationApi.ts`) — the backend must match it exactly.
+
+**Every** response, including errors, uses the envelope:
+
+```ts
+{ ok: true,  data: T }        // success
+{ ok: false, error: string }  // failure — error string is shown/logged by the UI
+```
+
+| # | Method | Path | Returns (`data`) |
+|---|---|---|---|
+| 1 | GET | `/api/health` | `{ ok: true }` |
+| 2 | GET | `/api/me` | `{ parent: Parent, students: Student[] }` — resolved from the JWT, *not* from a query param |
+| 3 | GET | `/api/students/:studentId/track-progress` | `{ progress: ProgressRecord[], summary: Summary }` |
+| 4 | GET | `/api/students/:studentId/summary` | `Summary` |
+| 5 | POST | `/api/students/:studentId/recommendations` (no body) | `Recommendation` |
+| 6 | GET | `/api/parents/:parentId/preferences` | `NotificationPreference` |
+| 7 | PUT | `/api/parents/:parentId/preferences` | `NotificationPreference` |
+
+PUT body (the only request body in the API): `{ enabled: boolean, frequency: 'Weekly'|'Fortnightly'|'Monthly', recipientEmail: string }`.
+
+Contract details the frontend depends on:
+
+- `ProgressRecord.date` and `Student.dateOfBirth` are **bare `YYYY-MM-DD` strings** (not ISO datetimes) — the chart parses them as `${date}T00:00:00`.
+- `skillArea` is one of six exact strings: `Phonological Awareness`, `Reading Accuracy`, `Reading Fluency`, `Spelling`, `Writing`, `Comprehension`. Unknown values silently vanish from the chart.
+- `score` is 0–100 (the chart's Y axis is fixed to that domain).
+- `Recommendation.content` is a single string with `\n`-separated lines; it is keyed to a `summaryId`, not directly to the student.
+- `Summary.generatedAt` / `Recommendation.generatedAt` are full ISO 8601 datetimes.
+
+There is **no REST endpoint for notifications** — that flow is timer-driven (§7). There are also no login/signup/refresh endpoints — Supabase Auth owns those; the frontend will talk to Supabase directly with `supabase-js`.
+
+## 6. Authentication and authorization
+
+**Authentication** (who are you?) — every `/api/*` route except `/api/health`:
+
+1. Read `Authorization: Bearer <token>`. Missing or malformed → **401**.
+2. Verify the JWT locally with `jose`: `jwtVerify(token, jwks, { issuer: SUPABASE_URL + '/auth/v1' })`. The JWKS (Supabase's public signing keys, from `<SUPABASE_URL>/auth/v1/.well-known/jwks.json`) is fetched **once** via `createRemoteJWKSet` and cached in memory — re-fetched only if an unknown key id appears (key rotation). **No network call per request.** Invalid/expired token → **401**.
+3. Map the token's `sub` claim (the Supabase Auth user id) to a row in `insight.parents` via `auth_user_id`. No row → **401** (a valid platform user who isn't a registered parent here).
+4. Attach the parent to the request (`req.parent`).
+
+**Authorization** (may you see this?) — enforced in backend code:
+
+- `requireOwnStudent(req, studentId)` — checks `parent_students` for the (caller, student) pair. **No row → 404 `progressUnavailable`.** By construction, a student that doesn't exist and a student that belongs to someone else produce the *same* query miss and the *same* error — a caller cannot probe which student ids exist.
+- `requireOwnParent(req, parentId)` — preferences routes; a mismatched `parentId` → **404**. This closes the IDOR that exists in the mock backend (which accepts any `parentId`).
+
+**Dev fallback (temporary):** the current frontend sends no tokens yet. If `AUTH_DEV_SUB` is set **and** `NODE_ENV !== 'production'`, a request without an `Authorization` header is treated as that user id. One fenced `if`; delete it once the frontend wires up Supabase login.
+
+### 6.1 Database access model: service_role now, RLS later
+
+**Decision (2026-07-28):** the backend talks to Supabase with the **`service_role` key**, scoped to the `insight` schema (`createClient(url, serviceKey, { db: { schema: 'insight' } })`). The `service_role` key bypasses Postgres Row Level Security entirely, so **all access control lives in the backend code** — which is why the two `requireOwn*` checks above are mandatory on every data route, and why the key must never leave the server (never in the frontend, never in git).
+
+**Why:** only this backend touches `insight` tables; RLS policies on the shared instance would be extra design/maintenance for a second line of defense nothing else needs yet. Simpler wins at this scale.
+
+**Future migration path to RLS** (record kept per team decision — do these if the trust model changes, e.g. the frontend starts querying Supabase directly, or defense-in-depth is wanted):
+
+1. **Per-request client:** in request handling, build a Supabase client with the **anon key** plus the caller's JWT forwarded (`global: { headers: { Authorization: req.headers.authorization } }`), and use it in the repos. Postgres then knows who `auth.uid()` is.
+2. **RLS policies per table:** `parents` → `auth_user_id = auth.uid()`; student-linked tables (`students`, `progress_records`, `summaries`, `recommendations` via join) → `EXISTS (SELECT 1 FROM insight.parent_students ps JOIN insight.parents p USING (parent_id) WHERE p.auth_user_id = auth.uid() AND ps.student_id = <row's student>)`; `notification_preferences` / `email_notifications` → owner-parent check.
+3. **Grants:** `GRANT USAGE ON SCHEMA insight TO authenticated;` plus table-level selects/updates as needed.
+4. **service_role remains** only where there is no user in context: the notification scheduler and the seed script.
+5. The code-level `requireOwn*` checks **stay** — RLS becomes the second layer, not a replacement.
+
+## 7. Core behaviors
+
+### 7.1 Summaries (`insight.service.ts` — `ensureSummary`)
+
+Shared by track-progress and summary routes (Get Summary is an `<<include>>` of Track Progress in the use-case model):
+
+1. Verify guardianship (route already did). Load the student's progress records. **Zero records → 503 `progressUnavailable`** (IT7A-05).
+2. Load the latest stored summary.
+3. **Staleness rule:** regenerate **iff** there is no summary, or `max(progress_records.created_at) > summary.generated_at`. The comparison uses the internal `created_at` insertion timestamp, not the business `date`, so a *backdated* record still triggers regeneration. Otherwise **reuse** the stored summary — no LLM call, fast and deterministic.
+4. On regeneration, call the LLM. **Failure → 503 `summaryUnavailable`, and nothing is stored** — the insert happens strictly after a successful generation, so "nothing stored on failure" (IT7A-07) is guaranteed by ordering; no transaction machinery needed.
+5. **Concurrency stance:** two simultaneous stale requests may both generate and insert. Accepted: reads use "latest", so last-write-wins; rows are cheap; the trigger requires a double-click during generation. No locks, no coalescing — a documented known non-problem at this scale.
+
+### 7.2 Recommendations (`createRecommendation`)
+
+Guardianship → load the **latest stored summary**. None → **404 `summaryUnavailable`** (IT7A-08). Call the LLM; failure → **503 `recommendationUnavailable`, nothing stored** (IT7A-09). Success → insert keyed on `summary_id`, return. This flow never triggers summary generation — the recommendation button lives on a page that has already loaded the summary.
+
+### 7.3 Notifications (`notifier.service.ts` + `scheduler.ts`)
+
+The "Notify Parent" flow (sequence diagram 7_2) is **not an HTTP flow** — its outcomes are return values, not status codes, matching the IT7B test cases:
+
+- `notifyParent(parentId, now)` → `'parentNotified' | 'notificationFailed'`
+  1. Load the parent's notification preference; must be `enabled`.
+  2. Load the parent's students; for each, run `ensureSummary` (§7.1) — fresh summaries get generated *and stored* (IT7B-03).
+  3. Compose one email (subject like "Progress update for <names>", body from the summaries).
+  4. `emailProvider.send(...)`, **then** insert the `email_notifications` row. Because the send precedes the insert, a failed send leaves no row — "email not recorded" (IT7B-02/04) is again pure ordering.
+  5. Any failure anywhere (no progress → IT7B-05, LLM down → IT7B-04, provider unreachable → IT7B-02) is caught, logged, and returned as `'notificationFailed'`. Nothing escapes to crash the tick.
+- `runDueNotifications(now)` — selects enabled preferences; a parent is **due** iff `lastSent === null || now − lastSent ≥ interval(frequency)`, where `lastSent` is the newest `email_notifications.sent_at` for that parent. Intervals: Weekly = 7 d, Fortnightly = 14 d, Monthly = 30 d — each overridable via env (`NOTIFY_WEEKLY_MS` etc.) so a live demo can set Weekly = 60 s and watch an email arrive.
+
+**Scheduler:** an in-process `setInterval` (default tick 15 min, `SCHEDULER_TICK_MS`) calling `runDueNotifications`, started from `index.ts` when `SCHEDULER_ENABLED=true`, with `start()`/`stop()` and a catch that never lets an error escape.
+
+*Why in-process rather than a separate worker:* one container, one deploy, one `.env`; the volume is tiny; due-ness is computed per tick, so a crash just delays work to the next tick; and a separate process would need exactly the job-lease coordination machinery this design deleted. **Revisit trigger:** running multiple API replicas (they would double-send) — that's the point to split the scheduler out or add a job table.
+
+## 8. Error model
+
+Small typed hierarchy in `src/errors.ts`; one Express error middleware maps them to the envelope. Express 5 forwards rejected async handlers automatically, so services simply `throw`.
+
+| Class | Status | `error` strings used |
+|---|---|---|
+| `UnauthorizedError` | 401 | `unauthorised` |
+| `NotFoundError` | 404 | `progressUnavailable` (missing/unowned student), `summaryUnavailable` (no summary for recommendations), `notFound` (catch-all route, unknown parent) |
+| `ValidationError` | 400 | human-readable, e.g. `` `frequency` must be one of: Weekly, Fortnightly, Monthly.`` |
+| `UnavailableError` | 503 | `progressUnavailable` (no records), `summaryUnavailable` (LLM failed), `recommendationUnavailable` (LLM failed) |
+| anything else | 500 | `internalError` (real error logged server-side only) |
+
+## 9. Database schema — `insight` on the shared Supabase
+
+> ⚠️ **Pre-step before running any DDL:** `main`'s migrations may already have created an `insight` schema on the hosted instance. Inspect first (Dashboard → Database), and coordinate with the team before dropping/replacing anything. The migration file is written idempotently (`create ... if not exists`) so re-running is safe.
+
+The schema must be added to the Data API's **Exposed schemas** list (Dashboard → Settings → API) for supabase-js access.
+
+```sql
+create schema if not exists insight;
+
+create table insight.parents (
+  parent_id     uuid primary key default gen_random_uuid(),
+  auth_user_id  uuid unique,            -- Supabase Auth user id (JWT `sub`); nullable so
+  name          text not null,          -- seed data can exist before the parent signs up
+  email         text not null,
+  mobile_number text not null default ''
+);
+
+create table insight.students (
+  student_id    uuid primary key default gen_random_uuid(),
+  name          text not null,
+  date_of_birth date not null,
+  band_level    text not null
+);
+
+create table insight.parent_students (      -- guardianship: which parent may see which student
+  parent_id  uuid not null references insight.parents  on delete cascade,
+  student_id uuid not null references insight.students on delete cascade,
+  primary key (parent_id, student_id)
+);
+
+create table insight.progress_records (
+  record_id  uuid primary key default gen_random_uuid(),
+  student_id uuid not null references insight.students on delete cascade,
+  date       date not null,                 -- bare business date, per API contract
+  skill_area text not null check (skill_area in ('Phonological Awareness','Reading Accuracy',
+               'Reading Fluency','Spelling','Writing','Comprehension')),
+  score      int  not null check (score between 0 and 100),
+  notes      text not null default '',
+  created_at timestamptz not null default now()   -- internal; drives summary staleness (§7.1)
+);
+create index on insight.progress_records (student_id, date);
+
+create table insight.summaries (
+  summary_id   uuid primary key default gen_random_uuid(),
+  student_id   uuid not null references insight.students on delete cascade,
+  content      text not null,
+  generated_at timestamptz not null default now()
+);
+create index on insight.summaries (student_id, generated_at desc);   -- "latest summary"
+
+create table insight.recommendations (
+  recommendation_id uuid primary key default gen_random_uuid(),
+  summary_id        uuid not null references insight.summaries on delete cascade,
+  content           text not null,          -- newline-joined suggestion lines
+  generated_at      timestamptz not null default now()
+);
+
+create table insight.notification_preferences (
+  parent_id       uuid primary key references insight.parents on delete cascade,
+  enabled         boolean not null default false,
+  frequency       text not null default 'Weekly'
+                    check (frequency in ('Weekly','Fortnightly','Monthly')),
+  recipient_email text not null
+);
+
+create table insight.email_notifications (   -- a row exists ⇒ the email was sent;
+  notification_id uuid primary key default gen_random_uuid(),
+  parent_id       uuid not null references insight.parents on delete cascade,
+  summary_id      uuid references insight.summaries,
+  recipient_email text not null,
+  subject         text not null,
+  body            text not null,
+  sent_at         timestamptz not null default now()   -- doubles as "last sent" for due calc
+);
+create index on insight.email_notifications (parent_id, sent_at desc);
+```
+
+**Migration management:** numbered SQL files in `db/migrations/`, applied manually via the Supabase SQL editor; the applied list is logged in `db/migrations/README.md`. (The Supabase CLI's linked-project workflow would add per-developer setup and a shared migration-history table across three teams — not worth it for a schema expected to change a handful of times. The files are written so they can drop into `supabase/migrations/` unchanged if the team adopts the CLI later.)
+
+**Data provenance:** progress data is **seeded** (`scripts/seed.ts`) this iteration — no live ingestion from other subsystems. If DAS 7 later needs real assessment data, the platform rule is to call the owning service's API (e.g. `GET /api/screening/results/{childId}`), never to read another service's tables.
+
+## 10. Adapters
+
+### 10.1 LLM (`src/adapters/llm/`)
+
+Provider is **undecided**; the seam is one interface:
+
+```ts
+interface LlmClient {
+  generateSummary(input: { student: Student; records: ProgressRecord[] }): Promise<string>;
+  generateRecommendation(input: { student: Student; summary: Summary }): Promise<string>; // '\n'-joined lines
+}
+class LlmUnavailableError extends Error {}   // any failure mode: down, timeout, malformed output
+```
+
+`createLlmClient(config)` switches on `LLM_PROVIDER`: `stub` (default, only implemented case) returns `StubLlmClient`; `anthropic` / `openai` / `gemini` throw `not implemented yet`. **Adding a real provider = one new file implementing the interface + one switch case + env keys** (`LLM_API_KEY`, `LLM_MODEL`, `LLM_TIMEOUT_MS` with `AbortSignal.timeout`). Output validation (non-empty, length caps, line structure for recommendations) belongs in the real adapter; anything malformed → `LlmUnavailableError`.
+
+`StubLlmClient` is **deterministic** — it computes per-skill-area averages and trends from the actual input (e.g. "Reading Fluency improved from 62 to 78 across 3 sessions"), so demo output looks plausible and unit tests can assert exact strings.
+
+### 10.2 Email (`src/adapters/email/`)
+
+```ts
+interface SentEmail { to: string; subject: string; body: string; }
+interface EmailProvider { send(email: SentEmail): Promise<void>; }  // throws EmailSendError
+```
+
+- `ResendEmailProvider` — one `fetch` POST to `https://api.resend.com/emails` with `Authorization: Bearer ${RESEND_API_KEY}`; non-2xx or network error → `EmailSendError`. No SDK.
+- `FakeEmailProvider` — public `history: SentEmail[]` and a fail toggle. The IT7B tests assert directly against `history` ("EmailProvider has the email in its history").
+
+## 11. Testing strategy → IT7x mapping
+
+Unit tests run offline. Integration tests use the **real Supabase** (real repos, real routes, real JWT verification) and stub **exactly two boundaries**, as the PM3 test plan specifies: the LLM client and the email provider.
+
+| Jest suite | Kind | Covers |
+|---|---|---|
+| `unit/insight-service.test.ts` | unit | §7.1 regenerate/reuse rule + IT7A error semantics |
+| `unit/stub-llm.test.ts` | unit | stub determinism |
+| `unit/notifier-service.test.ts`, `unit/scheduler.test.ts` | unit | due calculation (`isDue`), outcomes, timer behavior |
+| `unit/preference-service.test.ts` | unit | defaults + 400 messages |
+| `unit/error-handler.test.ts`, `unit/mappers.test.ts`, `unit/auth.test.ts`, `unit/fake-email.test.ts` | unit | envelope mapping/500, row⇄domain mapping, JWT middleware paths, fake provider |
+| `integration/track-progress.int.test.ts` | integration | IT7A-01, 02, 04, 05, 07 |
+| `integration/recommendations.int.test.ts` | integration | IT7A-03, 08, 09 |
+| `integration/auth.int.test.ts` | integration | IT7A-06 — no/garbage token → 401; parent A requesting parent B's student → 404 |
+| `integration/preferences.int.test.ts` | integration | preferences 200/400/404 + cross-parent 404 |
+| `integration/notifier.int.test.ts` | integration | IT7B-01…05 (call `notifyParent` directly; fake email, failable LLM); IT7B-06 (scheduler tick via Jest fake timers → `parentNotified`) |
+
+Harness notes:
+
+- **Real JWTs, no forgery:** global setup signs in two pre-created Supabase Auth test users (parent A and parent B) with `signInWithPassword` using the anon key; tests use the real tokens through the real JWKS verification path.
+- **Teardown:** tests insert rows with fresh UUIDs and delete the test parents in `afterAll` — `on delete cascade` cleans the rest. (The old plan's blocker — "no delete grant on any role" — doesn't apply because the service_role key bypasses grants.)
+- **Safety guard:** integration suites refuse to run unless `SUPABASE_URL` contains the project ref in `TEST_SUPABASE_REF`, preventing an accidental run against the wrong project.
+- IT7B outcomes are asserted as **return values** (`parentNotified` / `notificationFailed`), not HTTP statuses — the PM3 tables list statuses for 7B, but the flow has no HTTP surface; this correction is deliberate and matches the sequence diagram's own message names.
+
+## 12. Configuration (`.env`)
+
+| Variable | Purpose |
+|---|---|
+| `NODE_ENV`, `PORT` | standard; port 4000 (frontend dev proxy target) |
+| `SUPABASE_URL` | `https://<project-ref>.supabase.co` |
+| `SUPABASE_SERVICE_ROLE_KEY` | server-only secret — never in frontend or git |
+| `SUPABASE_DB_SCHEMA` | `insight` |
+| `SUPABASE_JWKS_URL` | optional override; defaults to `${SUPABASE_URL}/auth/v1/.well-known/jwks.json` |
+| `AUTH_DEV_SUB` | dev-only tokenless fallback (§6); ignored in production |
+| `LLM_PROVIDER` | `stub` (default) \| `anthropic` \| `openai` \| `gemini` |
+| `LLM_API_KEY`, `LLM_MODEL`, `LLM_TIMEOUT_MS` | for the future real provider |
+| `EMAIL_PROVIDER` | `resend` \| `fake` |
+| `RESEND_API_KEY`, `EMAIL_FROM` | Resend credentials/sender |
+| `SCHEDULER_ENABLED`, `SCHEDULER_TICK_MS` | notification timer (default tick 15 min) |
+| `NOTIFY_WEEKLY_MS`, `NOTIFY_FORTNIGHTLY_MS`, `NOTIFY_MONTHLY_MS` | demo overrides; blank = 7/14/30 days |
+| `SUPABASE_ANON_KEY` | tests only — mint real JWTs via `signInWithPassword` |
+| `TEST_SUPABASE_REF` | tests only — safety guard (§11) |
+| `TEST_USER_A_EMAIL/PASSWORD`, `TEST_USER_B_*` | tests only — pre-created auth users |
+
+## 13. Build order
+
+Each phase ends runnable and tested; phases 4–8 map one-to-one onto the IT7 groups.
+
+1. **Scaffold** — package.json (Express 5, TS, ts-jest), `config.ts`, `types.ts`, `errors.ts`, `app.ts`, envelope, error middleware, `GET /health`; error-handler unit tests.
+2. **Database** — inspect existing `insight` schema on the hosted instance (⚠ §9 pre-step), run `0001_insight_schema.sql`, expose the schema in Data API settings, `repos/db.ts` + repos, `scripts/seed.ts`.
+3. **Auth** — `http/auth.ts` (jose JWKS), `/me` route, create test auth users, `auth.int.test.ts` (IT7A-06).
+4. **Summaries** — LLM interface + stub, staleness logic, track-progress + summary routes → IT7A-01/02/04/05/07.
+5. **Recommendations** — POST route → IT7A-03/08/09.
+6. **Preferences** — GET/PUT + validation → preferences tests.
+7. **Email + notifier** — `EmailProvider`, Resend impl, fake, `notifier.service.ts` → IT7B-01…05.
+8. **Scheduler** — wire into `index.ts` → IT7B-06.
+9. **Polish** — Dockerfile (node:20-alpine, listen on 0.0.0.0:4000 for Traefik), README pointing here for the service_role/RLS decision, seed pass for the frontend demo.
+
+## 14. Glossary (for non-backend readers)
+
+- **JWT (JSON Web Token):** a signed token the browser sends with each request proving who the user is. We verify the signature locally against Supabase's published public keys (**JWKS**), so no network call is needed per request.
+- **service_role key:** Supabase's all-powerful server key. It skips all database-level security, which is why it must stay server-side and why the backend re-checks permissions in code.
+- **RLS (Row Level Security):** Postgres feature where the database itself filters rows per user. We don't use it yet — see §6.1 for the migration path.
+- **Adapter:** a thin wrapper class that hides an external service (LLM, email) behind a small interface, so tests can swap in a fake and the provider can change without touching business logic.
+- **Repo(sitory):** a module that owns all database queries for one table, translating between DB rows (snake_case) and domain objects (camelCase).
+- **Envelope:** the `{ok, data} / {ok, error}` wrapper every API response uses, so the frontend has one uniform way to detect errors.
+- **Idempotent (migrations):** written so running the same SQL twice is harmless (`create table if not exists`).
+- **IDOR (Insecure Direct Object Reference):** the vulnerability where guessing someone else's id in a URL exposes their data — prevented here by the guardianship checks in §6.
