@@ -47,6 +47,17 @@ export interface InsightService {
 
 From `src/errors.ts`: `NotFoundError`, `UnavailableError`. From `src/http/auth.ts`: `requireOwnStudent(studentRepo, parent, studentId)` (throws 404 `progressUnavailable` when not guardian). From `src/http/envelope.ts`: `ok(res, data)`.
 
+## Progress
+
+Tick each box (`[ ]` → `[x]`) in this file as you complete the step. Do not change any other text in this document.
+
+- [ ] Step 1 — `stub-llm.ts`
+- [ ] Step 2 — `insight.service.ts`
+- [ ] Step 3 — `students.routes.ts`
+- [ ] Step 4 — unit tests (stub-llm, insight-service)
+- [ ] Step 5 — integration tests (compile + self-skip)
+- [ ] Done criteria verified (typecheck + tests green, ownership respected)
+
 ## Step 1 — `src/adapters/llm/stub-llm.ts`
 
 `export class StubLlmClient implements LlmClient` — **fully deterministic** (no randomness, no clock), so demo output is plausible and tests can assert exact strings.

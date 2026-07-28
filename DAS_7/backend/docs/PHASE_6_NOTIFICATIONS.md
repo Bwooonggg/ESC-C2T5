@@ -48,6 +48,18 @@ export interface NotifierService {
 From `src/config.ts`: `AppConfig` (`resendApiKey`, `emailFrom`, `notifyIntervalsMs`).
 `InsightService.getSummary` throws `ApiError`s on failure (no progress → 503-typed error, LLM down → 503-typed error) and **persists** freshly generated summaries — you get IT7B-03's "summary stored" behavior for free by calling it.
 
+## Progress
+
+Tick each box (`[ ]` → `[x]`) in this file as you complete the step. Do not change any other text in this document.
+
+- [ ] Step 1 — `fake-email.ts`
+- [ ] Step 2 — `resend-email.ts`
+- [ ] Step 3 — `notifier.service.ts` (+ `isDue`)
+- [ ] Step 4 — `scheduler.ts`
+- [ ] Step 5 — unit tests (fake-email, notifier-service, scheduler)
+- [ ] Step 6 — integration tests (compile + self-skip)
+- [ ] Done criteria verified (typecheck + tests green, notifyParent never throws)
+
 ## Step 1 — `src/adapters/email/fake-email.ts`
 
 ```ts

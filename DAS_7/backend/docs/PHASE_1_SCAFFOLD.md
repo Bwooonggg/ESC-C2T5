@@ -36,6 +36,24 @@ Do **not** create `src/index.ts`, any repo, service, or adapter *implementation*
 - Business code signals failure by **throwing** `ApiError` subclasses; the error middleware does the mapping. Never hand-write `res.status(...).json(...)` outside `envelope.ts`/`error-handler.ts`.
 - IDs are generated with `crypto.randomUUID()` — no uuid dependency.
 
+## Progress
+
+Tick each box (`[ ]` → `[x]`) in this file as you complete the step. Do not change any other text in this document.
+
+- [x] Step 1 — package.json
+- [x] Step 2 — TypeScript & Jest config
+- [x] Step 3 — `src/types.ts`
+- [x] Step 4 — `src/errors.ts`
+- [x] Step 5 — `src/config.ts`
+- [x] Step 6 — `src/deps.ts`
+- [x] Step 7 — adapter interface files
+- [x] Step 8 — HTTP plumbing (envelope, error-handler, auth placeholder)
+- [x] Step 9 — routes and app
+- [x] Step 10 — `test/helpers/harness.ts` placeholder
+- [x] Step 11 — `.env.example`
+- [x] Step 12 — error-handler unit tests
+- [x] Done criteria verified (typecheck + tests green, ownership respected)
+
 ## Step 1 — package.json
 
 Scripts:

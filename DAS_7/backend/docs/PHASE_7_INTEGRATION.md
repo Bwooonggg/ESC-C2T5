@@ -16,6 +16,17 @@ backend/test/helpers/harness.ts        # REPLACE the Phase 1 placeholder; keep t
 backend/README.md                      # update: quickstart, test guide, service_role/RLS note
 ```
 
+## Progress
+
+Tick each box (`[ ]` → `[x]`) in this file as you complete the step. Do not change any other text in this document (except logging cross-phase fixes per your mandate).
+
+- [ ] Step 1 — `src/index.ts` composition root
+- [ ] Step 2 — real test harness
+- [ ] Step 3 — Dockerfile
+- [ ] Step 4 — full suite run + drift fixes
+- [ ] Step 5 — README update
+- [ ] Done criteria verified (full integration suite green, build clean, fix list reported)
+
 ## Step 1 — `src/index.ts` (composition root)
 
 ```ts

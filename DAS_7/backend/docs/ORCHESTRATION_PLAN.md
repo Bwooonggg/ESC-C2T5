@@ -46,9 +46,12 @@ Everything else compiles against P1's frozen contracts, so nothing may run concu
 
 Launch all five with the standard brief. Conflict rules already embedded in the docs: nobody edits `package.json`, `deps.ts`, or another phase's files; unit tests use in-file fakes; integration tests use only the frozen harness API.
 
+**Monitoring mid-wave:** each phase doc has a "Progress" checklist its worker ticks after every step — glance at `docs/PHASE_N_*.md` in a worktree to see where that worker is without interrupting it.
+
 **Per-phase acceptance (as each worker finishes):**
 - [ ] `npm run typecheck && npm test` green in that worker's tree (its unit suites pass; integration suites skipped).
-- [ ] Diff touches only the phase's owned files.
+- [ ] The phase doc's Progress checklist is fully ticked (an unticked box = an unfinished or unverified step — ask, don't assume).
+- [ ] Diff touches only the phase's owned files (+ its own phase doc's checklist).
 
 **Gate G2 (after merging all five):**
 - [ ] Merge the five branches (any order; conflicts indicate a worker broke ownership — reject and fix, don't hand-resolve silently).

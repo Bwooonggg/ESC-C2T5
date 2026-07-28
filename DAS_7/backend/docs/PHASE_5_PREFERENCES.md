@@ -35,6 +35,16 @@ From `src/errors.ts`: `ValidationError` (400), `NotFoundError` (404).
 From `src/http/auth.ts`: `requireOwnParent(parent, parentId)` — throws 404 on mismatch.
 From `src/http/envelope.ts`: `ok(res, data)`.
 
+## Progress
+
+Tick each box (`[ ]` → `[x]`) in this file as you complete the step. Do not change any other text in this document.
+
+- [ ] Step 1 — `preference.service.ts`
+- [ ] Step 2 — `preferences.routes.ts`
+- [ ] Step 3 — unit tests
+- [ ] Step 4 — integration tests (compile + self-skip)
+- [ ] Done criteria verified (typecheck + tests green, ownership respected)
+
 ## Step 1 — `src/services/preference.service.ts`
 
 ```ts
