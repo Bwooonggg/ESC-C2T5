@@ -50,12 +50,12 @@ export function requireOwnParent(parent: Parent, parentId: string): void;
 
 Tick each box (`[ ]` → `[x]`) in this file as you complete the step. Do not change any other text in this document.
 
-- [ ] Step 1 — rewrite `createAuthenticate` (JWT verification, both signing modes)
-- [ ] Step 2 — `/api/me` route
-- [ ] Step 3 — `test/helpers/test-auth.ts`
-- [ ] Step 4 — auth unit tests
-- [ ] Step 5 — auth integration tests (compile + self-skip)
-- [ ] Done criteria verified (typecheck + tests green, export signatures unchanged)
+- [x] Step 1 — rewrite `createAuthenticate` (JWT verification, both signing modes)
+- [x] Step 2 — `/api/me` route
+- [x] Step 3 — `test/helpers/test-auth.ts`
+- [x] Step 4 — auth unit tests
+- [x] Step 5 — auth integration tests (compile + self-skip)
+- [x] Done criteria verified (typecheck + tests green, export signatures unchanged)
 
 ## Step 1 — rewrite `createAuthenticate`
 
