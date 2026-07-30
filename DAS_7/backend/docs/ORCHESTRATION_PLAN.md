@@ -1,16 +1,5 @@
 # Orchestration Plan — DAS 7 Backend Implementation
 
-> **Audience: the orchestrator (you).** This is the run-book for executing the seven phase plans in `docs/PHASE_*.md` with parallel workers. Architecture reference: `docs/ARCHITECTURE.md`.
-
-## The model
-
-- Work is split into **waves**. Every phase inside a wave can run **fully in parallel** — the phase docs define disjoint file-ownership sets, and all cross-phase contracts were frozen in Phase 1.
-- Give each worker exactly: its own `PHASE_N_*.md` (required) + `ARCHITECTURE.md` (optional background). A worker must not need — and must not touch — anything else. Suggested worker brief:
-  > *"Implement Phase N of the DAS 7 backend by following `backend/docs/PHASE_N_<name>.md` exactly. Only create/modify the files listed under 'Files you own'. Do not add dependencies or edit package.json. If the plan seems wrong or something you need is missing, stop and report instead of improvising outside your file list."*
-- **Isolation between simultaneous workers:** if workers share one checkout they will trample each other's `npm test` runs even without file conflicts. Preferred: one **git worktree/branch per phase** (`git worktree add ../das7-p4 -b phase-4 DAS7_backend_v2`), merged after the wave — merges will be conflict-free by construction (disjoint files). Acceptable fallback: run the wave's workers sequentially in one checkout; correctness is unaffected, only wall-clock.
-- **`backend/CLAUDE.md` is gitignored on purpose** (it holds the worker rules but stays out of the repo). It therefore does NOT appear in fresh worktrees — after creating each worktree, copy it in yourself: `cp DAS_7/backend/CLAUDE.md ../das7-p4/DAS_7/backend/CLAUDE.md`. Skipping this silently strips every guardrail from that worker.
-- **Gate** at the end of each wave before starting the next: review diffs, run checks, commit/merge. Nothing in Wave N+1 starts until the gate passes.
-
 ## Phase → wave map
 
 | Wave | Phase | Doc | Files it owns (summary) | Depends on |
