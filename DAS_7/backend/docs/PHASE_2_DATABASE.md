@@ -70,13 +70,13 @@ Domain types (`Parent`, `Student`, `ProgressRecord`, `Summary`, `Recommendation`
 
 Tick each box (`[ ]` → `[x]`) in this file as you complete the step. Do not change any other text in this document.
 
-- [ ] Step 1 — migration SQL + migrations README
-- [ ] Step 2 — `src/repos/db.ts`
-- [ ] Step 3 — `src/repos/mappers.ts`
-- [ ] Step 4 — repo implementations (7 files)
-- [ ] Step 5 — `scripts/seed.ts`
-- [ ] Step 6 — mapper unit tests
-- [ ] Done criteria verified (typecheck + tests green, ownership respected, no live DB touched)
+- [x] Step 1 — migration SQL + migrations README
+- [x] Step 2 — `src/repos/db.ts`
+- [x] Step 3 — `src/repos/mappers.ts`
+- [x] Step 4 — repo implementations (7 files)
+- [x] Step 5 — `scripts/seed.ts`
+- [x] Step 6 — mapper unit tests
+- [x] Done criteria verified (typecheck + tests green, ownership respected, no live DB touched)
 
 ## Step 1 — `db/migrations/0001_insight_schema.sql`
 
