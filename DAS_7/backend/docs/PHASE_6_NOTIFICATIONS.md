@@ -52,13 +52,13 @@ From `src/config.ts`: `AppConfig` (`resendApiKey`, `emailFrom`, `notifyIntervals
 
 Tick each box (`[ ]` → `[x]`) in this file as you complete the step. Do not change any other text in this document.
 
-- [ ] Step 1 — `fake-email.ts`
-- [ ] Step 2 — `resend-email.ts`
-- [ ] Step 3 — `notifier.service.ts` (+ `isDue`)
-- [ ] Step 4 — `scheduler.ts`
-- [ ] Step 5 — unit tests (fake-email, notifier-service, scheduler)
-- [ ] Step 6 — integration tests (compile + self-skip)
-- [ ] Done criteria verified (typecheck + tests green, notifyParent never throws)
+- [x] Step 1 — `fake-email.ts`
+- [x] Step 2 — `resend-email.ts`
+- [x] Step 3 — `notifier.service.ts` (+ `isDue`)
+- [x] Step 4 — `scheduler.ts`
+- [x] Step 5 — unit tests (fake-email, notifier-service, scheduler)
+- [x] Step 6 — integration tests (compile + self-skip)
+- [x] Done criteria verified (typecheck + tests green, notifyParent never throws)
 
 ## Step 1 — `src/adapters/email/fake-email.ts`
 

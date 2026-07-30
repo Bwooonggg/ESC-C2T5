@@ -51,12 +51,12 @@ From `src/errors.ts`: `NotFoundError`, `UnavailableError`. From `src/http/auth.t
 
 Tick each box (`[ ]` → `[x]`) in this file as you complete the step. Do not change any other text in this document.
 
-- [ ] Step 1 — `stub-llm.ts`
-- [ ] Step 2 — `insight.service.ts`
-- [ ] Step 3 — `students.routes.ts`
-- [ ] Step 4 — unit tests (stub-llm, insight-service)
-- [ ] Step 5 — integration tests (compile + self-skip)
-- [ ] Done criteria verified (typecheck + tests green, ownership respected)
+- [x] Step 1 — `stub-llm.ts`
+- [x] Step 2 — `insight.service.ts`
+- [x] Step 3 — `students.routes.ts`
+- [x] Step 4 — unit tests (stub-llm, insight-service)
+- [x] Step 5 — integration tests (compile + self-skip)
+- [x] Done criteria verified (typecheck + tests green, ownership respected)
 
 ## Step 1 — `src/adapters/llm/stub-llm.ts`
 

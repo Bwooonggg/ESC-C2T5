@@ -39,11 +39,11 @@ From `src/http/envelope.ts`: `ok(res, data)`.
 
 Tick each box (`[ ]` → `[x]`) in this file as you complete the step. Do not change any other text in this document.
 
-- [ ] Step 1 — `preference.service.ts`
-- [ ] Step 2 — `preferences.routes.ts`
-- [ ] Step 3 — unit tests
-- [ ] Step 4 — integration tests (compile + self-skip)
-- [ ] Done criteria verified (typecheck + tests green, ownership respected)
+- [x] Step 1 — `preference.service.ts`
+- [x] Step 2 — `preferences.routes.ts`
+- [x] Step 3 — unit tests
+- [x] Step 4 — integration tests (compile + self-skip)
+- [x] Done criteria verified (typecheck + tests green, ownership respected)
 
 ## Step 1 — `src/services/preference.service.ts`
 

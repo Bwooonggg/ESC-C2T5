@@ -1,21 +1,28 @@
 import { Router } from 'express';
 import type { Deps } from '../../deps.js';
-import { ApiError } from '../../errors.js';
+import { requireOwnStudent } from '../auth.js';
+import { ok } from '../envelope.js';
 
-/** PHASE 1 STUB — signature is final; a later phase fills in the handlers. */
-export function studentsRoutes(_deps: Deps): Router {
+/** Student-scoped reads: progress, its AI summary, and recommendations. */
+export function studentsRoutes(deps: Deps): Router {
     const router = Router();
 
-    router.get('/:studentId/track-progress', () => {
-        throw new ApiError(501, 'notImplemented');
+    router.get('/:studentId/track-progress', async (req, res) => {
+        const { studentId } = req.params;
+        await requireOwnStudent(deps.studentRepo, req.parent!, studentId);
+        ok(res, await deps.insightService.trackProgress(studentId));
     });
 
-    router.get('/:studentId/summary', () => {
-        throw new ApiError(501, 'notImplemented');
+    router.get('/:studentId/summary', async (req, res) => {
+        const { studentId } = req.params;
+        await requireOwnStudent(deps.studentRepo, req.parent!, studentId);
+        ok(res, await deps.insightService.getSummary(studentId));
     });
 
-    router.post('/:studentId/recommendations', () => {
-        throw new ApiError(501, 'notImplemented');
+    router.post('/:studentId/recommendations', async (req, res) => {
+        const { studentId } = req.params;
+        await requireOwnStudent(deps.studentRepo, req.parent!, studentId);
+        ok(res, await deps.insightService.createRecommendation(studentId));
     });
 
     return router;
