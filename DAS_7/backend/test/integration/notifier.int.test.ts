@@ -116,13 +116,23 @@ describeIntegration('notifier (integration)', () => {
         it('sweeps due parents on a timer tick', async () => {
             const { recipientEmail } = await dueParent();
 
+            // Fake timers prove the tick fires; the sweep it starts is real network
+            // work, which no amount of timer advancing completes, so it is awaited.
+            const sweeps: Array<Promise<unknown>> = [];
+
             jest.useFakeTimers();
-            const scheduler = createScheduler(
-                now => h.deps.notifierService.runDueNotifications(now), 1000,
-            );
+            const scheduler = createScheduler(now => {
+                const sweep = h.deps.notifierService.runDueNotifications(now);
+                sweeps.push(sweep);
+                return sweep;
+            }, 1000);
             scheduler.start();
             await jest.advanceTimersByTimeAsync(1000);
             scheduler.stop();
+            jest.useRealTimers();
+
+            expect(sweeps).toHaveLength(1);
+            await Promise.all(sweeps);
 
             // runDueNotifications legitimately sweeps every enabled preference in
             // the shared test database, so assert by recipient rather than count.

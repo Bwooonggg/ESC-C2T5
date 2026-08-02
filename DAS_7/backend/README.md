@@ -1,120 +1,133 @@
-# DAS 7 Backend
+# DAS 7 Backend — Parent Insight Dashboard
 
-This directory contains the TypeScript/Express backend scaffold described in
-[`docs/backend-architecture.md`](docs/backend-architecture.md).
+An Express + TypeScript API that lets a parent see their child's reading-progress
+records, an AI-written summary of them, and follow-up suggestions for home. It also
+runs an in-process timer that emails opted-in parents a progress update on their
+chosen schedule.
 
-## Development
+Design background — data model, error semantics, decisions and their reasons —
+lives in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
-```powershell
+## Quickstart
+
+```bash
 npm install
+```
+
+Copy the environment template and fill it in:
+
+```bash
+cp .env.example .env
+```
+
+The only two required values are `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`;
+everything else has a working default (`LLM_PROVIDER=stub`, `EMAIL_PROVIDER=fake`,
+scheduler off). Apply `db/migrations/*.sql` through the Supabase dashboard, then
+load the demo dataset:
+
+```bash
+npm run seed
+```
+
+Set `SEED_AUTH_USER_ID` to the Supabase Auth user id of your demo login before
+seeding, so the seeded parent is reachable from a browser session — and set
+`AUTH_DEV_SUB` to the same id if you want tokenless local requests to work.
+
+```bash
 npm run dev
 ```
 
-The API listens on `http://localhost:4000` by default. The frontend's Vite
-configuration proxies `/api` to this port, so browser requests remain on the
-frontend's local origin.
+The API listens on `http://localhost:4000`. The frontend's Vite dev server proxies
+`/api` to that port, so the browser stays on one origin.
 
-Useful checks:
+Other scripts: `npm run typecheck`, `npm run build`, `npm start` (runs `dist/`),
+`npm test`.
 
-```powershell
-npm run typecheck
-npm run build
+## Endpoints
+
+| Method | Path | Purpose |
+|---|---|---|
+| `GET` | `/api/health` | liveness; the only unauthenticated route |
+| `GET` | `/api/me` | the signed-in parent and their students |
+| `GET` | `/api/students/:studentId/track-progress` | progress records + summary |
+| `GET` | `/api/students/:studentId/summary` | the summary alone |
+| `POST` | `/api/students/:studentId/recommendations` | suggestions from the stored summary |
+| `GET`/`PUT` | `/api/parents/:parentId/preferences` | notification preferences |
+
+Every response uses one envelope: `{ ok: true, data }` or `{ ok: false, error }`.
+
+## Tests
+
+```bash
 npm test
 ```
 
-## Testing
+**Unit suites** (`test/unit/`) run entirely offline — no database, no network. They
+use in-file fakes and never import `src/repos/`.
 
-The backend uses Jest with `ts-jest` for TypeScript tests and Supertest for
-HTTP tests. Production code remains ESM/NodeNext; the test-only TypeScript
-configuration compiles modules as CommonJS so Jest can resolve the `.js`
-suffixes used by production imports.
+**Integration suites** (`test/integration/`) run the real app against a real Supabase
+project: real repositories, real routes, real JWT verification. Exactly two boundaries
+are faked — the LLM client and the email provider — so the tests are deterministic
+without weakening the parts under test. `test/helpers/harness.ts` builds that app,
+creates its own parents, students and progress rows with fresh UUIDs, and deletes
+them again in `afterAll`.
 
-```powershell
-npm test
-npm run test:watch
-npm run test:coverage
-npm run test:unit
-npm run test:http
-npm run test:integration
-npm run test:contract
-npm run test:e2e
+**They are not fully isolated, by design.** The notifier suite calls
+`runDueNotifications`, which sweeps *every* enabled preference in the project — not
+just the harness's own. So a run will generate summaries and `email_notifications`
+rows for the seeded demo parent, and for anyone else whose preference is enabled.
+That is what the test is for, and it asserts by recipient address rather than by
+row count so the extra work is harmless. Worth knowing before you look at the seed
+data afterwards and wonder what touched it.
+
+**The `TEST_SUPABASE_REF` guard.** Integration suites skip themselves unless
+`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` and `TEST_SUPABASE_REF` are all set *and*
+`SUPABASE_URL` contains `TEST_SUPABASE_REF`. That last condition is the point: it makes
+running the suites against the wrong project take a deliberate act. `npm test` with the
+variables unset is a normal, fully green run with the integration suites reported as
+skipped. Do not weaken this guard.
+
+**Test users.** The two integration parents are backed by real Supabase Auth users,
+created by hand in the dashboard and referenced through `TEST_USER_A_EMAIL` /
+`TEST_USER_A_PASSWORD` and the `_B_` pair. The harness signs them in with the anon key
+(`SUPABASE_ANON_KEY`) and uses the resulting access tokens, so tests exercise the same
+verification path a browser would. Nothing in the test code ever creates an auth user.
+
+Jest runs with `maxWorkers: 1`: the integration suites share one project and one pair of
+test users, and `insight.parents.auth_user_id` is unique, so only one harness can exist
+at a time.
+
+## Database access: service_role now, RLS later
+
+The backend connects to Supabase with the **`service_role` key**, scoped to the
+`insight` schema. That key **bypasses Row Level Security entirely**, so *every*
+authorization decision is made in backend code — `requireOwnStudent` and
+`requireOwnParent` on each data route are not belt-and-braces, they are the only thing
+standing between one parent and another's data. The key must never reach the frontend
+and never enter git.
+
+This was a deliberate call (ARCHITECTURE §6.1, 2026-07-28): only this backend touches
+the `insight` tables, so RLS policies would be design and maintenance work for a second
+line of defense nothing else needs yet.
+
+The migration path is recorded so it stays a choice rather than an accident. If the trust
+model changes — the frontend starts querying Supabase directly, or defense-in-depth is
+wanted — switch the repositories to a per-request client built from the anon key plus the
+caller's JWT, add owner-check policies per table, grant `authenticated` what it needs, and
+keep `service_role` only where no user is in context (the scheduler and the seed script).
+The code-level `requireOwn*` checks stay either way; RLS would become the second layer,
+not a replacement.
+
+## Deployment
+
+`Dockerfile` is a two-stage build: compile with dev dependencies, ship `dist/` plus
+production `node_modules` on `node:22-alpine`. The service listens on `0.0.0.0:4000` so
+Traefik can reach it, and no environment values are baked into the image.
+
+```bash
+docker build -t das7-backend .
+docker run --env-file .env -p 4000:4000 das7-backend
 ```
 
-Unit, HTTP, and contract suites must not require a running MySQL instance.
-The default `npm test` command excludes the integration directory. The
-integration suite runs serially against a dedicated MySQL test database and
-requires `MYSQL_TEST_HOST`, `MYSQL_TEST_PORT`, `MYSQL_TEST_DATABASE`,
-`MYSQL_TEST_USER`, and `MYSQL_TEST_PASSWORD`. Copy
-`.env.integration.example` to `.env.integration` or export those variables
-before running `npm run test:integration`.
-
-The ordered implementation plan is recorded in [`docs/plan.md`](docs/plan.md).
-Current phase status is tracked in [`docs/progress.md`](docs/progress.md).
-
-## Configuration
-
-Copy `.env.example` to `.env` for local development. The backend loads and
-validates environment values at process startup through
-`src/config/environment.ts`.
-
-Development and test runs use safe local defaults. Production requires explicit
-values for the MySQL connection, summary generator, recommendation generator,
-and email provider. Authentication configuration is introduced with the final
-authentication and authorization phase.
-
-The migration runner reads the `MYSQL_*` values from the same environment,
-resolves `db/migrations/` relative to its entrypoint, records applied
-migrations in `schema_migrations`, and does not depend on a developer-specific
-filesystem path:
-
-```powershell
-# Development entrypoint
-npm run migrate
-
-# Compiled/deployment entrypoint
-npm run build
-npm run migrate:compiled
-```
-
-The integration suite applies the same migrations to the configured test
-database, verifies migration replay, checks the expected InnoDB tables and
-indexes, exercises key foreign-key and value constraints, and verifies the
-non-authentication repository read/write and notification-job claim paths. The
-database-backed Track Progress and Recommendation API workflows are also
-exercised with controlled generator services. The test database must be isolated from
-development and production data; its name must identify it as a test database,
-such as `das7_integration_test`.
-
-The API and worker read the same validated configuration through separate
-composition containers. The worker is disabled by default until notification
-processing is implemented.
-
-## Deployment model
-
-The React application and API use one public domain. The public web host serves
-the frontend at `/` and forwards `/api/*` to the Express process. The browser
-therefore calls relative `/api` URLs on the same origin. Local development uses
-the existing Vite proxy to preserve that behavior.
-
-## Current scaffold behavior
-
-- `GET /api/health` returns a liveness response.
-- `GET /api/health/ready` reports that database readiness is not wired yet.
-- `GET /api/students/:studentId/track-progress` loads progress from MySQL,
-  generates and persists a summary through the configured external summary
-  service, and returns the frontend-compatible progress/summary envelope.
-- `GET /api/students/:studentId/summary` runs the same summary workflow and
-  returns only the summary object in the standard envelope.
-- `POST /api/students/:studentId/recommendations` loads the latest persisted
-  summary, generates a recommendation through the configured external service,
-  persists its summary basis, and returns the frontend-compatible response.
-- `GET /api/parents/:parentId/preferences` reads the persisted notification
-  preference, while `PUT /api/parents/:parentId/preferences` validates,
-  normalizes, persists, and returns the updated preference.
-- Overlapping summary requests for the same student progress version share one
-  in-flight generation operation.
-- Existing frontend and future ingestion routes are registered, but business
-  handlers currently return a JSON `501 Not implemented` envelope.
-- Ingestion, email-delivery, and worker-job workflows remain reserved for their
-  respective implementation phases. Authentication routes and authorization
-  middleware remain unmounted until the final phase.
+Node 22 or newer is required at runtime: `@supabase/supabase-js` needs a native
+`WebSocket`, which Node 20 does not provide.

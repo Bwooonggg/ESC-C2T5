@@ -50,6 +50,15 @@ The only request body in the whole API is the preferences `PUT`:
 
 `frequency` must be `"Weekly"`, `"Fortnightly"` or `"Monthly"`. Bad values → `400` with a human-readable `error` message you can show directly.
 
+**The four `400` messages are part of the API contract** — they are written to be rendered verbatim, and we will not reword them without telling you. Validation stops at the first failure, so exactly one arrives per request, in this order:
+
+1. `Request body must be an object.`
+2. `` `enabled` must be true or false. `` — also what a missing `enabled` gets.
+3. `` `frequency` must be one of: Weekly, Fortnightly, Monthly. ``
+4. `` `recipientEmail` must be a valid email address. ``
+
+`recipientEmail` is trimmed and lowercased before it is checked, so `"  Parent@X.COM "` is accepted and stored as `parent@x.com` — surrounding whitespace is forgiven, and the value you read back may differ in case from the one you sent. Unknown extra keys in the body are ignored.
+
 ## Data shapes (the fields you'll actually use)
 
 ```ts

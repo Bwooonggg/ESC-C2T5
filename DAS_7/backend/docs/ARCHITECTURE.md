@@ -237,82 +237,216 @@ Small typed hierarchy in `src/errors.ts`; one Express error middleware maps them
 
 ## 9. Database schema — `insight` on the shared Supabase
 
-> ⚠️ **Pre-step before running any DDL:** `main`'s migrations may already have created an `insight` schema on the hosted instance. Inspect first (Dashboard → Database), and coordinate with the team before dropping/replacing anything. The migration file is written idempotently (`create ... if not exists`) so re-running is safe.
+**Applied state (2026-07-29):** migrations `0001_insight_schema.sql` and `0002_grants_and_rls.sql` are live on the hosted instance — 8 tables, `service_role`-only grants, RLS enabled with no policies. The `db/migrations/README.md` "Applied" table is the authoritative record; this section describes what those files create.
 
-The schema must be added to the Data API's **Exposed schemas** list (Dashboard → Settings → API) for supabase-js access.
+Two one-time project settings are also in place, and both are invisible in the DDL:
+
+- The `insight` schema is on the Data API's **Exposed schemas** list (Dashboard → Settings → API). Without it every query fails `PGRST106 Invalid schema: insight` even though the tables exist.
+- Privileges are granted (§9.3). Without them every query fails `42501 permission denied for schema insight`.
+
+### 9.1 Tables at a glance
+
+Eight tables, all in schema `insight`. Every primary key is a `uuid` defaulting to `gen_random_uuid()`; every foreign key to a parent/student is `on delete cascade`, so deleting one parent row cleans up everything hanging off it (relied on by the integration-test teardown, §11).
+
+```mermaid
+erDiagram
+    parents ||--o{ parent_students : "guardian of"
+    students ||--o{ parent_students : ""
+    students ||--o{ progress_records : "scored in"
+    students ||--o{ summaries : "described by"
+    summaries ||--o{ recommendations : "suggests"
+    parents ||--|| notification_preferences : "configures"
+    parents ||--o{ email_notifications : "was sent"
+    summaries ||--o{ email_notifications : "quoted in"
+```
+
+**`parents`** — one row per registered parent. The bridge between Supabase Auth and this service.
+
+| Column | Type | Notes |
+|---|---|---|
+| `parent_id` | uuid PK | |
+| `auth_user_id` | uuid unique, **nullable** | The Supabase Auth user id (JWT `sub`). Nullable so seed data can exist before the parent signs up; a null here means "not linked to a login yet" and the row is unreachable through the API. |
+| `name` | text not null | |
+| `email` | text not null | Account email. The address emails actually go to is `notification_preferences.recipient_email`. |
+| `mobile_number` | text not null default `''` | Carried for parity with the frontend `Parent` type; unused by any flow. |
+
+**`students`** — one row per child.
+
+| Column | Type | Notes |
+|---|---|---|
+| `student_id` | uuid PK | |
+| `name` | text not null | |
+| `date_of_birth` | date | Serialized as a bare `YYYY-MM-DD` string, per the API contract (§5). |
+| `band_level` | text not null | Free text (e.g. `Band 2`); no check constraint — the frontend only displays it. |
+
+**`parent_students`** — the guardianship join table, and the **sole basis for authorization** (§6). A missing row is what turns into `404 progressUnavailable`.
+
+| Column | Type | Notes |
+|---|---|---|
+| `parent_id` | uuid → `parents` | Composite PK part 1 |
+| `student_id` | uuid → `students` | Composite PK part 2 |
+
+The composite primary key makes a duplicate link impossible and gives the lookup its index for free. Many-to-many by design: two guardians may share a child, one guardian may have several.
+
+**`progress_records`** — the raw data behind the chart and every generated summary.
+
+| Column | Type | Notes |
+|---|---|---|
+| `record_id` | uuid PK | |
+| `student_id` | uuid → `students` | |
+| `date` | date not null | The **business** date of the assessment; may be backdated. |
+| `skill_area` | text not null | `check` constrained to the six exact strings in §5 — the database, not just the code, rejects a seventh skill area (which would silently vanish from the chart). |
+| `score` | int not null | `check (score between 0 and 100)`, matching the chart's fixed Y axis. |
+| `notes` | text not null default `''` | |
+| `created_at` | timestamptz not null default `now()` | **Internal insertion time, never exposed.** `max(created_at)` vs `summaries.generated_at` is the staleness rule (§7.1) — using this rather than `date` is what makes a backdated record still trigger regeneration. |
+
+Index `progress_records_student_date_idx (student_id, date)` — the list-by-student read, already in chart order.
+
+**`summaries`** — append-only; rows are never updated, "the summary" always means the newest.
+
+| Column | Type | Notes |
+|---|---|---|
+| `summary_id` | uuid PK | |
+| `student_id` | uuid → `students` | |
+| `content` | text not null | LLM prose. A row exists ⇒ generation succeeded (the insert follows a successful call), which is what makes "nothing stored on failure" (IT7A-07) pure ordering. |
+| `generated_at` | timestamptz not null default `now()` | Full ISO 8601 datetime in the API. Compared against `progress_records.created_at` for staleness. |
+
+Index `summaries_student_latest_idx (student_id, generated_at desc)` — serves the "latest summary" lookup that both the summary route and the recommendation flow depend on.
+
+**`recommendations`** — append-only, keyed to a **summary**, not to a student.
+
+| Column | Type | Notes |
+|---|---|---|
+| `recommendation_id` | uuid PK | |
+| `summary_id` | uuid → `summaries` | No summary ⇒ no recommendation is possible; that's the `404 summaryUnavailable` in §7.2. |
+| `content` | text not null | Newline-joined suggestion lines (one string, per the contract). |
+| `generated_at` | timestamptz not null default `now()` | |
+
+**`notification_preferences`** — exactly one row per parent, enforced by making `parent_id` the primary key *and* the foreign key. That is why the repo is an `upsert` rather than an insert/update pair.
+
+| Column | Type | Notes |
+|---|---|---|
+| `parent_id` | uuid PK → `parents` | |
+| `enabled` | boolean not null default `false` | Opt-in: a parent who never touched preferences is never emailed. |
+| `frequency` | text not null default `'Weekly'` | `check` constrained to `Weekly` / `Fortnightly` / `Monthly` — the same three values the PUT body validator accepts, enforced twice on purpose. |
+| `recipient_email` | text not null | Where the email goes; deliberately separate from `parents.email`. |
+
+**`email_notifications`** — the send log. **A row exists ⇒ that email was sent**, because the insert happens strictly after `emailProvider.send()` returns (§7.3). This table is also the state the due-calculation reads, which is why no job table is needed.
+
+| Column | Type | Notes |
+|---|---|---|
+| `notification_id` | uuid PK | |
+| `parent_id` | uuid → `parents` | |
+| `summary_id` | uuid → `summaries`, **nullable, no cascade** | Which summary the email quoted, when there was a single one. Nullable because a multi-child email quotes several. |
+| `recipient_email` | text not null | Copy of the address at send time, not a live join — a later preference change must not rewrite history. |
+| `subject` | text not null | |
+| `body` | text not null | |
+| `sent_at` | timestamptz not null default `now()` | Doubles as "last sent": `max(sent_at)` per parent is the input to `isDue` (§7.3). |
+
+Index `email_notifications_parent_latest_idx (parent_id, sent_at desc)` — exactly the shape of that "newest send for this parent" query.
+
+### 9.2 DDL (`db/migrations/0001_insight_schema.sql`)
+
+Written idempotently throughout (`if not exists`), so re-running on an up-to-date database is harmless.
 
 ```sql
 create schema if not exists insight;
 
-create table insight.parents (
-  parent_id     uuid primary key default gen_random_uuid(),
-  auth_user_id  uuid unique,            -- Supabase Auth user id (JWT `sub`); nullable so
-  name          text not null,          -- seed data can exist before the parent signs up
-  email         text not null,
-  mobile_number text not null default ''
+create table if not exists insight.parents (
+    parent_id     uuid primary key default gen_random_uuid(),
+    auth_user_id  uuid unique,            -- Supabase Auth user id (JWT `sub`); nullable so
+    name          text not null,          -- seed data can exist before the parent signs up
+    email         text not null,
+    mobile_number text not null default ''
 );
 
-create table insight.students (
-  student_id    uuid primary key default gen_random_uuid(),
-  name          text not null,
-  date_of_birth date not null,
-  band_level    text not null
+create table if not exists insight.students (
+    student_id    uuid primary key default gen_random_uuid(),
+    name          text not null,
+    date_of_birth date not null,
+    band_level    text not null
 );
 
-create table insight.parent_students (      -- guardianship: which parent may see which student
-  parent_id  uuid not null references insight.parents  on delete cascade,
-  student_id uuid not null references insight.students on delete cascade,
-  primary key (parent_id, student_id)
+create table if not exists insight.parent_students (   -- guardianship: who may see whom
+    parent_id  uuid not null references insight.parents  on delete cascade,
+    student_id uuid not null references insight.students on delete cascade,
+    primary key (parent_id, student_id)
 );
 
-create table insight.progress_records (
-  record_id  uuid primary key default gen_random_uuid(),
-  student_id uuid not null references insight.students on delete cascade,
-  date       date not null,                 -- bare business date, per API contract
-  skill_area text not null check (skill_area in ('Phonological Awareness','Reading Accuracy',
-               'Reading Fluency','Spelling','Writing','Comprehension')),
-  score      int  not null check (score between 0 and 100),
-  notes      text not null default '',
-  created_at timestamptz not null default now()   -- internal; drives summary staleness (§7.1)
+create table if not exists insight.progress_records (
+    record_id  uuid primary key default gen_random_uuid(),
+    student_id uuid not null references insight.students on delete cascade,
+    date       date not null,                 -- bare business date, per API contract
+    skill_area text not null check (skill_area in ('Phonological Awareness','Reading Accuracy',
+                 'Reading Fluency','Spelling','Writing','Comprehension')),
+    score      int  not null check (score between 0 and 100),
+    notes      text not null default '',
+    created_at timestamptz not null default now()   -- internal; drives staleness (§7.1)
 );
-create index on insight.progress_records (student_id, date);
+create index if not exists progress_records_student_date_idx
+    on insight.progress_records (student_id, date);
 
-create table insight.summaries (
-  summary_id   uuid primary key default gen_random_uuid(),
-  student_id   uuid not null references insight.students on delete cascade,
-  content      text not null,
-  generated_at timestamptz not null default now()
+create table if not exists insight.summaries (
+    summary_id   uuid primary key default gen_random_uuid(),
+    student_id   uuid not null references insight.students on delete cascade,
+    content      text not null,
+    generated_at timestamptz not null default now()
 );
-create index on insight.summaries (student_id, generated_at desc);   -- "latest summary"
+create index if not exists summaries_student_latest_idx
+    on insight.summaries (student_id, generated_at desc);   -- "latest summary"
 
-create table insight.recommendations (
-  recommendation_id uuid primary key default gen_random_uuid(),
-  summary_id        uuid not null references insight.summaries on delete cascade,
-  content           text not null,          -- newline-joined suggestion lines
-  generated_at      timestamptz not null default now()
-);
-
-create table insight.notification_preferences (
-  parent_id       uuid primary key references insight.parents on delete cascade,
-  enabled         boolean not null default false,
-  frequency       text not null default 'Weekly'
-                    check (frequency in ('Weekly','Fortnightly','Monthly')),
-  recipient_email text not null
+create table if not exists insight.recommendations (
+    recommendation_id uuid primary key default gen_random_uuid(),
+    summary_id        uuid not null references insight.summaries on delete cascade,
+    content           text not null,          -- newline-joined suggestion lines
+    generated_at      timestamptz not null default now()
 );
 
-create table insight.email_notifications (   -- a row exists ⇒ the email was sent;
-  notification_id uuid primary key default gen_random_uuid(),
-  parent_id       uuid not null references insight.parents on delete cascade,
-  summary_id      uuid references insight.summaries,
-  recipient_email text not null,
-  subject         text not null,
-  body            text not null,
-  sent_at         timestamptz not null default now()   -- doubles as "last sent" for due calc
+create table if not exists insight.notification_preferences (
+    parent_id       uuid primary key references insight.parents on delete cascade,
+    enabled         boolean not null default false,
+    frequency       text not null default 'Weekly'
+                      check (frequency in ('Weekly','Fortnightly','Monthly')),
+    recipient_email text not null
 );
-create index on insight.email_notifications (parent_id, sent_at desc);
+
+create table if not exists insight.email_notifications (  -- a row exists ⇒ email was sent
+    notification_id uuid primary key default gen_random_uuid(),
+    parent_id       uuid not null references insight.parents on delete cascade,
+    summary_id      uuid references insight.summaries,
+    recipient_email text not null,
+    subject         text not null,
+    body            text not null,
+    sent_at         timestamptz not null default now()  -- doubles as "last sent"
+);
+create index if not exists email_notifications_parent_latest_idx
+    on insight.email_notifications (parent_id, sent_at desc);
 ```
 
-**Migration management:** numbered SQL files in `db/migrations/`, applied manually via the Supabase SQL editor; the applied list is logged in `db/migrations/README.md`. (The Supabase CLI's linked-project workflow would add per-developer setup and a shared migration-history table across three teams — not worth it for a schema expected to change a handful of times. The files are written so they can drop into `supabase/migrations/` unchanged if the team adopts the CLI later.)
+### 9.3 Grants and RLS (`db/migrations/0002_grants_and_rls.sql`)
+
+A schema you create yourself starts with **no privileges for anyone** — Supabase only wires privileges up automatically for `public`. Migration 0002 fixes that, and grants to `service_role` *only*: `anon` and `authenticated` deliberately get nothing, so the browser cannot reach these tables through the Data API even though the schema is exposed. All access goes through this backend.
+
+```sql
+grant usage on schema insight to service_role;
+grant all privileges on all tables in schema insight to service_role;
+
+-- Applies to tables created by later migrations, so this never has to be repeated.
+alter default privileges in schema insight grant all on tables to service_role;
+
+alter table insight.parents                  enable row level security;
+alter table insight.students                 enable row level security;
+alter table insight.parent_students          enable row level security;
+alter table insight.progress_records         enable row level security;
+alter table insight.summaries                enable row level security;
+alter table insight.recommendations          enable row level security;
+alter table insight.notification_preferences enable row level security;
+alter table insight.email_notifications      enable row level security;
+```
+
+**RLS is enabled with no policies.** That is a no-op today — `service_role` bypasses RLS (§6.1) — but it **fails safe**: if anyone later grants access to `authenticated`, RLS-on-with-no-policies denies everything, whereas RLS-off-plus-grant would be wide open. Adding the real per-row policies is step 2 of the §6.1 migration path; the tables are already armed for them.
+
+**Migration management:** numbered SQL files in `db/migrations/`, applied manually via the Supabase SQL editor by a human, who then records the date and filename in the "Applied" table in `db/migrations/README.md` — that table is the only record of what the shared database actually contains. Never renumber or rewrite an applied file; add a new one. (The Supabase CLI's linked-project workflow would add per-developer setup and a shared migration-history table across three teams — not worth it for a schema expected to change a handful of times. The files are written so they can drop into `supabase/migrations/` unchanged if the team adopts the CLI later.)
 
 **Data provenance:** progress data is **seeded** (`scripts/seed.ts`) this iteration — no live ingestion from other subsystems. If DAS 7 later needs real assessment data, the platform rule is to call the owning service's API (e.g. `GET /api/screening/results/{childId}`), never to read another service's tables.
 

@@ -80,6 +80,9 @@ export function createNotifierService(deps: NotifierDeps): NotifierService {
         const results: Array<{ parentId: string; outcome: NotifyOutcome }> = [];
 
         for (const pref of prefs) {
+            // Deliberately outside a try/catch: the never-throws guarantee lives in
+            // notifyParent, not here. A repo-level failure on this read therefore ends
+            // the sweep and skips the remaining parents until the next tick.
             const lastSent = await emailNotificationRepo.lastSentAt(pref.parentId);
             if (!isDue(lastSent, pref.frequency, now, config.notifyIntervalsMs)) continue;
             // notifyParent never throws, so one bad parent can't stop the sweep.
