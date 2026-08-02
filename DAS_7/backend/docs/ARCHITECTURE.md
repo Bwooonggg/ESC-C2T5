@@ -1,6 +1,6 @@
 # DAS 7 Backend Architecture — Parent Insight Dashboard
 
-> **Status:** Approved design (2026-07-28). This document is the reference for the v2 backend built on branch `DAS7_backend_v2`. It supersedes the backend on `main`, which is kept as read-only prior art.
+> **Status:** describes the service as built and running. Design settled 2026-07-28; the `insight` schema was applied to the shared database on 2026-07-29. Where a decision has a condition that ought to force a rethink, that trigger is recorded inline rather than left implicit.
 
 ## 1. What this service does
 
@@ -15,12 +15,14 @@ The dashboard UI lives in `../frontend` (React + Vite). This backend serves it a
 
 ## 2. Design stance: deliberately simple
 
-A previous backend exists on `main`. It works, but it is heavily over-abstracted for the project's scope: a 5-layer hexagonal architecture, DI containers, idempotency records, audit events, notification-job leases, and transaction managers — around 120 source files. This rewrite targets **~30 source files in 3 layers**, keeping abstraction only where something is genuinely swappable:
+The service is three layers deep and abstracts only what is genuinely swappable:
 
 - The **LLM provider** (undecided) → behind an interface.
 - The **email provider** (Resend today) → behind an interface.
 
-Everything else — Express, Supabase, the domain types — is a fixed decision, and abstracting fixed decisions is cost without payoff.
+Everything else — Express, Supabase, the domain types — is a fixed decision, and abstracting a fixed decision is cost without payoff.
+
+An earlier iteration of this service put a five-layer hexagonal architecture, a DI container, idempotency records, audit events, notification-job leases and transaction managers over the same six endpoints. The structure described here is the deliberate reaction to that, and the table below records what was dropped, so that each exclusion stays a decision someone can argue with rather than an oversight.
 
 **Deliberately excluded** (and why it's safe to exclude them):
 
@@ -33,7 +35,7 @@ Everything else — Express, Supabase, the domain types — is a fixed decision,
 | zod / validation library | Exactly one request body exists in the whole API; it is validated by hand. |
 | Resend SDK | Sending an email is one `fetch` call. |
 
-Runtime dependencies: `express` (v5), `@supabase/supabase-js`, `jose` (JWT verification), `dotenv`. Dev: TypeScript, Jest + ts-jest, Supertest.
+Runtime dependencies, in full: `express` (v5), `@supabase/supabase-js`, `jose` (JWT verification), `dotenv`. Development: TypeScript, Jest + ts-jest, Supertest, `tsx` (runs `scripts/seed.ts` and the dev server without a build step), `cross-env`.
 
 ## 3. The big picture
 
@@ -81,12 +83,18 @@ Data shapes (`Student`, `ProgressRecord`, …) are plain TypeScript interfaces i
 
 ```
 backend/
-├── package.json / tsconfig.json / jest.config.cjs / .env.example / Dockerfile / README.md
-├── db/migrations/0001_insight_schema.sql   # all DDL, one idempotent file
+├── package.json / tsconfig.json / tsconfig.build.json / jest.config.cjs
+├── .env.example / Dockerfile / .dockerignore / README.md
+├── db/migrations/
+│   ├── 0001_insight_schema.sql             # all DDL, idempotent (§9.2)
+│   ├── 0002_grants_and_rls.sql             # service_role grants, RLS armed (§9.3)
+│   └── README.md                           # how migrations are applied + the Applied log
 ├── scripts/seed.ts                         # demo parents/students/progress (service_role)
 ├── src/
 │   ├── index.ts                # entrypoint: config → deps → createApp().listen → scheduler.start
+│   │                           # also holds the two provider factories (§10)
 │   ├── config.ts               # typed env parsing, fail-fast on missing vars
+│   ├── deps.ts                 # the Deps object: every service/repo/adapter interface
 │   ├── types.ts                # domain interfaces, mirror of frontend domain.ts
 │   ├── errors.ts               # ApiError subclasses (§8)
 │   ├── app.ts                  # createApp(deps): json parser, routes, error middleware
@@ -105,20 +113,21 @@ backend/
 │   │   ├── notifier.service.ts     # notifyParent → 'parentNotified' | 'notificationFailed'
 │   │   └── scheduler.ts            # setInterval wrapper: start/stop, never throws
 │   ├── repos/
-│   │   ├── db.ts                   # supabase client factory + row⇄domain mappers
+│   │   ├── db.ts                   # supabase client factory, scoped to the insight schema
+│   │   ├── mappers.ts              # row ⇄ domain: snake_case → camelCase, six pure functions
 │   │   ├── parent.repo.ts          # byAuthUserId, byId (+ studentIds)
-│   │   ├── student.repo.ts         # byId, isGuardian(parentId, studentId)
+│   │   ├── student.repo.ts         # byId, listByParent, isGuardian(parentId, studentId)
 │   │   ├── progress.repo.ts        # listByStudent, latestCreatedAt
 │   │   ├── summary.repo.ts         # latestByStudent, insert
 │   │   ├── recommendation.repo.ts  # insert
-│   │   ├── preference.repo.ts      # byParentId, upsert
+│   │   ├── preference.repo.ts      # byParentId, upsert, listEnabled
 │   │   └── emailNotification.repo.ts  # lastSentAt(parentId), insert
 │   └── adapters/
 │       ├── llm/
-│       │   ├── llm-client.ts       # LlmClient interface + factory (switch on LLM_PROVIDER)
+│       │   ├── llm-client.ts       # LlmClient interface + LlmUnavailableError
 │       │   └── stub-llm.ts         # deterministic stub — only implementation today
 │       └── email/
-│           ├── email-provider.ts   # EmailProvider interface + factory
+│           ├── email-provider.ts   # EmailProvider interface + EmailSendError
 │           ├── resend-email.ts     # one fetch POST to api.resend.com/emails
 │           └── fake-email.ts       # public history[] + fail toggle (tests)
 └── test/
@@ -127,6 +136,8 @@ backend/
     ├── integration/     # track-progress, recommendations, auth, preferences, notifier
     └── helpers/         # harness.ts (test app + fixtures + skip guard), test-auth.ts (mints real JWTs)
 ```
+
+The adapter files hold interfaces only. Both provider factories — "which LLM, which email sender" — live in `index.ts`, because choosing an implementation from config is composition, and composition happens in exactly one place (§10).
 
 ## 5. API contract
 
@@ -166,7 +177,9 @@ There is **no REST endpoint for notifications** — that flow is timer-driven (�
 **Authentication** (who are you?) — every `/api/*` route except `/api/health`:
 
 1. Read `Authorization: Bearer <token>`. Missing or malformed → **401**.
-2. Verify the JWT locally with `jose`: `jwtVerify(token, jwks, { issuer: SUPABASE_URL + '/auth/v1' })`. The JWKS (Supabase's public signing keys, from `<SUPABASE_URL>/auth/v1/.well-known/jwks.json`) is fetched **once** via `createRemoteJWKSet` and cached in memory — re-fetched only if an unknown key id appears (key rotation). **No network call per request.** Invalid/expired token → **401**.
+2. Verify the JWT locally with `jose`: `jwtVerify(token, key, { issuer: SUPABASE_URL + '/auth/v1' })`. Invalid/expired token → **401**, and the reason is never disclosed to the caller.
+
+   Two signing modes are supported, resolved **once** when the middleware is constructed rather than per request. If `SUPABASE_JWT_SECRET` is set, tokens are verified as legacy symmetric **HS256** against that secret. Otherwise verification is asymmetric against the JWKS (Supabase's public signing keys, from `<SUPABASE_URL>/auth/v1/.well-known/jwks.json`), fetched via `createRemoteJWKSet` and cached in memory — re-fetched only if an unknown key id appears (key rotation). Either way there is **no network call per request**. Audience is deliberately not checked: Supabase issues `aud: 'authenticated'` for every user, so it distinguishes nothing here; ownership is decided by the parent row in step 3.
 3. Map the token's `sub` claim (the Supabase Auth user id) to a row in `insight.parents` via `auth_user_id`. No row → **401** (a valid platform user who isn't a registered parent here).
 4. Attach the parent to the request (`req.parent`).
 
@@ -201,7 +214,7 @@ Shared by track-progress and summary routes (Get Summary is an `<<include>>` of 
 2. Load the latest stored summary.
 3. **Staleness rule:** regenerate **iff** there is no summary, or `max(progress_records.created_at) > summary.generated_at`. The comparison uses the internal `created_at` insertion timestamp, not the business `date`, so a *backdated* record still triggers regeneration. Otherwise **reuse** the stored summary — no LLM call, fast and deterministic.
 4. On regeneration, call the LLM. **Failure → 503 `summaryUnavailable`, and nothing is stored** — the insert happens strictly after a successful generation, so "nothing stored on failure" (IT7A-07) is guaranteed by ordering; no transaction machinery needed.
-5. **Concurrency stance:** two simultaneous stale requests may both generate and insert. Accepted: reads use "latest", so last-write-wins; rows are cheap; the trigger requires a double-click during generation. No locks, no coalescing — a documented known non-problem at this scale.
+5. **Concurrency stance:** two simultaneous stale requests may both generate and insert. This is accepted rather than prevented — reads always take the latest row, so the loser of the race is simply an extra row nobody reads, and provoking it requires a double-click during generation. Locking or coalescing would cost more machinery than the duplicate row costs.
 
 ### 7.2 Recommendations (`createRecommendation`)
 
@@ -464,7 +477,9 @@ interface LlmClient {
 class LlmUnavailableError extends Error {}   // any failure mode: down, timeout, malformed output
 ```
 
-`createLlmClient(config)` switches on `LLM_PROVIDER`: `stub` (default, only implemented case) returns `StubLlmClient`; `anthropic` / `openai` / `gemini` throw `not implemented yet`. **Adding a real provider = one new file implementing the interface + one switch case + env keys** (`LLM_API_KEY`, `LLM_MODEL`, `LLM_TIMEOUT_MS` with `AbortSignal.timeout`). Output validation (non-empty, length caps, line structure for recommendations) belongs in the real adapter; anything malformed → `LlmUnavailableError`.
+`createLlmClient(config)` in `index.ts` switches on `LLM_PROVIDER`: `stub` (the default and only implemented case) returns `StubLlmClient`; **any** other value throws at startup, naming the provider and pointing back at this section. Failing at startup rather than on the first request is the point — a misconfigured provider is a deploy-time mistake, and it should not wait hours to surface as a 503.
+
+**Adding a real provider = one new file implementing the interface + one switch case + env keys** (`LLM_API_KEY`, `LLM_MODEL`, `LLM_TIMEOUT_MS` with `AbortSignal.timeout`). Output validation (non-empty, length caps, line structure for recommendations) belongs in the real adapter; anything malformed → `LlmUnavailableError`.
 
 `StubLlmClient` is **deterministic** — it computes per-skill-area averages and trends from the actual input (e.g. "Reading Fluency improved from 62 to 78 across 3 sessions"), so demo output looks plausible and unit tests can assert exact strings.
 
@@ -475,8 +490,10 @@ interface SentEmail { to: string; subject: string; body: string; }
 interface EmailProvider { send(email: SentEmail): Promise<void>; }  // throws EmailSendError
 ```
 
-- `ResendEmailProvider` — one `fetch` POST to `https://api.resend.com/emails` with `Authorization: Bearer ${RESEND_API_KEY}`; non-2xx or network error → `EmailSendError`. No SDK.
+- `ResendEmailProvider` — one `fetch` POST to `https://api.resend.com/emails` with `Authorization: Bearer ${RESEND_API_KEY}`, a 10s `AbortSignal.timeout`, and no retries; non-2xx or network error → `EmailSendError`. No SDK.
 - `FakeEmailProvider` — public `history: SentEmail[]` and a fail toggle. The IT7B tests assert directly against `history` ("EmailProvider has the email in its history").
+
+The factory sits in `index.ts` alongside the LLM one. Selecting `resend` requires both `RESEND_API_KEY` and `EMAIL_FROM`; whichever is missing is named in a startup error. Selecting `fake` logs a warning at startup, because a service that silently records mail in memory instead of delivering it is worth one noisy line in the log.
 
 ## 11. Testing strategy → IT7x mapping
 
@@ -498,7 +515,8 @@ Unit tests run offline. Integration tests use the **real Supabase** (real repos,
 Harness notes:
 
 - **Real JWTs, no forgery:** global setup signs in two pre-created Supabase Auth test users (parent A and parent B) with `signInWithPassword` using the anon key; tests use the real tokens through the real JWKS verification path.
-- **Teardown:** tests insert rows with fresh UUIDs and delete the test parents in `afterAll` — `on delete cascade` cleans the rest. (The old plan's blocker — "no delete grant on any role" — doesn't apply because the service_role key bypasses grants.)
+- **Teardown:** tests insert rows with fresh UUIDs and delete the test parents in `afterAll` — `on delete cascade` cleans the rest. Deletes work despite the grant-only-`service_role` setup in §9.3 for the same reason RLS is a no-op today: the `service_role` key bypasses both.
+- **Not fully isolated, deliberately.** `runDueNotifications` sweeps *every* enabled preference in the project, so the notifier suite also generates summaries and `email_notifications` rows for the seeded demo parent. That is inherent to testing a sweep rather than a single call, so the suite asserts by recipient address instead of by row count.
 - **Safety guard:** integration suites refuse to run unless `SUPABASE_URL` contains the project ref in `TEST_SUPABASE_REF`, preventing an accidental run against the wrong project.
 - IT7B outcomes are asserted as **return values** (`parentNotified` / `notificationFailed`), not HTTP statuses — the PM3 tables list statuses for 7B, but the flow has no HTTP surface; this correction is deliberate and matches the sequence diagram's own message names.
 
@@ -511,7 +529,9 @@ Harness notes:
 | `SUPABASE_SERVICE_ROLE_KEY` | server-only secret — never in frontend or git |
 | `SUPABASE_DB_SCHEMA` | `insight` |
 | `SUPABASE_JWKS_URL` | optional override; defaults to `${SUPABASE_URL}/auth/v1/.well-known/jwks.json` |
+| `SUPABASE_JWT_SECRET` | set only if the project still issues legacy HS256 tokens (§6); blank selects the JWKS path |
 | `AUTH_DEV_SUB` | dev-only tokenless fallback (§6); ignored in production |
+| `SEED_AUTH_USER_ID` | `scripts/seed.ts` only — the auth user the demo parent is linked to. Blank leaves `auth_user_id` null, which makes the seeded parent unreachable through the API. Use a *third* auth user, not either `TEST_USER_*`: the integration harness owns those two parent rows and refuses to run if it finds one mapped to a parent it did not create. |
 | `LLM_PROVIDER` | `stub` (default) \| `anthropic` \| `openai` \| `gemini` |
 | `LLM_API_KEY`, `LLM_MODEL`, `LLM_TIMEOUT_MS` | for the future real provider |
 | `EMAIL_PROVIDER` | `resend` \| `fake` |
@@ -522,19 +542,14 @@ Harness notes:
 | `TEST_SUPABASE_REF` | tests only — safety guard (§11) |
 | `TEST_USER_A_EMAIL/PASSWORD`, `TEST_USER_B_*` | tests only — pre-created auth users |
 
-## 13. Build order
+## 13. Runtime and deployment
 
-Each phase ends runnable and tested; phases 4–8 map one-to-one onto the IT7 groups.
+One container, one process, serving the API and running the notification timer.
 
-1. **Scaffold** — package.json (Express 5, TS, ts-jest), `config.ts`, `types.ts`, `errors.ts`, `app.ts`, envelope, error middleware, `GET /health`; error-handler unit tests.
-2. **Database** — inspect existing `insight` schema on the hosted instance (⚠ §9 pre-step), run `0001_insight_schema.sql`, expose the schema in Data API settings, `repos/db.ts` + repos, `scripts/seed.ts`.
-3. **Auth** — `http/auth.ts` (jose JWKS), `/me` route, create test auth users, `auth.int.test.ts` (IT7A-06).
-4. **Summaries** — LLM interface + stub, staleness logic, track-progress + summary routes → IT7A-01/02/04/05/07.
-5. **Recommendations** — POST route → IT7A-03/08/09.
-6. **Preferences** — GET/PUT + validation → preferences tests.
-7. **Email + notifier** — `EmailProvider`, Resend impl, fake, `notifier.service.ts` → IT7B-01…05.
-8. **Scheduler** — wire into `index.ts` → IT7B-06.
-9. **Polish** — Dockerfile (node:20-alpine, listen on 0.0.0.0:4000 for Traefik), README pointing here for the service_role/RLS decision, seed pass for the frontend demo.
+- **Startup** builds everything once at module scope in `index.ts`: config → Supabase client → the seven repos → LLM and email adapters → the three services → `Deps` → `createApp()`. A missing or contradictory environment variable fails here, not on the first request that needs it.
+- **Binding** is `0.0.0.0:4000`, not localhost, so Traefik can reach the container. The startup log is one line naming the schema and the selected providers, which is usually enough to diagnose a misconfigured deploy without opening a shell.
+- **Shutdown** on `SIGINT`/`SIGTERM` stops the scheduler, then closes the server, then exits — so `docker stop` returns promptly instead of waiting out the 10s `SIGKILL` fallback.
+- **Node 22 or newer is required.** `@supabase/supabase-js` reaches for a native `WebSocket` during `createClient()`, which Node 20 does not provide: a Node 20 image builds cleanly and then dies on startup. The `Dockerfile` is a two-stage build shipping `dist/` plus production dependencies on `node:22-alpine`, with no environment values baked in.
 
 ## 14. Glossary (for non-backend readers)
 
