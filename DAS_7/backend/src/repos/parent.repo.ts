@@ -14,12 +14,14 @@ export function createParentRepo(client: SupabaseClient): ParentRepo {
         return (data ?? []).map((row: { student_id: string }) => row.student_id);
     }
 
+    /** withStudentIds combines Parent's info (from ParentRow) with their associated Students */
     async function withStudentIds(row: ParentRow | null): Promise<Parent | null> {
         if (row === null) return null;
         return rowToParent(row, await studentIdsOf(row.parent_id));
     }
 
     return {
+        /** find a parent using Supabase Auth account id (used after JWT auth) */
         async byAuthUserId(authUserId: string): Promise<Parent | null> {
             const { data, error } = await client
                 .from('parents')
@@ -30,6 +32,7 @@ export function createParentRepo(client: SupabaseClient): ParentRepo {
             return withStudentIds(data as ParentRow | null);
         },
 
+        /** find a parent using app parent record ID (used when parentId is available) */
         async byId(parentId: string): Promise<Parent | null> {
             const { data, error } = await client
                 .from('parents')

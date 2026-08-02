@@ -3,6 +3,10 @@ import { NotFoundError, ValidationError } from '../errors.js';
 import type { NotificationFrequency, NotificationPreference } from '../types.js';
 import { NOTIFICATION_FREQUENCIES } from '../types.js';
 
+// ^[^\s@]+ start of line with non-empty string (without '@')
+// @ literal '@' character (part of email)
+// \. literal '.' character
+// [^\s@]+$ non-empty string (without '@') up to end of line
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /** Hand-rolled validation of the API's only request body; first failure wins. */

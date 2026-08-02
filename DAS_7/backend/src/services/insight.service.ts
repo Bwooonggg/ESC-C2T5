@@ -2,6 +2,7 @@ import type { Deps, InsightService } from '../deps.js';
 import { NotFoundError, UnavailableError } from '../errors.js';
 import type { ProgressRecord, Recommendation, Student, Summary } from '../types.js';
 
+// get only relevant dependency proprties
 type InsightDeps = Pick<
     Deps,
     'studentRepo' | 'progressRepo' | 'summaryRepo' | 'recommendationRepo' | 'llm'

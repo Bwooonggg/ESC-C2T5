@@ -35,6 +35,7 @@ export interface RecommendationRepo {
 
 export interface PreferenceRepo {
     byParentId(parentId: string): Promise<NotificationPreference | null>;
+    /** upsert saves parent's notification preferences */
     upsert(pref: NotificationPreference): Promise<NotificationPreference>;
     listEnabled(): Promise<NotificationPreference[]>;
 }

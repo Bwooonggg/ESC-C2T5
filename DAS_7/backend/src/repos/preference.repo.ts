@@ -5,6 +5,7 @@ import { rowToPreference, type NotificationPreferenceRow } from './mappers.js';
 
 export function createPreferenceRepo(client: SupabaseClient): PreferenceRepo {
     return {
+        /** Get Parent's preferences */
         async byParentId(parentId: string): Promise<NotificationPreference | null> {
             const { data, error } = await client
                 .from('notification_preferences')
@@ -25,8 +26,8 @@ export function createPreferenceRepo(client: SupabaseClient): PreferenceRepo {
                     frequency: pref.frequency,
                     recipient_email: pref.recipientEmail,
                 }, { onConflict: 'parent_id' })
-                .select()
-                .single();
+                .select() // return the saved row
+                .single(); // expects exactly one row, returns obj instead of arr
             if (error) throw new Error(`db: ${error.message}`);
             return rowToPreference(data as NotificationPreferenceRow);
         },

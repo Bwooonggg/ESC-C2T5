@@ -10,11 +10,12 @@ export function createStudentRepo(client: SupabaseClient): StudentRepo {
                 .from('students')
                 .select('*')
                 .eq('student_id', studentId)
-                .maybeSingle();
+                .maybeSingle(); // returns 0 or 1 rows
             if (error) throw new Error(`db: ${error.message}`);
             return data === null ? null : rowToStudent(data as StudentRow);
         },
-
+        
+        /** Returns all students connected to parent*/
         async listByParent(parentId: string): Promise<Student[]> {
             const links = await client
                 .from('parent_students')
@@ -33,6 +34,7 @@ export function createStudentRepo(client: SupabaseClient): StudentRepo {
             return (data ?? []).map((row: StudentRow) => rowToStudent(row));
         },
 
+        /** Checks if Parent is connected to the Student */
         async isGuardian(parentId: string, studentId: string): Promise<boolean> {
             const { data, error } = await client
                 .from('parent_students')
