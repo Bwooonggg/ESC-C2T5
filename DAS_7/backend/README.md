@@ -1,150 +1,133 @@
-# DAS 7 Backend
+# DAS 7 Backend — Parent Insight Dashboard
 
-This directory contains the TypeScript/Express backend scaffold described in
-[`docs/backend-architecture.md`](docs/backend-architecture.md).
+An Express + TypeScript API that lets a parent see their child's reading-progress
+records, an AI-written summary of them, and follow-up suggestions for home. It also
+runs an in-process timer that emails opted-in parents a progress update on their
+chosen schedule.
 
-## Development
+Design background — data model, error semantics, decisions and their reasons —
+lives in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
-```powershell
+## Quickstart
+
+```bash
 npm install
+```
+
+Copy the environment template and fill it in:
+
+```bash
+cp .env.example .env
+```
+
+The only two required values are `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`;
+everything else has a working default (`LLM_PROVIDER=stub`, `EMAIL_PROVIDER=fake`,
+scheduler off). Apply `db/migrations/*.sql` through the Supabase dashboard, then
+load the demo dataset:
+
+```bash
+npm run seed
+```
+
+Set `SEED_AUTH_USER_ID` to the Supabase Auth user id of your demo login before
+seeding, so the seeded parent is reachable from a browser session — and set
+`AUTH_DEV_SUB` to the same id if you want tokenless local requests to work.
+
+```bash
 npm run dev
 ```
 
-The API listens on `http://localhost:4000` by default. Express exposes
-service-local routes; the final deployment uses Traefik's `/api/insights`
-prefix, which is stripped before forwarding the request to this service.
+The API listens on `http://localhost:4000`. The frontend's Vite dev server proxies
+`/api` to that port, so the browser stays on one origin.
 
-Useful checks:
+Other scripts: `npm run typecheck`, `npm run build`, `npm start` (runs `dist/`),
+`npm test`.
 
-```powershell
-npm run typecheck
-npm run build
-npm run test:http -- --runInBand
-```
+## Endpoints
 
-## Testing
+| Method | Path | Purpose |
+|---|---|---|
+| `GET` | `/api/health` | liveness; the only unauthenticated route |
+| `GET` | `/api/me` | the signed-in parent and their students |
+| `GET` | `/api/students/:studentId/track-progress` | progress records + summary |
+| `GET` | `/api/students/:studentId/summary` | the summary alone |
+| `POST` | `/api/students/:studentId/recommendations` | suggestions from the stored summary |
+| `GET`/`PUT` | `/api/parents/:parentId/preferences` | notification preferences |
 
-The backend uses Jest with `ts-jest` for TypeScript tests and Supertest for
-HTTP tests. Production code remains ESM/NodeNext; the test-only TypeScript
-configuration compiles modules as CommonJS so Jest can resolve the `.js`
-suffixes used by production imports.
+Every response uses one envelope: `{ ok: true, data }` or `{ ok: false, error }`.
 
-```powershell
+## Tests
+
+```bash
 npm test
-npm run test:watch
-npm run test:coverage
-npm run test:unit
-npm run test:http
-npm run test:integration
-npm run test:contract
-npm run test:e2e
 ```
 
-The existing MySQL suites are a historical baseline and are being replaced by
-hosted-Supabase verification. New Supabase repository, RPC, provider, and
-end-to-end test files are intentionally deferred to the dedicated testing
-phase; the implementation phases run only applicable existing tests.
-The full `npm test` command may therefore stop at the four deferred identity
-and MySQL suites until the dedicated testing phase updates those historical
-fixtures.
+**Unit suites** (`test/unit/`) run entirely offline — no database, no network. They
+use in-file fakes and never import `src/repos/`.
 
-The ordered implementation plan is recorded in [`docs/plan.md`](docs/plan.md).
-Current phase status is tracked in [`docs/progress.md`](docs/progress.md).
+**Integration suites** (`test/integration/`) run the real app against a real Supabase
+project: real repositories, real routes, real JWT verification. Exactly two boundaries
+are faked — the LLM client and the email provider — so the tests are deterministic
+without weakening the parts under test. `test/helpers/harness.ts` builds that app,
+creates its own parents, students and progress rows with fresh UUIDs, and deletes
+them again in `afterAll`.
 
-## Configuration
+**They are not fully isolated, by design.** The notifier suite calls
+`runDueNotifications`, which sweeps *every* enabled preference in the project — not
+just the harness's own. So a run will generate summaries and `email_notifications`
+rows for the seeded demo parent, and for anyone else whose preference is enabled.
+That is what the test is for, and it asserts by recipient address rather than by
+row count so the extra work is harmless. Worth knowing before you look at the seed
+data afterwards and wonder what touched it.
 
-Copy `.env.example` to `.env` for local development. The backend loads and
-validates environment values at process startup through
-`src/config/environment.ts`.
+**The `TEST_SUPABASE_REF` guard.** Integration suites skip themselves unless
+`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` and `TEST_SUPABASE_REF` are all set *and*
+`SUPABASE_URL` contains `TEST_SUPABASE_REF`. That last condition is the point: it makes
+running the suites against the wrong project take a deliberate act. `npm test` with the
+variables unset is a normal, fully green run with the integration suites reported as
+skipped. Do not weaken this guard.
 
-Development and test runs use safe defaults. The current transitional
-composition still accepts MySQL settings, while the target runtime uses
-`SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, and `SUPABASE_SCHEMA` for API
-requests and a worker-only `SUPABASE_SECRET_KEY`. DAS7 does not implement
-login, signup, password security, session management, or token issuance; those
-remain platform/Auth responsibilities.
+**Test users.** The two integration parents are backed by real Supabase Auth users,
+created by hand in the dashboard and referenced through `TEST_USER_A_EMAIL` /
+`TEST_USER_A_PASSWORD` and the `_B_` pair. The harness signs them in with the anon key
+(`SUPABASE_ANON_KEY`) and uses the resulting access tokens, so tests exercise the same
+verification path a browser would. Nothing in the test code ever creates an auth user.
 
-MySQL remains a transitional development dependency while the hosted Supabase
-workflow is composed into the existing feature models. Supabase configuration
-is currently optional so the historical baseline can still start during the
-transition. The intended database workflow uses the hosted development project
-through the Supabase CLI; this repository does not require `supabase start`,
-`supabase stop`, or a local Supabase database.
+Jest runs with `maxWorkers: 1`: the integration suites share one project and one pair of
+test users, and `insight.parents.auth_user_id` is unique, so only one harness can exist
+at a time.
 
-## Hosted Supabase development
+## Database access: service_role now, RLS later
 
-Install dependencies, authenticate the CLI, and link only the dedicated
-development project:
+The backend connects to Supabase with the **`service_role` key**, scoped to the
+`insight` schema. That key **bypasses Row Level Security entirely**, so *every*
+authorization decision is made in backend code — `requireOwnStudent` and
+`requireOwnParent` on each data route are not belt-and-braces, they are the only thing
+standing between one parent and another's data. The key must never reach the frontend
+and never enter git.
 
-```powershell
-npm install
-npx supabase login
-npx supabase link --project-ref <development-project-ref>
+This was a deliberate call (ARCHITECTURE §6.1, 2026-07-28): only this backend touches
+the `insight` tables, so RLS policies would be design and maintenance work for a second
+line of defense nothing else needs yet.
+
+The migration path is recorded so it stays a choice rather than an accident. If the trust
+model changes — the frontend starts querying Supabase directly, or defense-in-depth is
+wanted — switch the repositories to a per-request client built from the anon key plus the
+caller's JWT, add owner-check policies per table, grant `authenticated` what it needs, and
+keep `service_role` only where no user is in context (the scheduler and the seed script).
+The code-level `requireOwn*` checks stay either way; RLS would become the second layer,
+not a replacement.
+
+## Deployment
+
+`Dockerfile` is a two-stage build: compile with dev dependencies, ship `dist/` plus
+production `node_modules` on `node:22-alpine`. The service listens on `0.0.0.0:4000` so
+Traefik can reach it, and no environment values are baked into the image.
+
+```bash
+docker build -t das7-backend .
+docker run --env-file .env -p 4000:4000 das7-backend
 ```
 
-Review pending migrations before applying them:
-
-```powershell
-npm run supabase:db:push:dry-run
-npm run supabase:migrations
-```
-
-The migration push and generated-type commands operate on the linked hosted
-development project. Do not link this checkout to production until the final
-production handoff phase.
-
-The legacy MySQL migration runner still reads the `MYSQL_*` values from the
-same environment and is retained only until revision R9. The current database
-source of truth is the hosted Supabase migration chain under `supabase/`:
-
-```powershell
-# Legacy transitional runner
-npm run migrate
-
-# Compiled/deployment entrypoint
-npm run build
-npm run migrate:compiled
-```
-
-Do not use the legacy MySQL integration workflow as evidence for the Supabase
-target. Hosted Supabase smoke and integration checks will use unique development
-records and will be added during the dedicated testing phase.
-
-The API and worker read the same validated configuration through separate
-composition containers. The worker is disabled by default until notification
-processing is implemented.
-
-## Deployment model
-
-The React application and API use one public domain. The public web host serves
-the frontend at `/` and Traefik forwards `/api/insights/*` to the service after
-stripping that prefix. No CORS configuration is required for the browser.
-
-## Current scaffold behavior
-
-The following service-local paths are currently registered. In deployment,
-Traefik exposes the same routes under `/api/insights`:
-
-- `GET /health` returns a liveness response.
-- `GET /health/ready` reports that the transitional database readiness
-  dependency is not configured unless a probe is injected.
-- The historical workflow routes currently load persistence through MySQL;
-  their Supabase repository equivalents and bounded readiness probe are now
-  implemented under `src/infrastructure/supabase/` and are composed in later
-  revision phases.
-- `GET /students/:studentId/summary` runs the same summary workflow and
-  returns only the summary object in the standard envelope.
-- `POST /students/:studentId/recommendations` loads the latest persisted
-  summary, generates a recommendation through the configured external service,
-  persists its summary basis, and returns the frontend-compatible response.
-- `GET /parents/:parentId/preferences` reads the persisted notification
-  preference, while `PUT /parents/:parentId/preferences` validates,
-  normalizes, persists, and returns the updated preference.
-- Overlapping summary requests for the same student progress version share one
-  in-flight generation operation.
-- Existing frontend and future ingestion routes are registered, but business
-  handlers currently return a JSON `501 Not implemented` envelope.
-- Ingestion, email-delivery, and worker-job workflows remain reserved for their
-  respective implementation phases. JWT verification remains deferred until
-  the platform-auth contract is available; DAS 7 does not mount login or
-  signup routes.
+Node 22 or newer is required at runtime: `@supabase/supabase-js` needs a native
+`WebSocket`, which Node 20 does not provide.

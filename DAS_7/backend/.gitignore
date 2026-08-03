@@ -7,3 +7,5 @@ coverage/
 !.env.example
 !.env.integration.example
 *.log
+CLAUDE.md
+.claude

@@ -1,0 +1,15 @@
+# Keep the build context small and secrets out of it. The Dockerfile copies only
+# package manifests, tsconfigs and src/ anyway; this stops the rest being uploaded.
+node_modules
+dist
+coverage
+.ts-jest
+.env
+.env.*
+!.env.example
+*.log
+test
+docs
+db
+scripts
+.git

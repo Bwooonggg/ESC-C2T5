@@ -1,50 +1,71 @@
 @startuml
-title Use Case DAS 7 - Notify Parent
+title DAS 7 - Notify Parent (as implemented, backend v2)
 
 hide footbox
-autoactivate off
 skinparam backgroundColor white
 
 actor Clock
-participant NotificationController
-participant NotifierModel
-participant GeneratorServiceAdapter
-participant EmailServiceAdapter
-actor SummaryGeneratorService as SummaryService <<Secondary Actor>>
-actor EmailProvider <<Secondary Actor>>
+participant "Scheduler" as Scheduler
+participant "NotifierService" as Notifier
+participant "Repositories\n(Supabase)" as Repo
+participant "InsightService" as Insight
+participant "EmailProvider\n(Resend)" as Email
 
-Clock -> NotificationController : timerExpired()
-activate NotificationController
-NotificationController -> NotifierModel : notifyParent(student)
-activate NotifierModel
+note over Clock, Email
+  This flow has no HTTP endpoint. It is driven by an in-process
+  timer, and its outcomes are the return values
+  parentNotified / notificationFailed - not status codes.
+end note
 
-NotifierModel -> GeneratorServiceAdapter : generateSummary(records)
-activate GeneratorServiceAdapter
-GeneratorServiceAdapter -> SummaryService : generate(records)
-activate SummaryService
-SummaryService --> GeneratorServiceAdapter -- : Summary
-GeneratorServiceAdapter --> NotifierModel -- : Summary
+Clock -> Scheduler : tick (every SCHEDULER_TICK_MS)
+Scheduler -> Notifier : runDueNotifications(now)
+Notifier -> Repo : preferenceRepo.listEnabled()
+Repo --> Notifier : NotificationPreference[]
 
-NotifierModel -> EmailServiceAdapter : sendNotification(summary, recipient)
-activate EmailServiceAdapter
-EmailServiceAdapter -> EmailProvider : send(notification)
-activate EmailProvider
+loop for each enabled preference
+  Notifier -> Repo : emailNotificationRepo.lastSentAt(parentId)
+  Repo --> Notifier : last sent time or null
+  Notifier -> Notifier : isDue(lastSentAt, frequency, now)
 
-alt Email sent successfully
-  EmailProvider ->x] : Email
-  EmailProvider --> EmailServiceAdapter -- : sendSuccess
-  EmailServiceAdapter --> NotifierModel -- : notificationSent
-  NotifierModel --> NotificationController -- : parentNotified
-  NotificationController --> Clock -- : parentNotified
-else Email provider does not send the email
-  activate EmailProvider
-  EmailProvider --> EmailServiceAdapter -- : sendFailed
-  activate EmailServiceAdapter
-  EmailServiceAdapter --> NotifierModel -- : notificationFailed
-  activate NotifierModel
-  NotifierModel --> NotificationController -- : notificationFailed
-  activate NotificationController
-  NotificationController --> Clock -- : notificationFailed
+  alt not due yet
+    note right of Notifier : skipped until the\ninterval has elapsed
+  else due
+    Notifier -> Notifier : notifyParent(parentId, now)
+    Notifier -> Repo : parentRepo.byId / studentRepo.listByParent
+    Repo --> Notifier : Parent and Student[]
+
+    alt preference disabled, parent missing, or no students
+      Notifier --> Scheduler : notificationFailed
+    else ready to summarise
+      loop for each student
+        Notifier -> Insight : getSummary(studentId)
+
+        alt summary available (reused or freshly generated and stored)
+          Insight --> Notifier : Summary
+        else no progress, or generator unavailable
+          Insight --> Notifier : UnavailableError
+          note right of Notifier : caught and logged;\nnothing is sent
+          Notifier --> Scheduler : notificationFailed
+        end
+      end
+
+      Notifier -> Email : send(to, subject, body)
+
+      alt email accepted by the provider
+        Email ->x] : Email to parent
+        Email --> Notifier : sent
+        Notifier -> Repo : emailNotificationRepo.insert(...)
+        note right of Notifier : the send happens first,\nso a failed send leaves no record
+        Repo --> Notifier : recorded
+        Notifier --> Scheduler : parentNotified
+      else provider unreachable or rejected the send
+        Email --> Notifier : EmailSendError
+        Notifier --> Scheduler : notificationFailed
+      end
+    end
+  end
 end
+
+Scheduler --> Clock : outcomes per parent
 
 @enduml

@@ -1,60 +1,101 @@
 @startuml
-title Use Case DAS 7 - Track Child's Progress
+title DAS 7 - Track Child's Progress (as implemented, backend v2)
 
 hide footbox
-autoactivate off
 skinparam backgroundColor white
 
 actor Parent
-participant TrackProgressUI as UI
-participant TrackProgressController as Controller
-participant TrackProgressModel as Model
-participant RecommendationModel as RecoModel
-participant GeneratorAdapter as Adapter
-actor SummaryGeneratorService as SummaryService <<Secondary Actor>>
-actor RecommendationGeneratorService as RecommendationService <<Secondary Actor>>
+participant "Dashboard UI" as UI
+participant "authenticate\n(JWT middleware)" as Auth
+participant "students.routes" as Route
+participant "InsightService" as Service
+participant "Repositories\n(Supabase)" as Repo
+participant "LlmClient" as Llm
 
-Parent -> UI : Track child's progress
-activate UI
-UI --> Controller : trackProgress(parent, student)
-activate Controller
-Controller -> Model : getProgress(student)
-activate Model
-Model -> Model : getProgress()
+Parent -> UI : view child's progress
+UI -> Auth : GET /api/students/{studentId}/track-progress\nAuthorization: Bearer <token>
+Auth -> Auth : verify signature against cached JWKS
+Auth -> Repo : parentRepo.byAuthUserId(sub)
+Repo --> Auth : Parent
 
-alt Progress data is available
-  Model -> Adapter : generateSummary(progress)
-  activate Adapter
-  Adapter -> SummaryService : generate(progress)
-  activate SummaryService
-  SummaryService --> Adapter -- : Summary
-  Adapter --> Model -- : Summary
-  Model --> Controller -- : ProgressRecord and Summary
-  Controller --> UI -- : ProgressRecord and Summary
-  UI --> Parent -- : display progress and summary
+alt token missing, invalid, or not a registered parent
+  Auth --> UI : 401 unauthorised
+  UI --> Parent : send to login
+else authenticated
+  Auth -> Route : next(), req.parent set
+  Route -> Repo : studentRepo.isGuardian(parentId, studentId)
+  Repo --> Route : true / false
 
-  opt Parent requests recommendations
-    Parent -> UI : Request recommendations
-    activate UI
-    UI --> Controller : requestRecommendations(parent, student)
-    activate Controller
-    Controller -> RecoModel : requestRecommendations(student)
-    activate RecoModel
-    RecoModel -> RecoModel : getLatestSummary()
-    RecoModel -> Adapter : generateRecommendation(summary)
-    activate Adapter
-    Adapter -> RecommendationService : generate(summary)
-    activate RecommendationService
-    RecommendationService --> Adapter -- : Recommendation
-    Adapter --> RecoModel -- : Recommendation
-    RecoModel --> Controller -- : Recommendation
-    Controller --> UI -- : Recommendation
-    UI --> Parent -- : display recommendation
+  alt not this parent's child, or no such student
+    note right of Route : both cases are deliberately\nindistinguishable
+    Route --> UI : 404 progressUnavailable
+    UI --> Parent : "Try again at another time"
+  else guardianship confirmed
+    Route -> Service : trackProgress(studentId)
+    Service -> Repo : progressRepo.listByStudent(studentId)
+    Repo --> Service : ProgressRecord[]
+
+    alt no progress records yet
+      Service --> Route : UnavailableError(progressUnavailable)
+      Route --> UI : 503 progressUnavailable
+      UI --> Parent : "Try again at another time"
+    else progress available
+      Service -> Repo : summaryRepo.latestByStudent(studentId)
+      Repo --> Service : Summary or null
+      Service -> Repo : progressRepo.latestCreatedAt(studentId)
+      Repo --> Service : newest insert time or null
+
+      alt stored summary still covers the newest progress
+        note right of Service : reused as-is - no LLM call
+      else no summary yet, or progress arrived after it
+        Service -> Llm : generateSummary(student, records)
+
+        alt generation succeeded
+          Llm --> Service : summary text
+          Service -> Repo : summaryRepo.insert(studentId, content)
+          Repo --> Service : Summary
+        else generator unreachable or timed out
+          Llm --> Service : LlmUnavailableError
+          note right of Service : insert never runs,\nso nothing is stored
+          Service --> Route : UnavailableError(summaryUnavailable)
+          Route --> UI : 503 summaryUnavailable
+          UI --> Parent : "Try again at another time"
+        end
+      end
+
+      Service --> Route : { progress, summary }
+      Route --> UI : 200 { ok: true, data: { progress, summary } }
+      UI --> Parent : display progress chart and summary
+
+      opt Parent requests recommendations
+        Parent -> UI : click "Get recommendations"
+        UI -> Route : POST /api/students/{studentId}/recommendations
+        Route -> Service : createRecommendation(studentId)
+        Service -> Repo : summaryRepo.latestByStudent(studentId)
+        Repo --> Service : Summary or null
+
+        alt no summary has ever been generated
+          Service --> Route : NotFoundError(summaryUnavailable)
+          Route --> UI : 404 summaryUnavailable
+        else summary on file
+          Service -> Llm : generateRecommendation(student, summary)
+
+          alt generation succeeded
+            Llm --> Service : advice lines
+            Service -> Repo : recommendationRepo.insert(summaryId, content)
+            Repo --> Service : Recommendation
+            Service --> Route : Recommendation
+            Route --> UI : 200 { ok: true, data: Recommendation }
+            UI --> Parent : display recommendations
+          else generator unreachable
+            Llm --> Service : LlmUnavailableError
+            Service --> Route : UnavailableError(recommendationUnavailable)
+            Route --> UI : 503 recommendationUnavailable
+          end
+        end
+      end
+    end
   end
-else Progress data cannot be fetched
-  Model --> Controller -- : progressUnavailable
-  Controller --> UI -- : progressUnavailable
-  UI --> Parent -- : display "Try again at another time"
 end
 
 @enduml

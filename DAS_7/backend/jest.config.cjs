@@ -1,19 +1,17 @@
-/** @type {import('jest').Config} */
+/** @type {import('ts-jest').JestConfigWithTsJest} */
 module.exports = {
-    roots: ['<rootDir>/test'],
+    preset: 'ts-jest/presets/default-esm',
     testEnvironment: 'node',
-    clearMocks: true,
-    restoreMocks: true,
-    collectCoverageFrom: [
-        'src/**/*.ts',
-        '!src/entrypoints/**/*.ts',
-    ],
-    testPathIgnorePatterns: ['<rootDir>/test/integration/'],
-    coverageProvider: 'v8',
-    transform: {
-        '^.+\\.tsx?$': ['ts-jest', { tsconfig: '<rootDir>/tsconfig.test.json' }],
-    },
-    moduleNameMapper: {
-        '^(\\.{1,2}/.*)\\.js$': '$1',
-    },
-}
+    roots: ['<rootDir>/test'],
+    extensionsToTreatAsEsm: ['.ts'],
+    moduleNameMapper: { '^(\\.{1,2}/.*)\\.js$': '$1' },
+    transform: { '^.+\\.ts$': ['ts-jest', { useESM: true }] },
+    setupFiles: ['dotenv/config'],
+    // Integration suites share one live Supabase project and one pair of test auth
+    // users; `insight.parents.auth_user_id` is UNIQUE, so two harnesses can never
+    // exist at the same time. Serial execution is what makes them safe to run.
+    maxWorkers: 1,
+    // Those suites talk to Supabase over the network — the 5s default is a timeout
+    // on latency, not on a real failure.
+    testTimeout: 60000,
+};
