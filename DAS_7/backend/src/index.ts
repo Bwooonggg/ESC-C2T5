@@ -20,7 +20,7 @@ import type { LlmClient } from './adapters/llm/llm-client.js';
 import { StubLlmClient } from './adapters/llm/stub-llm.js';
 import type { EmailProvider } from './adapters/email/email-provider.js';
 import { FakeEmailProvider } from './adapters/email/fake-email.js';
-import { createResendEmailProvider } from './adapters/email/resend-email.js';
+import { createBrevoEmailProvider } from './adapters/email/brevo-email.js';
 import { createInsightService } from './services/insight.service.js';
 import { createPreferenceService } from './services/preference.service.js';
 import { createNotifierService } from './services/notifier.service.js';
@@ -37,20 +37,20 @@ function createLlmClient(config: AppConfig): LlmClient {
     );
 }
 
-/** Resend needs credentials; missing ones fail startup rather than the first send. */
+/** Brevo needs credentials; missing ones fail startup rather than the first send. */
 function createEmailProvider(config: AppConfig): EmailProvider {
-    if (config.emailProvider === 'resend') {
+    if (config.emailProvider === 'brevo') {
         const missing = [
-            config.resendApiKey === null ? 'RESEND_API_KEY' : null,
+            config.brevoApiKey === null ? 'BREVO_API_KEY' : null,
             config.emailFrom === null ? 'EMAIL_FROM' : null,
         ].filter((key): key is string => key !== null);
         if (missing.length > 0) {
             throw new Error(
-                `EMAIL_PROVIDER=resend requires ${missing.join(' and ')} to be set.`,
+                `EMAIL_PROVIDER=brevo requires ${missing.join(' and ')} to be set.`,
             );
         }
-        return createResendEmailProvider({
-            apiKey: config.resendApiKey as string,
+        return createBrevoEmailProvider({
+            apiKey: config.brevoApiKey as string,
             from: config.emailFrom as string,
         });
     }

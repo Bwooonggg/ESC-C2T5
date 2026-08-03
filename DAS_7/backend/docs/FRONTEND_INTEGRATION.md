@@ -4,8 +4,21 @@ Quick reference for the centralized frontend team: how to talk to the Parent Ins
 
 ## Where to send requests
 
-- **Integrated deployment:** call `/api/insights/...` — the gateway (Traefik) routes it to us and strips the `/api/insights` part.
-- **Local dev against our service alone:** the service listens on port **4000** and its routes start at `/api/...` (a Vite proxy `'/api' → 'http://localhost:4000'` works as-is).
+Always call **`/api/insights/...`** — the same relative path in every environment.
+
+- **Integrated deployment:** Traefik matches `/api/insights/*`, **strips that prefix**, and forwards to us.
+- **Local dev against our service alone:** the service listens on port **4000** and mounts its routes at the **root** (`/health`, `/me`, `/students/...`). Point the Vite proxy at it and strip the prefix exactly as Traefik does:
+
+```ts
+proxy: {
+  '/api/insights': {
+    target: 'http://localhost:4000',
+    rewrite: (path) => path.replace(/^\/api\/insights/, ''),
+  },
+}
+```
+
+Because both the gateway and the dev proxy strip, our service sees the same paths in both environments — and your code never needs an environment variable or a per-environment base URL.
 
 ## Logging in
 
@@ -18,6 +31,14 @@ Authorization: Bearer <supabase access token>
 - No/invalid/expired token → `401`.
 - A logged-in user who isn't a registered parent in our system also gets `401`.
 - Parents can only see **their own** children and settings. Asking for someone else's returns `404` — exactly as if it didn't exist.
+
+### Until Supabase login lands
+
+The frontend does not send tokens yet. To keep you unblocked, our backend accepts **tokenless** requests when `AUTH_DEV_SUB` is set and `NODE_ENV` is not `production` — each one is treated as a single fixed seeded parent.
+
+- Dev only, and it fails closed: in production a tokenless request is always `401`.
+- A **present but invalid** header never falls back to it. Send *no* `Authorization` header at all, or a valid token — a stale or malformed token gives `401`, not the dev parent. (This trips people up while debugging.)
+- Nothing changes on your side when login lands: start sending the header and the fallback stops applying. `AUTH_DEV_SUB` is then removed from the deployment.
 
 ## Response format
 
@@ -40,7 +61,7 @@ Every response (success or error) is wrapped the same way:
 | `PUT /parents/:parentId/preferences` | `NotificationPreference` — saves email settings |
 | `GET /health` | `{ ok: true }` — no auth needed |
 
-(Paths above are shown without the `/api` or `/api/insights` prefix — add whichever applies, see "Where to send requests".)
+(Paths above are shown **without** the `/api/insights` prefix — prepend it to every one. See "Where to send requests".)
 
 The only request body in the whole API is the preferences `PUT`:
 
@@ -84,7 +105,7 @@ Good to know:
 | Status | `error` value | Meaning / what to show |
 |---|---|---|
 | 401 | `unauthorised` | Not logged in (or session expired) → send to login |
-| 404 | `progressUnavailable` | Unknown student, or not this parent's child → "try again later" style message |
+| 404 | `progressUnavailable` | Unknown student, or not this parent's child. **Not retryable** — re-fetch `/me` and check the student ids |
 | 503 | `progressUnavailable` | Student has no progress data yet |
 | 503 | `summaryUnavailable` | Summary couldn't be generated right now → retry later |
 | 404 | `summaryUnavailable` | Recommendations requested before any summary exists (load the dashboard first) |
@@ -95,6 +116,6 @@ Good to know:
 
 ## Email notifications
 
-There is **no endpoint** for sending notification emails — a background timer in our service sends periodic summary emails based on each parent's saved preference. The frontend only needs the two preferences endpoints (a settings screen with an on/off toggle, a frequency dropdown, and an email field).
+There is **no endpoint** for sending notification emails — a background timer in our service sends periodic summary emails based on each parent's saved preference (enabled per deployment via `SCHEDULER_ENABLED`, off by default). The frontend only needs the two preferences endpoints (a settings screen with an on/off toggle, a frequency dropdown, and an email field).
 
 Questions → DAS 7 team. Full technical details: `ARCHITECTURE.md` in this folder.

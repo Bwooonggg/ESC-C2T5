@@ -99,7 +99,7 @@ describe('createApp', () => {
         llmModel: null,
         llmTimeoutMs: 10000,
         emailProvider: 'fake',
-        resendApiKey: null,
+        brevoApiKey: null,
         emailFrom: null,
         schedulerEnabled: false,
         schedulerTickMs: 900000,
@@ -107,17 +107,25 @@ describe('createApp', () => {
     };
     const deps = { config } as Deps;
 
-    it('serves GET /api/health without authentication', async () => {
-        const res = await request(createApp(deps)).get('/api/health');
+    it('serves GET /health without authentication', async () => {
+        const res = await request(createApp(deps)).get('/health');
 
         expect(res.status).toBe(200);
         expect(res.body).toEqual({ ok: true, data: { ok: true } });
     });
 
+    it('does not answer on the gateway-prefixed path', async () => {
+        // The public URL is /api/insights/health; Traefik and the Vite proxy both
+        // strip that prefix, so the app itself must never see it.
+        const res = await request(createApp(deps)).get('/api/insights/health');
+
+        expect(res.status).toBe(401);
+    });
+
     it('rejects an unauthenticated request to a route below health', async () => {
         // Everything after the health mount sits behind createAuthenticate, so an
-        // unknown /api path is rejected as unauthorised before notFoundHandler runs.
-        const res = await request(createApp(deps)).get('/api/me');
+        // unknown path is rejected as unauthorised before notFoundHandler runs.
+        const res = await request(createApp(deps)).get('/me');
 
         expect(res.status).toBe(401);
         expect(res.body).toEqual({ ok: false, error: 'unauthorised' });

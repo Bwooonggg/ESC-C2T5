@@ -12,7 +12,7 @@ describeIntegration('track progress (IT7A)', () => {
 
     it('IT7A-01/02 returns progress with a generated summary, then reuses it', async () => {
         const res = await request(h.app)
-            .get(`/api/students/${h.studentA1.studentId}/track-progress`)
+            .get(`/students/${h.studentA1.studentId}/track-progress`)
             .set('Authorization', `Bearer ${h.tokenA}`);
 
         expect(res.status).toBe(200);
@@ -32,7 +32,7 @@ describeIntegration('track progress (IT7A)', () => {
 
         // Second call: no new progress, so the stored summary is served as-is.
         const again = await request(h.app)
-            .get(`/api/students/${h.studentA1.studentId}/track-progress`)
+            .get(`/students/${h.studentA1.studentId}/track-progress`)
             .set('Authorization', `Bearer ${h.tokenA}`);
 
         expect(again.status).toBe(200);
@@ -42,10 +42,10 @@ describeIntegration('track progress (IT7A)', () => {
 
     it('serves the same summary from the standalone summary endpoint', async () => {
         const viaTrack = await request(h.app)
-            .get(`/api/students/${h.studentA1.studentId}/track-progress`)
+            .get(`/students/${h.studentA1.studentId}/track-progress`)
             .set('Authorization', `Bearer ${h.tokenA}`);
         const viaSummary = await request(h.app)
-            .get(`/api/students/${h.studentA1.studentId}/summary`)
+            .get(`/students/${h.studentA1.studentId}/summary`)
             .set('Authorization', `Bearer ${h.tokenA}`);
 
         expect(viaSummary.status).toBe(200);
@@ -54,7 +54,7 @@ describeIntegration('track progress (IT7A)', () => {
 
     it('IT7A-04 returns 404 progressUnavailable for a student that does not exist', async () => {
         const res = await request(h.app)
-            .get(`/api/students/${randomUUID()}/track-progress`)
+            .get(`/students/${randomUUID()}/track-progress`)
             .set('Authorization', `Bearer ${h.tokenA}`);
 
         expect(res.status).toBe(404);
@@ -63,7 +63,7 @@ describeIntegration('track progress (IT7A)', () => {
 
     it('IT7A-04 returns 404 progressUnavailable for another parent\'s student', async () => {
         const res = await request(h.app)
-            .get(`/api/students/${h.studentB1.studentId}/track-progress`)
+            .get(`/students/${h.studentB1.studentId}/track-progress`)
             .set('Authorization', `Bearer ${h.tokenA}`);
 
         expect(res.status).toBe(404);
@@ -72,7 +72,7 @@ describeIntegration('track progress (IT7A)', () => {
 
     it('IT7A-05 returns 503 progressUnavailable when the student has no progress', async () => {
         const res = await request(h.app)
-            .get(`/api/students/${h.studentA2.studentId}/track-progress`)
+            .get(`/students/${h.studentA2.studentId}/track-progress`)
             .set('Authorization', `Bearer ${h.tokenA}`);
 
         expect(res.status).toBe(503);
@@ -84,7 +84,7 @@ describeIntegration('track progress (IT7A)', () => {
         h.llm.mode = 'fail';
 
         const res = await request(h.app)
-            .get(`/api/students/${s.studentId}/track-progress`)
+            .get(`/students/${s.studentId}/track-progress`)
             .set('Authorization', `Bearer ${h.tokenA}`);
 
         expect(res.status).toBe(503);

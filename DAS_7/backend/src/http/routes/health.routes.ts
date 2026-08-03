@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { ok } from '../envelope.js';
 
-/** Unauthenticated liveness probe, mounted at /api/health. */
+/** Unauthenticated liveness probe, mounted at /health (public: /api/insights/health). */
 export function healthRoutes(): Router {
     const router = Router();
 

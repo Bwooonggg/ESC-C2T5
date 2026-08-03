@@ -9,7 +9,7 @@ participant "Scheduler" as Scheduler
 participant "NotifierService" as Notifier
 participant "Repositories\n(Supabase)" as Repo
 participant "InsightService" as Insight
-participant "EmailProvider\n(Resend)" as Email
+participant "EmailProvider\n(Brevo)" as Email
 
 note over Clock, Email
   This flow has no HTTP endpoint. It is driven by an in-process

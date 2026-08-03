@@ -18,7 +18,7 @@ The dashboard UI lives in `../frontend` (React + Vite). This backend serves it a
 The service is three layers deep and abstracts only what is genuinely swappable:
 
 - The **LLM provider** (undecided) → behind an interface.
-- The **email provider** (Resend today) → behind an interface.
+- The **email provider** (Brevo today) → behind an interface.
 
 Everything else — Express, Supabase, the domain types — is a fixed decision, and abstracting a fixed decision is cost without payoff.
 
@@ -33,7 +33,7 @@ An earlier iteration of this service put a five-layer hexagonal architecture, a 
 | `notification_jobs` + worker leases | Job tables coordinate multiple workers. We run one process; "who is due for an email" is *computed* from data on every tick, so a missed tick self-heals. |
 | DI container | A plain `Deps` object built in `index.ts` and passed to `createApp()` gives the same test-swappability. |
 | zod / validation library | Exactly one request body exists in the whole API; it is validated by hand. |
-| Resend SDK | Sending an email is one `fetch` call. |
+| Email provider SDK | Sending an email is one `fetch` call. |
 
 Runtime dependencies, in full: `express` (v5), `@supabase/supabase-js`, `jose` (JWT verification), `dotenv`. Development: TypeScript, Jest + ts-jest, Supertest, `tsx` (runs `scripts/seed.ts` and the dev server without a build step), `cross-env`.
 
@@ -50,11 +50,11 @@ flowchart LR
         SVC[Services]
         REPOS[Repos]
         LLM[LlmClient\nstub today]
-        MAIL[EmailProvider\nResend]
+        MAIL[EmailProvider\nBrevo]
     end
     DB[(Supabase Postgres\nschema: insight)]
     AUTH[Supabase Auth\nJWKS]
-    RESEND[Resend API]
+    BREVO[Brevo API]
 
     FE -- "Bearer JWT" --> API
     API --> SVC
@@ -64,11 +64,11 @@ flowchart LR
     SVC --> MAIL
     REPOS --> DB
     API -. "verify token (cached keys)" .- AUTH
-    MAIL --> RESEND
+    MAIL --> BREVO
 ```
 
 - **One process** runs both the HTTP API and the notification scheduler. There is no separate worker deployment.
-- In the integrated platform, Traefik routes `/api/insights/*` to this service and **strips the prefix**, so the service mounts its routes at `/api/*` locally (matching the frontend's dev proxy, which forwards `/api` → `localhost:4000`).
+- In the integrated platform, Traefik routes `/api/insights/*` to this service and **strips the prefix**, so the service mounts its routes at the **root** (`/health`, `/me`, `/students/*`, `/parents/*`) — the public prefix belongs to the gateway, never to the app. This matches DAS 1 and DAS 3, which are also reached prefix-free over the internal network. The frontend's Vite dev proxy performs the same match-and-strip against `localhost:4000`, so the app sees identical paths in both environments.
 - The database is the **centralized Supabase instance shared by all subsystems**. DAS 7 owns its own Postgres schema (`insight`) and never touches other services' schemas (schema-per-service rule from `OVERALL_ARCHITECTURE.md`).
 
 ## 4. Layers and directory structure
@@ -128,7 +128,7 @@ backend/
 │       │   └── stub-llm.ts         # deterministic stub — only implementation today
 │       └── email/
 │           ├── email-provider.ts   # EmailProvider interface + EmailSendError
-│           ├── resend-email.ts     # one fetch POST to api.resend.com/emails
+│           ├── brevo-email.ts      # one fetch POST to api.brevo.com/v3/smtp/email
 │           └── fake-email.ts       # public history[] + fail toggle (tests)
 └── test/
     ├── unit/            # error-handler, mappers, auth, stub-llm, insight-service,
@@ -150,15 +150,17 @@ Defined by the mock frontend (`frontend/src/api/client.ts`, `summaryApi.ts`, `re
 { ok: false, error: string }  // failure — error string is shown/logged by the UI
 ```
 
+Paths below are the routes **as the service mounts them**. Browsers reach them through the gateway, which prepends `/api/insights` (§3) — so `/me` here is `GET /api/insights/me` from the frontend.
+
 | # | Method | Path | Returns (`data`) |
 |---|---|---|---|
-| 1 | GET | `/api/health` | `{ ok: true }` |
-| 2 | GET | `/api/me` | `{ parent: Parent, students: Student[] }` — resolved from the JWT, *not* from a query param |
-| 3 | GET | `/api/students/:studentId/track-progress` | `{ progress: ProgressRecord[], summary: Summary }` |
-| 4 | GET | `/api/students/:studentId/summary` | `Summary` |
-| 5 | POST | `/api/students/:studentId/recommendations` (no body) | `Recommendation` |
-| 6 | GET | `/api/parents/:parentId/preferences` | `NotificationPreference` |
-| 7 | PUT | `/api/parents/:parentId/preferences` | `NotificationPreference` |
+| 1 | GET | `/health` | `{ ok: true }` |
+| 2 | GET | `/me` | `{ parent: Parent, students: Student[] }` — resolved from the JWT, *not* from a query param |
+| 3 | GET | `/students/:studentId/track-progress` | `{ progress: ProgressRecord[], summary: Summary }` |
+| 4 | GET | `/students/:studentId/summary` | `Summary` |
+| 5 | POST | `/students/:studentId/recommendations` (no body) | `Recommendation` |
+| 6 | GET | `/parents/:parentId/preferences` | `NotificationPreference` |
+| 7 | PUT | `/parents/:parentId/preferences` | `NotificationPreference` |
 
 PUT body (the only request body in the API): `{ enabled: boolean, frequency: 'Weekly'|'Fortnightly'|'Monthly', recipientEmail: string }`.
 
@@ -174,7 +176,7 @@ There is **no REST endpoint for notifications** — that flow is timer-driven (�
 
 ## 6. Authentication and authorization
 
-**Authentication** (who are you?) — every `/api/*` route except `/api/health`:
+**Authentication** (who are you?) — every route except `/health`:
 
 1. Read `Authorization: Bearer <token>`. Missing or malformed → **401**.
 2. Verify the JWT locally with `jose`: `jwtVerify(token, key, { issuer: SUPABASE_URL + '/auth/v1' })`. Invalid/expired token → **401**, and the reason is never disclosed to the caller.
@@ -490,10 +492,12 @@ interface SentEmail { to: string; subject: string; body: string; }
 interface EmailProvider { send(email: SentEmail): Promise<void>; }  // throws EmailSendError
 ```
 
-- `ResendEmailProvider` — one `fetch` POST to `https://api.resend.com/emails` with `Authorization: Bearer ${RESEND_API_KEY}`, a 10s `AbortSignal.timeout`, and no retries; non-2xx or network error → `EmailSendError`. No SDK.
+- `createBrevoEmailProvider` — one `fetch` POST to `https://api.brevo.com/v3/smtp/email` with an `api-key` header, a 10s `AbortSignal.timeout`, and no retries; non-2xx or network error → `EmailSendError`. No SDK, and the key never appears in a thrown message.
 - `FakeEmailProvider` — public `history: SentEmail[]` and a fail toggle. The IT7B tests assert directly against `history` ("EmailProvider has the email in its history").
 
-The factory sits in `index.ts` alongside the LLM one. Selecting `resend` requires both `RESEND_API_KEY` and `EMAIL_FROM`; whichever is missing is named in a startup error. Selecting `fake` logs a warning at startup, because a service that silently records mail in memory instead of delivering it is worth one noisy line in the log.
+The factory sits in `index.ts` alongside the LLM one. Selecting `brevo` requires both `BREVO_API_KEY` and `EMAIL_FROM`; whichever is missing is named in a startup error. Selecting `fake` logs a warning at startup, because a service that silently records mail in memory instead of delivering it is worth one noisy line in the log.
+
+**Why Brevo and not Resend.** The service originally used Resend. Its free tier without a verified domain only delivers to the account owner's own address, which makes it impossible to email a real parent — or a teammate during a demo. Brevo lifts that restriction once a **single sender address** is verified (Senders & IPs → Senders), with no domain ownership required, at 300 emails/day. The swap cost one adapter file and one factory case, which is the seam working as intended. **Revisit trigger:** if the team acquires a domain, verifying it in any provider improves deliverability and removes the per-address verification step.
 
 ## 11. Testing strategy → IT7x mapping
 
@@ -534,8 +538,8 @@ Harness notes:
 | `SEED_AUTH_USER_ID` | `scripts/seed.ts` only — the auth user the demo parent is linked to. Blank leaves `auth_user_id` null, which makes the seeded parent unreachable through the API. Use a *third* auth user, not either `TEST_USER_*`: the integration harness owns those two parent rows and refuses to run if it finds one mapped to a parent it did not create. |
 | `LLM_PROVIDER` | `stub` (default) \| `anthropic` \| `openai` \| `gemini` |
 | `LLM_API_KEY`, `LLM_MODEL`, `LLM_TIMEOUT_MS` | for the future real provider |
-| `EMAIL_PROVIDER` | `resend` \| `fake` |
-| `RESEND_API_KEY`, `EMAIL_FROM` | Resend credentials/sender |
+| `EMAIL_PROVIDER` | `brevo` \| `fake` |
+| `BREVO_API_KEY`, `EMAIL_FROM` | Brevo API key and a sender address verified in Brevo |
 | `SCHEDULER_ENABLED`, `SCHEDULER_TICK_MS` | notification timer (default tick 15 min) |
 | `NOTIFY_WEEKLY_MS`, `NOTIFY_FORTNIGHTLY_MS`, `NOTIFY_MONTHLY_MS` | demo overrides; blank = 7/14/30 days |
 | `SUPABASE_ANON_KEY` | tests only — mint real JWTs via `signInWithPassword` |

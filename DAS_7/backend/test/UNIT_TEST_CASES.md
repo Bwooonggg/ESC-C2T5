@@ -66,7 +66,7 @@ run offline against in-file fakes — no database, no network, no API keys.
 - **Row mappers** (12 cases): snake_case → camelCase for all six row types, bare-date
   preservation, and internal columns being dropped.
 - **Error-to-HTTP mapping** (11 cases): every `ApiError` subclass, the generic-error 500 path,
-  unknown routes, and `/api/health` being reachable without a token.
+  unknown routes, and `/health` being reachable without a token.
 - **Stub generator formatting** (9 cases) and **scheduler timer behaviour** (7 cases).
 - **The `FakeEmailProvider` test double itself** (4 cases).
 - **Integration coverage** — 26 cases against real Supabase, documented separately in

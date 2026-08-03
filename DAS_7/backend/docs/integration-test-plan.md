@@ -64,8 +64,8 @@ Traces to `sequenceDiagram7_1.puml`.
 
 | Case | Scenario | Expected |
 | --- | --- | --- |
-| **IT7A-01 / 02** | `GET /api/students/{studentA1}/track-progress` as parent A | 200 with `progress` (date-ascending) and a generated `summary`; the summary is persisted; a second identical call returns the **same** summary id with the LLM call count still at 1 |
-| — | `GET /api/students/{studentA1}/summary` | 200 with the same stored summary — the standalone endpoint shares the same code path |
+| **IT7A-01 / 02** | `GET /students/{studentA1}/track-progress` as parent A | 200 with `progress` (date-ascending) and a generated `summary`; the summary is persisted; a second identical call returns the **same** summary id with the LLM call count still at 1 |
+| — | `GET /students/{studentA1}/summary` | 200 with the same stored summary — the standalone endpoint shares the same code path |
 | **IT7A-04** | A student id that does not exist | 404 `progressUnavailable` |
 | **IT7A-04** | `studentB1` requested by parent A | 404 `progressUnavailable`, byte-identical to the nonexistent case |
 | **IT7A-05** | `studentA2` (exists, no progress records) | 503 `progressUnavailable` |
@@ -75,7 +75,7 @@ Traces to `sequenceDiagram7_1.puml`.
 
 | Case | Scenario | Expected |
 | --- | --- | --- |
-| **IT7A-03** | Summary primed, then `POST /api/students/{studentA1}/recommendations` | 200; `data.summaryId` equals the stored summary's id; content carries newline-separated lines; the row is persisted |
+| **IT7A-03** | Summary primed, then `POST /students/{studentA1}/recommendations` | 200; `data.summaryId` equals the stored summary's id; content carries newline-separated lines; the row is persisted |
 | **IT7A-08** | Student with progress but no summary ever generated | 404 `summaryUnavailable` — *not* 503, and no summary is generated as a side effect |
 | **IT7A-09** | Primed student; LLM switched to `fail` | 503 `recommendationUnavailable`, nothing stored |
 | — | `POST` against `studentB1` as parent A | 404 `progressUnavailable` |
@@ -84,9 +84,9 @@ Traces to `sequenceDiagram7_1.puml`.
 
 | Case | Scenario | Expected |
 | --- | --- | --- |
-| — | `GET /api/me` with no token | 401 `unauthorised` |
-| — | `GET /api/me` with a non-JWT bearer value | 401 `unauthorised` |
-| — | `GET /api/me` with parent A's real token | 200; the parent and both their students |
+| — | `GET /me` with no token | 401 `unauthorised` |
+| — | `GET /me` with a non-JWT bearer value | 401 `unauthorised` |
+| — | `GET /me` with parent A's real token | 200; the parent and both their students |
 | **IT7A-06 (authn)** | `track-progress` with no token | 401 `unauthorised` |
 | **IT7A-06 (authz)** | Parent A requesting `studentB1` | 404 `progressUnavailable`, with the response body compared against a random-UUID request and asserted identical |
 

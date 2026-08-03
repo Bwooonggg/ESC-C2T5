@@ -13,8 +13,8 @@ export interface AppConfig {
     llmApiKey: string | null;
     llmModel: string | null;
     llmTimeoutMs: number;                        // default 10000
-    emailProvider: 'resend' | 'fake';
-    resendApiKey: string | null;
+    emailProvider: 'brevo' | 'fake';
+    brevoApiKey: string | null;
     emailFrom: string | null;
     schedulerEnabled: boolean;                   // default false
     schedulerTickMs: number;                     // default 900000 (15 min)
@@ -25,7 +25,7 @@ export interface AppConfig {
 
 const NODE_ENVS = ['development', 'test', 'production'] as const;
 const LLM_PROVIDERS = ['stub', 'anthropic', 'openai', 'gemini'] as const;
-const EMAIL_PROVIDERS = ['resend', 'fake'] as const;
+const EMAIL_PROVIDERS = ['brevo', 'fake'] as const;
 
 const DEFAULT_NOTIFY_INTERVALS_MS: Record<NotificationFrequency, number> = {
     Weekly: 604800000,
@@ -97,7 +97,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
         llmModel: optional(env, 'LLM_MODEL'),
         llmTimeoutMs: num(env, 'LLM_TIMEOUT_MS', 10000),
         emailProvider: oneOf(env, 'EMAIL_PROVIDER', EMAIL_PROVIDERS, 'fake'),
-        resendApiKey: optional(env, 'RESEND_API_KEY'),
+        brevoApiKey: optional(env, 'BREVO_API_KEY'),
         emailFrom: optional(env, 'EMAIL_FROM'),
         schedulerEnabled: bool(env, 'SCHEDULER_ENABLED', false),
         schedulerTickMs: num(env, 'SCHEDULER_TICK_MS', 900000),

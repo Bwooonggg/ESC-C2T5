@@ -13,7 +13,7 @@ participant "Repositories\n(Supabase)" as Repo
 participant "LlmClient" as Llm
 
 Parent -> UI : view child's progress
-UI -> Auth : GET /api/students/{studentId}/track-progress\nAuthorization: Bearer <token>
+UI -> Auth : GET /api/insights/students/{studentId}/track-progress\nAuthorization: Bearer <token>
 Auth -> Auth : verify signature against cached JWKS
 Auth -> Repo : parentRepo.byAuthUserId(sub)
 Repo --> Auth : Parent
@@ -69,7 +69,7 @@ else authenticated
 
       opt Parent requests recommendations
         Parent -> UI : click "Get recommendations"
-        UI -> Route : POST /api/students/{studentId}/recommendations
+        UI -> Route : POST /api/insights/students/{studentId}/recommendations
         Route -> Service : createRecommendation(studentId)
         Service -> Repo : summaryRepo.latestByStudent(studentId)
         Repo --> Service : Summary or null

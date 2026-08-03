@@ -13,7 +13,7 @@ describeIntegration('preferences API (integration)', () => {
         await h?.cleanup();
     }, 60000);
 
-    const prefsPath = (parentId: string) => `/api/parents/${parentId}/preferences`;
+    const prefsPath = (parentId: string) => `/parents/${parentId}/preferences`;
 
     it('GET returns the non-persisted default when no row exists', async () => {
         const res = await request(h.app)

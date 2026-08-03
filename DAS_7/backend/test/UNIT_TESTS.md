@@ -68,7 +68,7 @@ internal columns (`created_at`, `auth_user_id`) never reach the domain object.
 **`error-handler.test.ts`** — each `ApiError` subclass maps to its status with its message
 intact; a generic `Error` becomes 500 `internalError` without leaking its message; a rejected
 async handler reaches the middleware (Express 5 behaviour); unknown routes return 404
-`notFound`; and `/api/health` is reachable without a token while everything below it is not.
+`notFound`; and `/health` is reachable without a token while everything below it is not.
 
 **`scheduler.test.ts`** — under fake timers: nothing runs before `start()`, one run per tick
 carrying the current `Date`, a rejecting run is logged and later ticks still fire, `stop()`

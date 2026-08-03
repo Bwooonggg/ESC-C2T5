@@ -13,9 +13,9 @@ describeIntegration('auth integration (IT7A-06)', () => {
         await h?.cleanup();
     });
 
-    describe('GET /api/me', () => {
+    describe('GET /me', () => {
         it('rejects a request with no token', async () => {
-            const res = await request(h.app).get('/api/me');
+            const res = await request(h.app).get('/me');
 
             expect(res.status).toBe(401);
             expect(res.body).toEqual({ ok: false, error: 'unauthorised' });
@@ -23,7 +23,7 @@ describeIntegration('auth integration (IT7A-06)', () => {
 
         it('rejects a token that is not a JWT', async () => {
             const res = await request(h.app)
-                .get('/api/me')
+                .get('/me')
                 .set('Authorization', 'Bearer garbage');
 
             expect(res.status).toBe(401);
@@ -32,7 +32,7 @@ describeIntegration('auth integration (IT7A-06)', () => {
 
         it('returns the signed-in parent and their students', async () => {
             const res = await request(h.app)
-                .get('/api/me')
+                .get('/me')
                 .set('Authorization', `Bearer ${h.tokenA}`);
 
             expect(res.status).toBe(200);
@@ -50,7 +50,7 @@ describeIntegration('auth integration (IT7A-06)', () => {
     describe('protected student routes', () => {
         it('IT7A-06 (authn): rejects track-progress without a token', async () => {
             const res = await request(h.app)
-                .get(`/api/students/${h.studentA1.studentId}/track-progress`);
+                .get(`/students/${h.studentA1.studentId}/track-progress`);
 
             expect(res.status).toBe(401);
             expect(res.body).toEqual({ ok: false, error: 'unauthorised' });
@@ -58,11 +58,11 @@ describeIntegration('auth integration (IT7A-06)', () => {
 
         it("IT7A-06 (authz): another parent's student is indistinguishable from a nonexistent one", async () => {
             const foreign = await request(h.app)
-                .get(`/api/students/${h.studentB1.studentId}/track-progress`)
+                .get(`/students/${h.studentB1.studentId}/track-progress`)
                 .set('Authorization', `Bearer ${h.tokenA}`);
 
             const nonexistent = await request(h.app)
-                .get(`/api/students/${randomUUID()}/track-progress`)
+                .get(`/students/${randomUUID()}/track-progress`)
                 .set('Authorization', `Bearer ${h.tokenA}`);
 
             expect(foreign.status).toBe(404);

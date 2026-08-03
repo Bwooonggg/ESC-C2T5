@@ -33,7 +33,7 @@ const BASE_CONFIG: AppConfig = {
     llmModel: null,
     llmTimeoutMs: 10000,
     emailProvider: 'fake',
-    resendApiKey: null,
+    brevoApiKey: null,
     emailFrom: null,
     schedulerEnabled: false,
     schedulerTickMs: 900000,

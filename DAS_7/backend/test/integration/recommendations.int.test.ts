@@ -12,7 +12,7 @@ describeIntegration('recommendations (IT7A)', () => {
     /** A recommendation is generated from a stored summary, so prime one first. */
     async function primeSummary(studentId: string): Promise<void> {
         const res = await request(h.app)
-            .get(`/api/students/${studentId}/track-progress`)
+            .get(`/students/${studentId}/track-progress`)
             .set('Authorization', `Bearer ${h.tokenA}`);
         expect(res.status).toBe(200);
     }
@@ -22,7 +22,7 @@ describeIntegration('recommendations (IT7A)', () => {
         const stored = await h.deps.summaryRepo.latestByStudent(h.studentA1.studentId);
 
         const res = await request(h.app)
-            .post(`/api/students/${h.studentA1.studentId}/recommendations`)
+            .post(`/students/${h.studentA1.studentId}/recommendations`)
             .set('Authorization', `Bearer ${h.tokenA}`);
 
         expect(res.status).toBe(200);
@@ -36,7 +36,7 @@ describeIntegration('recommendations (IT7A)', () => {
         const s = await h.createStudent({ parentId: h.parentA.parentId, withProgress: true });
 
         const res = await request(h.app)
-            .post(`/api/students/${s.studentId}/recommendations`)
+            .post(`/students/${s.studentId}/recommendations`)
             .set('Authorization', `Bearer ${h.tokenA}`);
 
         expect(res.status).toBe(404);
@@ -49,7 +49,7 @@ describeIntegration('recommendations (IT7A)', () => {
         h.llm.mode = 'fail';
 
         const res = await request(h.app)
-            .post(`/api/students/${h.studentA1.studentId}/recommendations`)
+            .post(`/students/${h.studentA1.studentId}/recommendations`)
             .set('Authorization', `Bearer ${h.tokenA}`);
 
         expect(res.status).toBe(503);
@@ -58,7 +58,7 @@ describeIntegration('recommendations (IT7A)', () => {
 
     it('returns 404 progressUnavailable for another parent\'s student', async () => {
         const res = await request(h.app)
-            .post(`/api/students/${h.studentB1.studentId}/recommendations`)
+            .post(`/students/${h.studentB1.studentId}/recommendations`)
             .set('Authorization', `Bearer ${h.tokenA}`);
 
         expect(res.status).toBe(404);
