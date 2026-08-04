@@ -42,6 +42,7 @@ needed before a single query works. Both are done, but they are listed here beca
 | ------------ | --------- | ---------- | ----- |
 | 2026-07-29 | `0001_insight_schema.sql` | Vay | Creates schema `insight` + 8 tables. Verified: all 8 reachable. |
 | 2026-07-29 | `0002_grants_and_rls.sql` | Vay | Grants to `service_role` only; RLS enabled with no policies. Verified: `anon` read → HTTP 401. |
+| | `0003_email_notifications_summary_fk.sql` | | Re-points `email_notifications.summary_id` at `ON DELETE SET NULL` so the send log stops blocking deletion of regenerable summaries. |
 
 **Verified state as of 2026-07-29:** all 8 tables present and reachable with the
 service-role key; every table empty (the seed has not been run); `anon` blocked.

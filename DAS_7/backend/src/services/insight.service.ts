@@ -37,7 +37,10 @@ export function createInsightService(deps: InsightDeps): InsightService {
         let content: string;
         try {
             content = await llm.generateSummary({ student, records });
-        } catch {
+        } catch (err) {
+            // The 503 body deliberately says nothing about why; the operator still needs to
+            // know, so the real cause is logged here rather than discarded.
+            console.error(`[insight] summary generation failed for student ${studentId}:`, err);
             // Thrown before the insert below, so a failed generation stores nothing.
             throw new UnavailableError('summaryUnavailable');
         }
@@ -64,7 +67,8 @@ export function createInsightService(deps: InsightDeps): InsightService {
         let content: string;
         try {
             content = await llm.generateRecommendation({ student, summary: latest });
-        } catch {
+        } catch (err) {
+            console.error(`[insight] recommendation generation failed for student ${studentId}:`, err);
             throw new UnavailableError('recommendationUnavailable');
         }
 

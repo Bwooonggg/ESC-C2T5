@@ -50,7 +50,13 @@ export function createOpenRouterLlmClient(
                         { role: 'user', content: user },
                     ],
                     temperature: 0.4,
-                    max_tokens: 600,
+                    // Generous, because reasoning models (gpt-oss, o-series, R1) spend
+                    // tokens on hidden chain-of-thought before emitting any `content`.
+                    // Too low and they hit the cap mid-thought, returning content: null.
+                    max_tokens: 2000,
+                    // Suppress reasoning output where the model supports it — parents
+                    // must never see chain-of-thought, and it wastes the budget.
+                    reasoning: { exclude: true },
                 }),
                 signal: AbortSignal.timeout(config.timeoutMs),
             });
@@ -65,10 +71,26 @@ export function createOpenRouterLlmClient(
             throw new LlmUnavailableError(`openrouter responded ${response.status}`);
         }
 
-        const body = await response.json().catch(() => null) as
-            { choices?: Array<{ message?: { content?: string } }> } | null;
-        const text = body?.choices?.[0]?.message?.content?.trim();
-        if (!text) throw new LlmUnavailableError('openrouter returned no usable text');
+        const body = await response.json().catch(() => null) as {
+            choices?: Array<{ finish_reason?: string; message?: { content?: string } }>;
+            error?: { message?: string };
+        } | null;
+
+        // OpenRouter can return 200 with an error object, or with empty content when a
+        // reasoning model exhausts max_tokens before writing any answer. Name which.
+        if (body?.error?.message) {
+            throw new LlmUnavailableError(`openrouter error: ${body.error.message}`);
+        }
+
+        const choice = body?.choices?.[0];
+        const text = choice?.message?.content?.trim();
+        if (!text) {
+            const why = choice?.finish_reason === 'length'
+                ? 'hit max_tokens before producing any content — the model is likely a '
+                  + 'reasoning model that spent the budget thinking; try a smaller/non-reasoning model'
+                : 'returned empty content';
+            throw new LlmUnavailableError(`openrouter ${why}`);
+        }
 
         return text;
     }
