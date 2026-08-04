@@ -2,7 +2,7 @@ import { API_BASE_URL, createApiUrl } from "../../src/config/api";
 
 describe("API configuration", () => {
   it("exports the API base URL without a trailing slash", () => {
-    expect(API_BASE_URL).toBe("/api");
+    expect(API_BASE_URL).toBe("/api/insights");
   });
 
   it("stays relative, so the Vite proxy and same-origin production both work", () => {
@@ -12,9 +12,9 @@ describe("API configuration", () => {
 
   describe("createApiUrl", () => {
     it.each([
-      ["a path without a leading slash", "users", "/api/users"],
-      ["a path with a leading slash", "/users", "/api/users"],
-      ["a nested path", "students/s1/summary", "/api/students/s1/summary"],
+      ["a path without a leading slash", "users", "/api/insights/users"],
+      ["a path with a leading slash", "/users", "/api/insights/users"],
+      ["a nested path", "students/s1/summary", "/api/insights/students/s1/summary"],
     ])("joins %s to the API base URL", (_description, path, expectedUrl) => {
       expect(createApiUrl(path)).toBe(expectedUrl);
     });

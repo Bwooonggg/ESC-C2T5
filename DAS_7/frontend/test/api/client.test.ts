@@ -60,17 +60,17 @@ describe("request", () => {
 
         await request("/thing");
 
-        expect(fetchMock.mock.calls[0][0]).toBe("/api/thing");
+        expect(fetchMock.mock.calls[0][0]).toBe("/api/insights/thing");
     });
 });
 
 describe("endpoint methods", () => {
-    it("getCurrentParent calls GET /api/me", async () => {
+    it("getCurrentParent calls GET /api/insights/me", async () => {
         const fetchMock = mockFetch(okEnvelope({ parent: {}, students: [] }));
 
         await getCurrentParent();
 
-        expect(fetchMock.mock.calls[0][0]).toBe("/api/me");
+        expect(fetchMock.mock.calls[0][0]).toBe("/api/insights/me");
     });
 
     it("trackProgress interpolates the studentId", async () => {
@@ -78,7 +78,7 @@ describe("endpoint methods", () => {
 
         await trackProgress("s1");
 
-        expect(fetchMock.mock.calls[0][0]).toBe("/api/students/s1/track-progress");
+        expect(fetchMock.mock.calls[0][0]).toBe("/api/insights/students/s1/track-progress");
         expect(fetchMock.mock.calls[0][0]).not.toContain("${");
     });
 
@@ -87,7 +87,7 @@ describe("endpoint methods", () => {
 
         await getPreferences("p1");
 
-        expect(fetchMock.mock.calls[0][0]).toBe("/api/parents/p1/preferences");
+        expect(fetchMock.mock.calls[0][0]).toBe("/api/insights/parents/p1/preferences");
     });
 });
 
@@ -105,7 +105,7 @@ describe("savePreferences", () => {
         await savePreferences("p1", prefs);
 
         const [url, init] = fetchMock.mock.calls[0];
-        expect(url).toBe("/api/parents/p1/preferences");
+        expect(url).toBe("/api/insights/parents/p1/preferences");
         expect(init).toMatchObject({
             method: "PUT",
             headers: { "Content-Type": "application/json" },

@@ -1,7 +1,7 @@
 import { createApiUrl } from "../config/api";
 import type { ApiEnvelope, Summary } from "../types/domain";
 
-// GET /api/students/:studentId/summary  ->  the PM2 `Summary` entity.
+// GET /api/insights/students/:studentId/summary  ->  the PM2 `Summary` entity.
 //
 // The backend answers every route in the { ok, data } | { ok, error } envelope.
 // Unwrapping it here means callers get a Summary or an exception, and never

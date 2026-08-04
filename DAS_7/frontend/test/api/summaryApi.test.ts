@@ -33,7 +33,7 @@ describe("getSummary", () => {
 
         await getSummary("s1");
 
-        expect(fetchMock).toHaveBeenCalledWith("/api/students/s1/summary");
+        expect(fetchMock).toHaveBeenCalledWith("/api/insights/students/s1/summary");
         // Guards the exact defect: an uninterpolated literal.
         expect(fetchMock.mock.calls[0][0]).not.toContain("{studentId}");
     });

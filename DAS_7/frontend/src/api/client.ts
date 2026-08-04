@@ -51,14 +51,14 @@ export async function request<T>(path: string, init?: RequestInit): Promise<T> {
     return body.data;
 }
 
-// GET /api/me — the logged-in parent and their children.
+// GET /api/insights/me — the logged-in parent and their children.
 // Auth is a separate workstream; until it lands the backend resolves this to
 // the single seeded parent.
 export function getCurrentParent(): Promise<{ parent: Parent; students: Student[] }> {
     return request<{ parent: Parent; students: Student[] }>("/me");
 }
 
-// GET /api/students/:studentId/track-progress
+// GET /api/insights/students/:studentId/track-progress
 // Progress records and the summary together — see the <<include>> note above.
 export function trackProgress(
     studentId: string,
@@ -68,12 +68,12 @@ export function trackProgress(
     );
 }
 
-// GET /api/parents/:parentId/preferences
+// GET /api/insights/parents/:parentId/preferences
 export function getPreferences(parentId: string): Promise<NotificationPreference> {
     return request<NotificationPreference>(`/parents/${parentId}/preferences`);
 }
 
-// PUT /api/parents/:parentId/preferences
+// PUT /api/insights/parents/:parentId/preferences
 // parentId travels in the URL, so the body carries only the editable fields.
 export function savePreferences(
     parentId: string,
