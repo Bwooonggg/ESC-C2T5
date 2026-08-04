@@ -9,7 +9,7 @@ export interface AppConfig {
     supabaseJwksUrl: string;                     // default `${supabaseUrl}/auth/v1/.well-known/jwks.json`
     supabaseJwtSecret: string | null;            // legacy HS256 fallback (see Phase 3)
     authDevSub: string | null;                   // dev-only tokenless fallback
-    llmProvider: 'stub' | 'anthropic' | 'openai' | 'gemini';
+    llmProvider: 'stub' | 'openrouter' | 'anthropic' | 'openai' | 'gemini';
     llmApiKey: string | null;
     llmModel: string | null;
     llmTimeoutMs: number;                        // default 10000
@@ -24,7 +24,7 @@ export interface AppConfig {
 }
 
 const NODE_ENVS = ['development', 'test', 'production'] as const;
-const LLM_PROVIDERS = ['stub', 'anthropic', 'openai', 'gemini'] as const;
+const LLM_PROVIDERS = ['stub', 'openrouter', 'anthropic', 'openai', 'gemini'] as const;
 const EMAIL_PROVIDERS = ['brevo', 'fake'] as const;
 
 const DEFAULT_NOTIFY_INTERVALS_MS: Record<NotificationFrequency, number> = {

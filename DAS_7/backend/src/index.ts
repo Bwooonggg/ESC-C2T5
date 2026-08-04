@@ -18,6 +18,7 @@ import { createPreferenceRepo } from './repos/preference.repo.js';
 import { createEmailNotificationRepo } from './repos/emailNotification.repo.js';
 import type { LlmClient } from './adapters/llm/llm-client.js';
 import { StubLlmClient } from './adapters/llm/stub-llm.js';
+import { createOpenRouterLlmClient } from './adapters/llm/openrouter-llm.js';
 import type { EmailProvider } from './adapters/email/email-provider.js';
 import { FakeEmailProvider } from './adapters/email/fake-email.js';
 import { createBrevoEmailProvider } from './adapters/email/brevo-email.js';
@@ -32,6 +33,24 @@ import { createScheduler } from './services/scheduler.js';
  */
 function createLlmClient(config: AppConfig): LlmClient {
     if (config.llmProvider === 'stub') return new StubLlmClient();
+
+    if (config.llmProvider === 'openrouter') {
+        const missing = [
+            config.llmApiKey === null ? 'LLM_API_KEY' : null,
+            config.llmModel === null ? 'LLM_MODEL' : null,
+        ].filter((key): key is string => key !== null);
+        if (missing.length > 0) {
+            throw new Error(
+                `LLM_PROVIDER=openrouter requires ${missing.join(' and ')} to be set.`,
+            );
+        }
+        return createOpenRouterLlmClient({
+            apiKey: config.llmApiKey as string,
+            model: config.llmModel as string,
+            timeoutMs: config.llmTimeoutMs,
+        });
+    }
+
     throw new Error(
         `LLM provider '${config.llmProvider}' not implemented — see docs/ARCHITECTURE.md §10.1`,
     );

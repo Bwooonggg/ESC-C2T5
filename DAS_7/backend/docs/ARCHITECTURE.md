@@ -17,7 +17,7 @@ The dashboard UI lives in `../frontend` (React + Vite). This backend serves it a
 
 The service is three layers deep and abstracts only what is genuinely swappable:
 
-- The **LLM provider** (undecided) → behind an interface.
+- The **LLM provider** (OpenRouter today, stub offline) → behind an interface.
 - The **email provider** (Brevo today) → behind an interface.
 
 Everything else — Express, Supabase, the domain types — is a fixed decision, and abstracting a fixed decision is cost without payoff.
@@ -49,7 +49,7 @@ flowchart LR
         SCHED[Scheduler\nsetInterval tick]
         SVC[Services]
         REPOS[Repos]
-        LLM[LlmClient\nstub today]
+        LLM[LlmClient\nstub or OpenRouter]
         MAIL[EmailProvider\nBrevo]
     end
     DB[(Supabase Postgres\nschema: insight)]
@@ -125,7 +125,8 @@ backend/
 │   └── adapters/
 │       ├── llm/
 │       │   ├── llm-client.ts       # LlmClient interface + LlmUnavailableError
-│       │   └── stub-llm.ts         # deterministic stub — only implementation today
+│       │   ├── stub-llm.ts         # deterministic offline stub (the test/demo default)
+│       │   └── openrouter-llm.ts   # one fetch POST to openrouter.ai chat-completions
 │       └── email/
 │           ├── email-provider.ts   # EmailProvider interface + EmailSendError
 │           ├── brevo-email.ts      # one fetch POST to api.brevo.com/v3/smtp/email
@@ -479,9 +480,11 @@ interface LlmClient {
 class LlmUnavailableError extends Error {}   // any failure mode: down, timeout, malformed output
 ```
 
-`createLlmClient(config)` in `index.ts` switches on `LLM_PROVIDER`: `stub` (the default and only implemented case) returns `StubLlmClient`; **any** other value throws at startup, naming the provider and pointing back at this section. Failing at startup rather than on the first request is the point — a misconfigured provider is a deploy-time mistake, and it should not wait hours to surface as a 503.
+`createLlmClient(config)` in `index.ts` switches on `LLM_PROVIDER`. Two cases are implemented — `stub` (the default) and `openrouter`; `anthropic`, `openai` and `gemini` are accepted config values with no adapter yet, and throw at startup naming the provider and pointing back at this section. Selecting `openrouter` without `LLM_API_KEY` or `LLM_MODEL` throws too, naming whichever is missing. Failing at startup rather than on the first request is the point — a misconfigured provider is a deploy-time mistake, and it should not wait hours to surface as a 503.
 
-**Adding a real provider = one new file implementing the interface + one switch case + env keys** (`LLM_API_KEY`, `LLM_MODEL`, `LLM_TIMEOUT_MS` with `AbortSignal.timeout`). Output validation (non-empty, length caps, line structure for recommendations) belongs in the real adapter; anything malformed → `LlmUnavailableError`.
+**Adding a further provider = one new file implementing the interface + one switch case + env keys** (`LLM_API_KEY`, `LLM_MODEL`, `LLM_TIMEOUT_MS` with `AbortSignal.timeout`). Output validation (non-empty, length caps, line structure for recommendations) belongs in the real adapter; anything malformed → `LlmUnavailableError`.
+
+**Why OpenRouter as the first real provider.** It fronts every major vendor behind one OpenAI-compatible endpoint, so a single adapter reaches all of them and changing model is an `.env` edit rather than new code — useful while the team is still comparing models, and it keeps one account and one key instead of several. `createOpenRouterLlmClient` is one `fetch` to `/api/v1/chat/completions`, no SDK, with system prompts that forbid markdown and medical advice, a `max_tokens` cap, a length cap on summaries, and bullet/numbering stripping on recommendations so the `'\n'`-joined-lines contract holds even when a model ignores the instruction. **Costs:** an extra network hop, and free (`:free`) models are rate-limited and can queue — raise `LLM_TIMEOUT_MS` accordingly and expect the 503 path to be exercised for real. **Privacy:** progress data passes through OpenRouter *and* the upstream vendor; the prompt sends first names only, no date of birth and no identifiers.
 
 `StubLlmClient` is **deterministic** — it computes per-skill-area averages and trends from the actual input (e.g. "Reading Fluency improved from 62 to 78 across 3 sessions"), so demo output looks plausible and unit tests can assert exact strings.
 
@@ -536,8 +539,8 @@ Harness notes:
 | `SUPABASE_JWT_SECRET` | set only if the project still issues legacy HS256 tokens (§6); blank selects the JWKS path |
 | `AUTH_DEV_SUB` | dev-only tokenless fallback (§6); ignored in production |
 | `SEED_AUTH_USER_ID` | `scripts/seed.ts` only — the auth user the demo parent is linked to. Blank leaves `auth_user_id` null, which makes the seeded parent unreachable through the API. Use a *third* auth user, not either `TEST_USER_*`: the integration harness owns those two parent rows and refuses to run if it finds one mapped to a parent it did not create. |
-| `LLM_PROVIDER` | `stub` (default) \| `anthropic` \| `openai` \| `gemini` |
-| `LLM_API_KEY`, `LLM_MODEL`, `LLM_TIMEOUT_MS` | for the future real provider |
+| `LLM_PROVIDER` | `stub` (default) \| `openrouter`; `anthropic` \| `openai` \| `gemini` are accepted but unimplemented |
+| `LLM_API_KEY`, `LLM_MODEL`, `LLM_TIMEOUT_MS` | required by `openrouter`; model ids are `vendor/model`, e.g. `google/gemini-2.0-flash-exp:free` |
 | `EMAIL_PROVIDER` | `brevo` \| `fake` |
 | `BREVO_API_KEY`, `EMAIL_FROM` | Brevo API key and a sender address verified in Brevo |
 | `SCHEDULER_ENABLED`, `SCHEDULER_TICK_MS` | notification timer (default tick 15 min) |
