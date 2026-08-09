@@ -1,0 +1,30 @@
+checkpoints.db
+checkpoints.db-shm
+checkpoints.db-wal
+
+
+/dist/
+/frontend/dist/
+/.vite/
+/docs/
+/.venv*/
+/.env
+/.env.local
+/.env.shipit
+/.idea
+/.github
+/.langgraph_api
+/__pycache__/
+__pycache__/
+/node_modules/
+/frontend/node_modules/
+
+# The committed Milvus directory is a deployment seed; runtime lock/state is local.
+/data/milvus/docling.db/LOCK
+
+# Keep local source documents private except for the deployment seed PDF.
+/data/seed/*
+!/data/seed/subject.pdf
+shipit.yaml
+shipit-new
+.shipit/
