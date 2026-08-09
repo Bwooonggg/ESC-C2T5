@@ -1,0 +1,118 @@
+:root {
+    --das-navy: #002b49;
+    --das-bg: #f8fafc;
+    --das-card: #ffffff;
+    --das-border: #cbd5e1;
+    --das-text: #0f172a;
+    --das-muted: #475569;
+    --das-assistant-bg: #f1f5f9;
+  }
+  
+  .screener-page-container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 2rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+  
+  /* Position title aligned with the box margin */
+  .screener-header-title {
+    font-size: 2.25rem;
+    font-weight: 700;
+    color: var(--das-navy);
+    margin: 0 0 0.25rem 0.5rem;
+  }
+  
+  /* Chat Container */
+  .chat-window {
+    border: 1px solid var(--das-border);
+    border-radius: 12px;
+    padding: 24px;
+    height: 550px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    background-color: var(--das-card);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+  }
+  
+  .user-box {
+    max-width: 70%;
+    border-radius: 14px 14px 2px 14px;
+    align-self: flex-end;
+    background-color: var(--das-navy);
+    color: #ffffff;
+    padding: 14px 20px;
+  }
+  
+  .assistant-box {
+    max-width: 70%;
+    border-radius: 14px 14px 14px 2px;
+    align-self: flex-start;
+    background-color: var(--das-assistant-bg);
+    color: var(--das-text);
+    padding: 14px 20px;
+  }
+  
+  .message {
+    font-size: 1.15rem;
+    line-height: 1.6;
+    word-break: break-word;
+  }
+  
+  .role {
+    font-weight: 600;
+    font-size: 0.95rem;
+    margin-bottom: 6px;
+    display: block;
+  }
+  
+  .user-box .role {
+    color: #cbd5e1;
+    text-align: right;
+  }
+  
+  .assistant-box .role {
+    color: var(--das-muted);
+  }
+  
+  /* Input Bar Styling */
+  .input-container {
+    display: flex;
+    gap: 12px;
+  }
+  
+  .custom-chat-input {
+    flex: 1;
+    padding: 16px 20px;
+    font-size: 1.1rem;
+    border: 1.5px solid var(--das-border);
+    border-radius: 10px;
+    outline: none;
+    background-color: #ffffff;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  
+  .custom-chat-input:focus {
+    border-color: var(--das-navy);
+    box-shadow: 0 0 0 3px rgba(0, 43, 73, 0.1);
+  }
+  
+  .custom-send-btn {
+    background-color: var(--das-navy);
+    color: #ffffff;
+    font-size: 1.1rem;
+    font-weight: 600;
+    padding: 16px 32px;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+  
+  .custom-send-btn:hover {
+    background-color: #001e33;
+  }

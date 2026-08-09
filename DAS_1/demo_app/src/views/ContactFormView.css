@@ -1,0 +1,84 @@
+:root {
+    --das-navy: #002b49;
+    --das-bg: #f8fafc;
+    --das-card: #ffffff;
+    --das-border: #cbd5e1;
+    --das-text: #0f172a;
+    --das-muted: #475569;
+  }
+  
+  .contact-form-container {
+    max-width: 1000px;
+    margin: 1.5rem auto;
+    padding: 0 1rem;
+  }
+  
+  .contact-card {
+    background: var(--das-card);
+    border: 1px solid var(--das-border);
+    border-radius: 12px;
+    padding: 2rem;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+  }
+  
+  .contact-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--das-navy);
+    margin: 0 0 1.5rem 0;
+  }
+  
+  .contact-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1.25rem;
+    margin-bottom: 1.5rem;
+  }
+  
+  .field-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .field-group label {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--das-text);
+  }
+  
+  .contact-input {
+    padding: 12px 14px;
+    font-size: 1rem;
+    border: 1.5px solid var(--das-border);
+    border-radius: 8px;
+    outline: none;
+    background-color: #ffffff;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  
+  .contact-input:focus {
+    border-color: var(--das-navy);
+    box-shadow: 0 0 0 3px rgba(0, 43, 73, 0.1);
+  }
+  
+  .submit-btn {
+    background-color: var(--das-navy);
+    color: #ffffff;
+    font-size: 1rem;
+    font-weight: 600;
+    padding: 12px 24px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+  
+  .submit-btn:hover {
+    background-color: #001e33;
+  }
+  
+  .submit-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }

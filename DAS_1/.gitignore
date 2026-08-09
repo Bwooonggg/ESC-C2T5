@@ -1,0 +1,19 @@
+# Dependencies and generated output
+**/node_modules/
+**/dist/
+**/build/
+**/coverage/
+*.tsbuildinfo
+
+# Environment and local runtime files
+.env
+.env.*
+*.log
+
+# Tooling and local cache noise
+.claude/
+.vscode/
+
+# Runtime data
+backend/data/sessions.json
+backend/data/just_submitted/sessions.json
