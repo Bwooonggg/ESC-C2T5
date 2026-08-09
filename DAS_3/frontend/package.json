@@ -1,0 +1,33 @@
+{
+  "name": "das-agent-frontend",
+  "version": "1.0.0",
+  "description": "Frontend for the DAS educational worksheet agent",
+  "scripts": {
+    "dev": "vite",
+    "start": "vite",
+    "build": "vite build",
+    "test": "jest"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "@assistant-ui/react": "^0.15.1",
+    "@langchain/langgraph-sdk": "^1.9.28",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.29.0",
+    "@babel/preset-env": "^7.29.0",
+    "@babel/preset-react": "^7.29.7",
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/jest-dom": "^7.0.0",
+    "@testing-library/react": "^16.3.2",
+    "@vitejs/plugin-react": "^4.3.1",
+    "babel-jest": "^30.4.1",
+    "jest": "^30.4.2",
+    "vite": "^5.4.2"
+  }
+}

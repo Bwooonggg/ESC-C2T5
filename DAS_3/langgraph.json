@@ -1,0 +1,9 @@
+{
+  "python_version": "3.12",
+  "dependencies": [
+    "."
+  ],
+  "graphs": {
+    "educational_agent": "./src/das_agent/graph/deployment_graph.py:graph_dev_instance"
+  }
+}
