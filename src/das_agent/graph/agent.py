@@ -1,0 +1,48 @@
+from langgraph.graph import StateGraph, START, END
+from das_agent.retrieval.knowledge_retriever import KnowledgeBaseRetriever
+from das_agent.nodes.nodes import RetrieveAndRerankNode, WorksheetAgentNode, get_intent_node, ask_clarification_node, wait_for_clarification_node
+from das_agent.graph.state import State
+
+
+def build_workflow(retriever: KnowledgeBaseRetriever, worksheet_llm):
+    workflow = StateGraph(State)
+
+    workflow.add_node("retrieve_and_rerank", RetrieveAndRerankNode(retriever))
+    workflow.add_node("get_intent", get_intent_node)
+    workflow.add_node("worksheet_agent", WorksheetAgentNode(worksheet_llm))
+    workflow.add_node("ask_clarification", ask_clarification_node)
+    workflow.add_node("wait_for_clarification", wait_for_clarification_node)
+
+    workflow.add_edge(START, "get_intent")
+    workflow.add_conditional_edges(
+        "get_intent",
+        route_decision,
+        {
+            "ready": "retrieve_and_rerank",
+            "needs_clarification": "ask_clarification",
+        },
+    )
+
+    # A clarification reply is saved as a HumanMessage, then intent detection
+    # runs again with the complete conversation.
+    workflow.add_edge("ask_clarification", "wait_for_clarification")
+    workflow.add_edge("wait_for_clarification", "get_intent")
+
+    workflow.add_edge("retrieve_and_rerank", "worksheet_agent")
+    workflow.add_edge("worksheet_agent", END)
+
+    return workflow
+
+
+def agent_init(retriever: KnowledgeBaseRetriever, worksheet_llm):
+    return build_workflow(retriever, worksheet_llm).compile()
+
+
+def route_decision(state: State) -> str:
+    # get_intent runs before this router. Proceed only when it extracted the two
+    # required worksheet fields; otherwise ask the user for clarification.
+    valid_qn_type = state.get("qn_type") in ("MCQ", "Open_ended")
+    valid_topic = bool(str(state.get("topic") or "").strip())
+    if valid_qn_type and valid_topic:
+        return "ready"
+    return "needs_clarification"
