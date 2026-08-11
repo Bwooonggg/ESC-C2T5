@@ -1,7 +1,7 @@
 import { Client } from "@langchain/langgraph-sdk";
 
 const configuredApiUrl =
-  import.meta.env.VITE_LANGGRAPH_URL || "http://localhost:2024";
+  import.meta.env.VITE_LANGGRAPH_URL || "/api/worksheet";
 const LANGGRAPH_API_URL = configuredApiUrl.startsWith("/")
   ? `${globalThis.location?.origin || "http://localhost"}${configuredApiUrl}`
   : configuredApiUrl;

@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import * as controller from '../controllers/screenerController.ts'
 
-/** The URL-to-controller map. Mounted under /api by server/main.ts. */
+/** Internal routes. Public callers use the gateway prefix /api/screening. */
 const router = Router()
 
 router.get('/ping', (_req, res) => {

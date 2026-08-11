@@ -75,11 +75,15 @@ docker compose up --build
 ```
 
 The frontend is available at `http://localhost:3000` by default. Its Nginx server
-proxies `/api` to the LangGraph backend, so the browser does not need a separate
-cross-origin backend URL. Compose overrides the local-development
-`VITE_LANGGRAPH_URL` with this same-origin `/api` route. Set `FRONTEND_PORT` to
-change the host port. For a separately hosted frontend, set
-`VITE_LANGGRAPH_URL` to the public backend URL at frontend image build time.
+proxies the shared public prefix `/api/worksheet` to the LangGraph backend and
+strips that prefix before forwarding. Vite applies the same rule during local
+development. The browser therefore uses one same-origin URL in every environment.
+Set `FRONTEND_PORT` to change the host port. For a separately hosted frontend,
+set `VITE_LANGGRAPH_URL` to the public backend URL at frontend image build time.
+
+This service still uses LangGraph's native thread/run protocol rather than the
+JSON envelope used by DAS 7. JWT verification has not yet been added to the
+LangGraph deployment; add it before exposing learner-specific worksheet data.
 
 ## Document ingestion
 

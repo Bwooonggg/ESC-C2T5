@@ -29,8 +29,8 @@ beforeAll(async () => {
           ? input.toString()
           : (input as Request).url
 
-    if (urlStr.startsWith('/')) {
-      urlStr = baseUrl + urlStr
+    if (urlStr.startsWith('/api/screening')) {
+      urlStr = baseUrl + urlStr.replace(/^\/api\/screening/, '')
     } else {
       urlStr = urlStr.replace(/^http:\/\/(127\.0\.0\.1|localhost):4173/, baseUrl)
     }

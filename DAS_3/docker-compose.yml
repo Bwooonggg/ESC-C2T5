@@ -4,7 +4,7 @@ services:
       context: frontend
       dockerfile: Dockerfile
       args:
-        VITE_LANGGRAPH_URL: /api
+        VITE_LANGGRAPH_URL: /api/worksheet
     image: das-agent-frontend:dev
     restart: unless-stopped
     ports:

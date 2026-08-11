@@ -193,6 +193,11 @@ stripping only happens for traffic arriving through Traefik.
 The token travels *with* the request, so identity is confirmed at the door —
 protected data is never returned before the check.
 
+**Implementation status:** the shared frontend sends the current Supabase access
+token and DAS 7 verifies it today. DAS 1's anonymous screener endpoints remain
+public. DAS 3 JWT verification is still required before learner-specific worksheet
+features are exposed through the shared frontend.
+
 ### Local verification (asymmetric keys)
 
 Supabase signs tokens with a **private key** that never leaves Supabase, and
@@ -474,7 +479,7 @@ Verify in order:
 |---|---|---|
 | Frontend loads | `http://localhost` | The React app |
 | Traefik routing | `http://localhost:8080` | All four routers listed |
-| Backend reachable | `http://localhost/api/worksheet/health` | 200 from DAS 3 |
+| Backend reachable | `http://localhost/api/worksheet/ok` | 200 from DAS 3 |
 
 If a route 404s, the label is almost always the cause — the dashboard shows
 exactly what Traefik registered.

@@ -21,9 +21,9 @@ beforeEach(async () => {
 })
 
 // IT-08 — Malformed session creation → clean 400
-describe('POST /api/sessions with an invalid screenerType', () => {
+describe('POST /sessions with an invalid screenerType', () => {
   it('responds 400 with the documented error shape and creates nothing', async () => {
-    const res = await request(app).post('/api/sessions').send({ screenerType: 'teenager' })
+    const res = await request(app).post('/sessions').send({ screenerType: 'teenager' })
 
     expect(res.status).toBe(400)
     expect(res.body).toEqual({ error: 'screenerType must be either "adult" or "child".' })
@@ -32,11 +32,11 @@ describe('POST /api/sessions with an invalid screenerType', () => {
 })
 
 // IT-09 — Unknown session id → 404
-describe('GET /api/sessions/:id for an unknown id', () => {
+describe('GET /sessions/:id for an unknown id', () => {
   it('responds 404 with the documented error shape and has no side effects', async () => {
     const unknownId = randomUUID()
 
-    const res = await request(app).get(`/api/sessions/${unknownId}`)
+    const res = await request(app).get(`/sessions/${unknownId}`)
 
     expect(res.status).toBe(404)
     expect(res.body).toEqual({ error: `No screening session found with id ${unknownId}.` })

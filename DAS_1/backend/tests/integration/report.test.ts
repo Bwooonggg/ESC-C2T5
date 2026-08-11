@@ -20,15 +20,15 @@ beforeEach(async () => {
 })
 
 // IT-04 — Early-finish path via /report
-describe('POST /api/sessions/:id/report', () => {
+describe('POST /sessions/:id/report', () => {
   it('calls generateReport (not decideNextStep) and attaches its output regardless of conversation length', async () => {
     vi.mocked(generateReport).mockResolvedValue('Early report based on minimal input.')
 
-    const createRes = await request(app).post('/api/sessions').send({ screenerType: 'adult' })
+    const createRes = await request(app).post('/sessions').send({ screenerType: 'adult' })
     const session = createRes.body as { id: string }
 
     const reportRes = await request(app)
-      .post(`/api/sessions/${session.id}/report`)
+      .post(`/sessions/${session.id}/report`)
       .send({ notes: 'just tired eyes, please still check' })
 
     expect(reportRes.status).toBe(200)

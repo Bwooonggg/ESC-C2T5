@@ -1,0 +1,57 @@
+.banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    padding: 24px 28px;
+    background: var(--bg-subtle);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--accent);
+    border-radius: var(--radius);
+}
+
+.identity {
+    display: flex;
+    align-items: baseline;
+    gap: 28px;
+    flex-wrap: wrap;
+}
+
+.name {
+    margin: 0;
+    font-size: 28px;
+}
+
+.meta {
+    display: flex;
+    gap: 28px;
+    flex-wrap: wrap;
+}
+
+.metaLabel {
+    margin: 0;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    text-transform: uppercase;
+}
+
+.metaValue {
+    margin: 2px 0 0;
+    font-size: 15px;
+    color: var(--text);
+}
+
+.picker {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    align-items: flex-start;
+}
+
+.pickerLabel {
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    text-transform: uppercase;
+}

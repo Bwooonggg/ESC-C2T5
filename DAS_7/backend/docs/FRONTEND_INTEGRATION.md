@@ -32,13 +32,17 @@ Authorization: Bearer <supabase access token>
 - A logged-in user who isn't a registered parent in our system also gets `401`.
 - Parents can only see **their own** children and settings. Asking for someone else's returns `404` — exactly as if it didn't exist.
 
-### Until Supabase login lands
+### Local tokenless fallback
 
-The frontend does not send tokens yet. To keep you unblocked, our backend accepts **tokenless** requests when `AUTH_DEV_SUB` is set and `NODE_ENV` is not `production` — each one is treated as a single fixed seeded parent.
+The shared frontend now sends the active Supabase access token. For backend-only
+development, the service can still accept **tokenless** requests when `AUTH_DEV_SUB`
+is set and `NODE_ENV` is not `production`; each one is treated as a single fixed
+seeded parent.
 
 - Dev only, and it fails closed: in production a tokenless request is always `401`.
 - A **present but invalid** header never falls back to it. Send *no* `Authorization` header at all, or a valid token — a stale or malformed token gives `401`, not the dev parent. (This trips people up while debugging.)
-- Nothing changes on your side when login lands: start sending the header and the fallback stops applying. `AUTH_DEV_SUB` is then removed from the deployment.
+- The fallback is unnecessary when testing through the shared frontend and must not
+  be configured in production.
 
 ## Response format
 

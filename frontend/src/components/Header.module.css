@@ -1,0 +1,102 @@
+.topBar {
+    height: 4px;
+    background: var(--accent);
+}
+
+.header {
+    display: flex;
+    align-items: center;
+    gap: 32px;
+    padding: 20px 32px;
+    border-bottom: 1px solid var(--border);
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    background: var(--accent-bg);
+    color: var(--accent);
+    font-weight: 500;
+    font-size: 14px;
+    letter-spacing: 0.04em;
+    flex: none;
+}
+
+.title {
+    margin: 0;
+    font-size: 18px;
+    color: var(--text-h);
+}
+
+.subtitle {
+    margin: 0;
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+.nav {
+    display: flex;
+    gap: 24px;
+    align-self: stretch;
+    align-items: center;
+}
+
+.navLink {
+    position: relative;
+    padding: 8px 0;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 16px;
+    text-decoration: none;
+}
+
+.navLink:hover {
+    color: var(--text);
+}
+
+.navLinkActive {
+    color: var(--accent);
+}
+
+.navLinkActive::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -21px;
+    height: 2px;
+    background: var(--accent);
+}
+
+.signedIn {
+    margin-left: auto;
+    font-size: 14px;
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+
+.signedInName {
+    color: var(--text);
+    font-weight: 500;
+}
+
+.logoutButton {
+    background: transparent;
+    color: var(--accent);
+    border: 1px solid var(--accent-border);
+    border-radius: var(--radius);
+    padding: 6px 14px;
+    font-size: 14px;
+    white-space: nowrap;
+}

@@ -1,0 +1,31 @@
+.card {
+    background: var(--bg-subtle);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+}
+
+.headerRow {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 0 0 12px;
+}
+
+.heading {
+    margin: 0;
+    font-size: 18px;
+}
+
+.date {
+    margin: 0;
+    font-size: 13px;
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+
+.body {
+    margin: 0;
+    color: var(--text);
+}

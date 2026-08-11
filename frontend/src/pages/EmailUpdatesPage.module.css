@@ -1,0 +1,109 @@
+.page {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.card {
+    background: var(--bg-subtle);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px 28px;
+    max-width: 640px;
+}
+
+.heading {
+    margin: 0 0 8px;
+    font-size: 18px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+}
+
+.intro {
+    margin: 16px 0 20px;
+    color: var(--text-muted);
+}
+
+.toggleBox {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 16px 18px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: var(--radius);
+    margin-bottom: 24px;
+}
+
+.toggleBox input {
+    margin-top: 3px;
+}
+
+.toggleTitle {
+    margin: 0 0 4px;
+    font-weight: 500;
+    color: var(--text-h);
+}
+
+.toggleHint {
+    margin: 0;
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+.field {
+    margin-bottom: 20px;
+}
+
+.fieldLabel {
+    display: block;
+    margin: 0 0 8px;
+    font-weight: 500;
+}
+
+.fieldHint {
+    margin: 8px 0 0;
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+.buttonRow {
+    display: flex;
+    gap: 12px;
+}
+
+.primaryButton {
+    background: var(--accent);
+    color: var(--text-h);
+    border: none;
+    border-radius: var(--radius);
+    padding: 10px 18px;
+    font-weight: 500;
+}
+
+.primaryButton:disabled {
+    opacity: 0.6;
+    cursor: default;
+}
+
+.secondaryButton {
+    background: transparent;
+    color: var(--accent);
+    border: 1px solid var(--accent-border);
+    border-radius: var(--radius);
+    padding: 10px 18px;
+    font-weight: 500;
+}
+
+.status {
+    margin: 16px 0 0;
+}
+
+.statusError {
+    color: var(--error);
+}
+
+.statusOk {
+    color: var(--ok);
+}

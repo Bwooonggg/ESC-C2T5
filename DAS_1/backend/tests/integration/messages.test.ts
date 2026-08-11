@@ -24,7 +24,7 @@ beforeEach(async () => {
   vi.mocked(decideNextStep).mockReset()
 })
 
-describe('POST /api/sessions/:id/messages', () => {
+describe('POST /sessions/:id/messages', () => {
   // IT-02 — Continue path via /messages
   it('appends the user message and returns the assistant question when Claude says continue', async () => {
     vi.mocked(decideNextStep).mockResolvedValue({
@@ -32,13 +32,13 @@ describe('POST /api/sessions/:id/messages', () => {
       question: 'How long have you noticed this?',
     })
 
-    const createRes = await request(app).post('/api/sessions').send({ screenerType: 'adult' })
+    const createRes = await request(app).post('/sessions').send({ screenerType: 'adult' })
     expect(createRes.status).toBe(201)
     const session = createRes.body as { id: string; stage: string }
     expect(session.stage).toBe('screening')
 
     const messageRes = await request(app)
-      .post(`/api/sessions/${session.id}/messages`)
+      .post(`/sessions/${session.id}/messages`)
       .send({ message: 'I mix up letters' })
 
     expect(messageRes.status).toBe(200)
@@ -59,11 +59,11 @@ describe('POST /api/sessions/:id/messages', () => {
       report: 'Summary...',
     })
 
-    const createRes = await request(app).post('/api/sessions').send({ screenerType: 'adult' })
+    const createRes = await request(app).post('/sessions').send({ screenerType: 'adult' })
     const session = createRes.body as { id: string }
 
     const messageRes = await request(app)
-      .post(`/api/sessions/${session.id}/messages`)
+      .post(`/sessions/${session.id}/messages`)
       .send({ message: "That's everything" })
 
     expect(messageRes.status).toBe(200)

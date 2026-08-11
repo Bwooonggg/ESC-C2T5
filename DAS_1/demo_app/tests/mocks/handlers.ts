@@ -2,7 +2,7 @@ import { http, HttpResponse } from 'msw'
 
 export const handlers = [
   // Intercept session creation (child & adult)
-  http.post('*/api/sessions', async ({ request }) => {
+  http.post('*/api/screening/sessions', async ({ request }) => {
     const body = (await request.json().catch(() => ({}))) as { screenerType?: string }
     const screenerType = body.screenerType || 'child'
 
@@ -40,7 +40,7 @@ export const handlers = [
   }),
 
   // Intercept session lookup by ID
-  http.get('*/api/sessions/:id', ({ params }) => {
+  http.get('*/api/screening/sessions/:id', ({ params }) => {
     return HttpResponse.json({
       id: params.id,
       screenerType: 'child',
@@ -62,14 +62,14 @@ export const handlers = [
   }),
 
   // Intercept chat messages
-  http.post('*/api/sessions/:id/messages', async () => {
+  http.post('*/api/screening/sessions/:id/messages', async () => {
     return HttpResponse.json({
       reply: 'Thank you for sharing. Could you describe more details?',
     })
   }),
 
   // Intercept question responses
-  http.post('*/api/sessions/:id/responses', async () => {
+  http.post('*/api/screening/sessions/:id/responses', async () => {
     return HttpResponse.json({
       id: 'mock-child-session-id',
       screenerType: 'child',
@@ -89,7 +89,7 @@ export const handlers = [
       contact: null,
     })
   }),
-  http.post('*/api/sessions/:id/answers', async () => {
+  http.post('*/api/screening/sessions/:id/answers', async () => {
     return HttpResponse.json({
       id: 'mock-child-session-id',
       screenerType: 'child',
@@ -97,7 +97,7 @@ export const handlers = [
       responses: { q1: 'Yes' },
     })
   }),
-  http.post('*/api/sessions/:id/response', async () => {
+  http.post('*/api/screening/sessions/:id/response', async () => {
     return HttpResponse.json({
       id: 'mock-child-session-id',
       screenerType: 'child',

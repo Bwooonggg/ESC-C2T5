@@ -1,0 +1,195 @@
+/* Series colours are declared here, not in the component, so that light and dark
+ * are a CSS concern. var() resolves inside an SVG `stroke` presentation
+ * attribute, which is what lets Recharts pick these up.
+ *
+ * These are slots 1-6 of a validated categorical palette. The set passed a
+ * colourblindness check together (worst adjacent ΔE 24.2 light, 10.3 dark) —
+ * swapping one hue for a prettier one invalidates the set, so don't.
+ *
+ * Dark is a selected set of steps for the dark surface, not an automatic
+ * lightening of the light values. */
+
+.chart {
+  --series-1: #2a78d6; /* blue    — Phonological Awareness */
+  --series-2: #1baf7a; /* aqua    — Reading Accuracy */
+  --series-3: #eda100; /* yellow  — Reading Fluency */
+  --series-4: #008300; /* green   — Spelling */
+  --series-5: #4a3aa7; /* violet  — Writing */
+  --series-6: #e34948; /* red     — Comprehension */
+
+  --grid: #e5e4e7;
+  --axis: #57535f;
+  --tooltip-bg: #ffffff;
+  --tooltip-border: #d9d7de;
+}
+
+/* Deliberately NOT hooked to `@media (prefers-color-scheme: dark)`.
+ *
+ * main.tsx stamps data-theme="dark" on the root on boot, which is what
+ * activates this block — the chart follows the APP's theme, not the OS. If a
+ * light/dark toggle is added later it should flip this same attribute rather
+ * than deferring to prefers-color-scheme, so a reader never gets the dark
+ * series hues (validated for contrast against a dark surface, #1a1a19)
+ * painted onto a light page or vice versa. */
+:root[data-theme="dark"] .chart {
+  --series-1: #3987e5;
+  --series-2: #199e70;
+  --series-3: #c98500;
+  --series-4: #008300;
+  --series-5: #9085e9;
+  --series-6: #e66767;
+
+  --grid: #3a3a38;
+  --axis: #c3c2b7;
+  --tooltip-bg: #1a1a19;
+  --tooltip-border: #3a3a38;
+}
+
+.chart {
+  width: 100%;
+}
+
+.plot {
+  width: 100%;
+  height: 340px;
+}
+
+/* Series hues are chosen for 2px strokes against the surface, not for text.
+ * The legend swatch carries identity; the label stays readable ink. */
+.legendText {
+  color: var(--text);
+}
+
+/* Chip-style legend, rendered above the plot instead of Recharts' own legend
+ * (disabled in the component below) so it can sit next to the "N assessments"
+ * meta line the way the rest of the card's header does. */
+.legendRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.legendChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 0.85rem;
+  color: var(--text);
+  background: var(--bg-subtle);
+}
+
+.legendChipLine {
+  width: 16px;
+  height: 0;
+  border-top-width: 2px;
+  border-top-style: solid;
+  flex: none;
+}
+
+.tooltip {
+  background: var(--tooltip-bg);
+  border: 1px solid var(--tooltip-border);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 0.9rem;
+}
+
+.tooltipDate {
+  margin: 0 0 6px;
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.tooltipList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tooltipRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  /* Values wear text tokens, never the series colour — the swatch carries
+   * identity, the text stays readable. */
+  color: var(--text);
+}
+
+.swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  flex: none;
+}
+
+/* The table is not a fallback — it is the relief that makes the low-contrast
+ * series legal, and it is the accessible view of the same numbers. */
+.tableWrap {
+  overflow-x: auto;
+  margin-top: 16px;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+
+.table caption {
+  text-align: left;
+  padding-bottom: 8px;
+  color: var(--text-muted);
+}
+
+.table th,
+.table td {
+  border: 1px solid var(--border);
+  padding: 6px 10px;
+  text-align: left;
+}
+
+.table thead th {
+  background: var(--bg-subtle);
+}
+
+.table td {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.table tbody th {
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* Repeats the line's dash pattern next to the skill name, so the table also
+ * ties each row back to its line without relying on colour. */
+.rowKey {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rowKeyLine {
+  width: 28px;
+  height: 0;
+  border-top-width: 2px;
+  border-top-style: solid;
+  flex: none;
+}
+
+.status {
+  padding: 24px 0;
+  color: var(--text-muted);
+}
+
+.error {
+  padding: 16px;
+  border: 1px solid var(--error);
+  border-radius: var(--radius);
+  color: var(--error);
+}

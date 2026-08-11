@@ -81,73 +81,66 @@ DAS empowers people who learn differently — including those with dyslexia — 
 
 ```
 ESC-C2T5/
-├─ package.json          # root manifest — convenience scripts that delegate to DAS_7/*
+├─ package.json          # root manifest — convenience scripts
+├─ frontend/             # shared React/Vite frontend (DAS 7 connected first)
+│  ├─ src/               # app source
+│  └─ test/              # Jest unit tests
+├─ DAS_1/                # screening service and its current standalone UI
+├─ DAS_3/                # LangGraph worksheet service and its current standalone UI
 ├─ DAS_7/                # DAS 7 — Parent Insight Dashboard
-│  ├─ frontend/          # React 19 + Vite + TypeScript (own package.json + lockfile)
-│  │  ├─ src/            # app source
-│  │  └─ test/           # Jest unit tests
-│  └─ mock_backend/      # Express + TypeScript mock API (own package.json + lockfile)
+│  └─ backend/           # Express API, insight generation, and Brevo email scheduler
 ├─ Files/                # project handout, briefs, and reference materials
 └─ README.md
 ```
 
-> **On layout:** each subsystem owns its dependencies and lockfile, and is installed and run
-> from its own directory. The root `package.json` only provides `das7:*` convenience scripts
-> that delegate via `npm --prefix`. The earlier `client/` + `server/` npm-workspaces scaffold
-> was removed — both were config-only shells that had no entry source file and could not start.
->
-> `DAS_7/mock_backend` serves **hardcoded** data. It is DAS 7's throwaway backend for
-> prototyping, not the team's eventual shared backend — don't "fix" the duplication by
-> deleting it.
+The root frontend is the canonical browser application. It currently exposes DAS 7 and
+reserves stable API prefixes for DAS 1 and DAS 3. Each package keeps its own lockfile.
+See [`API_CONTRACTS.md`](API_CONTRACTS.md) for the shared routing and auth rules.
 
 ---
 
 ## Getting started
 
-**Prerequisites:** Node.js 18+ (20 LTS recommended) and npm 7+.
+**Prerequisites:** Node.js 22+ and npm.
 
 ```bash
-# 1. Install DAS 7 dependencies (from the repo root)
+# 1. Install the shared frontend and DAS 7 backend
 npm run das7:install
 
-# 2. Start the mock backend            → http://localhost:4000
+# 2. Create frontend/.env from frontend/.env.example and set the
+#    Supabase URL and publishable key.
+
+# 3. Start the DAS 7 backend            → http://localhost:4000
 npm run das7:backend
 
-# 3. In a second terminal, the frontend → http://localhost:5173
+# 4. In a second terminal, the frontend → http://localhost:5173
 npm run das7:dev
 ```
 
-Start the backend **first**. The Vite dev server proxies `/api/*` to `http://localhost:4000`,
-so the frontend uses relative URLs and needs no CORS handling or environment variables.
+Start the backend first. Vite sends `/api/insights/*` to DAS 7 and strips the
+public prefix, matching the production gateway. Protected calls include the current
+Supabase JWT. The signed-in Supabase user's `sub` must match an `insight.parents.auth_user_id`.
 
 ### Available scripts
 
-**Root** — thin wrappers; each delegates into `DAS_7/` via `npm --prefix`.
+**Root** — thin wrappers that delegate into the shared frontend and DAS 7 backend.
 | Script | Action |
 |--------|--------|
-| `npm run das7:install` | Install both DAS 7 frontend and mock backend |
-| `npm run das7:dev` | Run the DAS 7 frontend dev server (`vite`, :5173) |
-| `npm run das7:backend` | Run the DAS 7 mock backend (`tsx watch`, :4000) |
-| `npm run das7:build` | Type-check + production-build the frontend |
-| `npm run das7:test` | Run the frontend Jest unit tests |
-| `npm run das7:lint` | Lint the frontend (`oxlint`) |
+| `npm run das7:install` | Install the shared frontend and DAS 7 backend |
+| `npm run das7:dev` | Run the shared frontend dev server (`vite`, :5173) |
+| `npm run das7:backend` | Run the DAS 7 backend (`tsx watch`, :4000) |
+| `npm run das7:build` | Build the frontend and DAS 7 backend |
+| `npm run das7:test` | Run frontend and DAS 7 backend tests |
+| `npm run das7:lint` | Run the frontend lint script |
 
-**`DAS_7/frontend/`**
+**`frontend/`**
 | Script | Action |
 |--------|--------|
 | `npm run dev` | Vite dev server |
 | `npm run build` | Type-check + production build |
 | `npm run preview` | Preview the production build |
 | `npm run test` | Jest unit tests |
-| `npm run lint` | `oxlint` |
-
-**`DAS_7/mock_backend/`**
-| Script | Action |
-|--------|--------|
-| `npm run dev` | Run with hot reload (`tsx watch`) |
-| `npm run build` | Compile TypeScript to `dist/` |
-| `npm run start` | Run the compiled server |
-| `npm run typecheck` | Type-check without emitting |
+| `npm run lint` | Run the configured frontend lint command |
 
 ---
 

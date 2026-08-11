@@ -1,0 +1,8 @@
+/* App-level layout only. Header, banner, chart, and form styling live in each
+ * component's own CSS module — this file is just the page shell. */
+
+.page-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 28px 32px 64px;
+}

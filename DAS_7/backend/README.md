@@ -47,12 +47,16 @@ Other scripts: `npm run typecheck`, `npm run build`, `npm start` (runs `dist/`),
 
 | Method | Path | Purpose |
 |---|---|---|
-| `GET` | `/api/health` | liveness; the only unauthenticated route |
-| `GET` | `/api/me` | the signed-in parent and their students |
-| `GET` | `/api/students/:studentId/track-progress` | progress records + summary |
-| `GET` | `/api/students/:studentId/summary` | the summary alone |
-| `POST` | `/api/students/:studentId/recommendations` | suggestions from the stored summary |
-| `GET`/`PUT` | `/api/parents/:parentId/preferences` | notification preferences |
+| `GET` | `/health` | liveness; the only unauthenticated route |
+| `GET` | `/me` | the signed-in parent and their students |
+| `GET` | `/students/:studentId/track-progress` | progress records + summary |
+| `GET` | `/students/:studentId/summary` | the summary alone |
+| `POST` | `/students/:studentId/recommendations` | suggestions from the stored summary |
+| `GET`/`PUT` | `/parents/:parentId/preferences` | notification preferences |
+
+These are internal service paths. Browser callers prepend the public gateway
+prefix `/api/insights`; Traefik and the Vite development proxy strip it before
+forwarding.
 
 Every response uses one envelope: `{ ok: true, data }` or `{ ok: false, error }`.
 
