@@ -3,14 +3,12 @@ from pathlib import Path
 import pytest
 from langchain_core.messages import HumanMessage
 from pymilvus import MilvusClient
-from das_agent.retrieval.ingestion import get_embedding, get_milvus_db_path
+from das_agent.retrieval.ingestion import get_milvus_db_path
 from das_agent.retrieval.knowledge_retriever import KnowledgeBaseRetriever
 from das_agent.nodes.nodes import RetrieveAndRerankNode
 from langchain_core.documents import Document
 from unittest.mock import Mock
-from FlagEmbedding import FlagReranker
-
-database_file = Path(__file__).resolve().parent / ".." / "data" / "milvus" / "docling.db"
+INTEGRATION_VECTOR = [0.1] * 384
 
 retriever = KnowledgeBaseRetriever(
         embedding_model=Mock(),
@@ -46,12 +44,54 @@ async def test_retrieval_uses_combined_clarification_query():
     search_retriever.retrieve_and_rerank.assert_called_once_with(combined_query)
     assert result["query"] == combined_query
 
-def create_integration_retriever():
+def create_integration_retriever(database_path: Path):
     return KnowledgeBaseRetriever(
-        embedding_model=get_embedding(),
-        search_client=MilvusClient(uri=str(database_file)),
-        reranker=FlagReranker("BAAI/bge-reranker-base", use_fp16=False),
+        embedding_model=StaticEmbedding(),
+        search_client=MilvusClient(uri=str(database_path)),
+        reranker=StaticReranker(),
     )
+
+
+class StaticEmbedding:
+    def embed_query(self, query: str) -> list[float]:
+        return INTEGRATION_VECTOR
+
+
+class StaticReranker:
+    def compute_score(self, query_and_chunk_pairs: list[tuple[str, str]]) -> list[float]:
+        return [float(index) for index in range(len(query_and_chunk_pairs))]
+
+
+def integration_record(index: int) -> dict:
+    return {
+        "id": index,
+        "vector": INTEGRATION_VECTOR,
+        "text": f"A subject is the focus of sentence {index}.",
+        "source": {
+            "dl_meta": {
+                "origin": {"filename": "integration-fixture.pdf"},
+                "headings": ["Grammar"],
+                "doc_items": [{"prov": [{"page_no": index + 1}]}],
+            }
+        },
+    }
+
+
+@pytest.fixture
+def integration_database_file(tmp_path: Path) -> Path:
+    database_path = tmp_path / "integration-milvus.db"
+    client = MilvusClient(uri=str(database_path))
+    client.create_collection(
+        collection_name="demo_collection",
+        dimension=384,
+        metric_type="COSINE",
+    )
+    client.insert(
+        collection_name="demo_collection",
+        data=[integration_record(index) for index in range(6)],
+    )
+    client.close()
+    return database_path
 
 
 def make_search_result(index: int) -> dict:
@@ -72,12 +112,11 @@ def make_search_result(index: int) -> dict:
     }
 
 @pytest.mark.integration
-def test_subject_search():
-    client = MilvusClient(uri=str(database_file))
+def test_subject_search(integration_database_file):
+    client = MilvusClient(uri=str(integration_database_file))
     client.load_collection(collection_name="demo_collection")
 
-    embedding = get_embedding()
-    query = embedding.embed_query("What is a subject?")
+    query = StaticEmbedding().embed_query("What is a subject?")
 
     res = client.search(
         collection_name="demo_collection",
@@ -88,17 +127,19 @@ def test_subject_search():
 
     assert res, "Search returned no results"
     assert len(res) == 1, "Expected one query result set"
-    assert len(res[0]) <= 3, "Expected 3 or less results"
+    assert len(res[0]) == 3, "Expected three seeded results"
+    client.close()
 
 @pytest.mark.integration
-def test_rerank():
-    integration_retriever = create_integration_retriever()
+def test_rerank(integration_database_file):
+    integration_retriever = create_integration_retriever(integration_database_file)
     docs = integration_retriever.retrieve("what is a subject?", 5)
     result = integration_retriever.rerank("what is a subject?", docs, 10)
     assert len(docs) == 1
     assert len(docs[0]) == 5, "Expected 5 results"
     assert 1 < len(result) <= 10
     doc_fields(result)
+    integration_retriever._search_client.close()
 
 
 def doc_fields(result: list):
@@ -205,12 +246,25 @@ def test_rerank_from_kb_unit():
     retriever._reranker.compute_score.assert_called_once()
 
 
+def test_rerank_returns_empty_list_without_calling_the_reranker():
+    retriever._reranker.compute_score.reset_mock()
+
+    result = retriever.rerank(
+        query="what is a subject?",
+        search_results=[[]],
+    )
+
+    assert result == []
+    retriever._reranker.compute_score.assert_not_called()
+
+
 @pytest.mark.integration
 @pytest.mark.asyncio
-async def test_integration_retrieve_and_rerank():
-    from das_agent.graph.deployment_graph import graph_dev_instance
+async def test_integration_retrieve_and_rerank(integration_database_file):
+    integration_retriever = create_integration_retriever(integration_database_file)
+    node = RetrieveAndRerankNode(integration_retriever)
 
-    result = await graph_dev_instance.nodes["retrieve_and_rerank"].ainvoke(
+    result = await node(
         {
             "messages": [
                 HumanMessage(content="what is a subject?")
@@ -230,3 +284,4 @@ async def test_integration_retrieve_and_rerank():
 
     # The reranker returns highest-scored documents first.
     assert scores == sorted(scores, reverse=True)
+    integration_retriever._search_client.close()

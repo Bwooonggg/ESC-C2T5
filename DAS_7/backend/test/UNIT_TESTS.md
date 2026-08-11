@@ -1,8 +1,9 @@
 # Unit Tests
 
-**9 suites, 108 cases, all passing.** Run offline with `npm test` — no database, no network,
-no API keys. Every suite uses plain in-file fakes; nothing imports `src/repos/` into a unit
-test, so a failure here always points at logic rather than infrastructure.
+**9 suites, 107 cases, all passing.** Run offline from `DAS_7/backend` with
+`npm test -- --runInBand test/unit` — no database, no network, no API keys. Every suite uses
+plain in-file fakes; nothing imports `src/repos/` into a unit test, so a failure here always
+points at logic rather than infrastructure.
 
 The formal case table for the core features is in [UNIT_TEST_CASES.md](UNIT_TEST_CASES.md).
 Integration coverage (real Supabase, 26 further cases) is described in
@@ -10,26 +11,25 @@ Integration coverage (real Supabase, 26 further cases) is described in
 
 | Suite | Cases | What it covers |
 | --- | --- | --- |
-| `unit/auth.test.ts` | 22 | The JWT middleware and both guardianship helpers |
+| `unit/auth.test.ts` | 18 | The JWT middleware and both guardianship helpers |
 | `unit/notifier-service.test.ts` | 16 | Due-date arithmetic, notification outcomes, the sweep loop |
 | `unit/preference-service.test.ts` | 14 | Preference defaults and every validation message |
 | `unit/insight-service.test.ts` | 13 | Summary staleness and all IT7A error semantics |
 | `unit/mappers.test.ts` | 12 | Database row → domain object conversion |
-| `unit/error-handler.test.ts` | 11 | Error → HTTP envelope mapping, app wiring |
+| `unit/error-handler.test.ts` | 14 | Error → HTTP envelope mapping, app wiring |
 | `unit/stub-llm.test.ts` | 9 | Deterministic offline summary and advice generation |
 | `unit/scheduler.test.ts` | 7 | Timer start/stop behaviour under fake timers |
 | `unit/fake-email.test.ts` | 4 | The in-memory email provider used by tests |
 
 ## What each suite proves
 
-**`auth.test.ts`** — the dev fallback only fires outside production and only when no
-`Authorization` header is present; malformed headers (Basic, bare token, empty, `Bearer` with
-nothing after it) are all 401; HS256 verification rejects expired tokens, foreign issuers,
-wrong secrets, and tokens with no `sub`; a valid platform user who is not a registered parent
-is still 401; and failures never disclose *why* they failed. It also pins the deliberate
-design choice that `requireOwnStudent` throws the **same** error for another parent's student
-as for a student that does not exist. The JWKS path is exercised in integration, not here —
-mocking a key server would only test the mock.
+**`auth.test.ts`** — malformed headers (Basic, bare token, empty, `Bearer` with nothing after
+it) are all 401; JWKS verification rejects expired tokens, foreign issuers, wrong signing keys,
+and tokens with no `sub`; a valid platform user who is not a registered parent receives 403.
+The suite uses an in-memory signing key and mocked JWKS response to exercise the same
+asymmetric verification path offline. It also pins the deliberate design choice that
+`requireOwnStudent` throws the **same** error for another parent's student as for a student that
+does not exist.
 
 **`insight-service.test.ts`** — the staleness rule in all four states (no summary, fresh
 summary, newer progress, unknown insert time), plus every failure mapping: unknown student →

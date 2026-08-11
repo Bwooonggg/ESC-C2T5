@@ -9,6 +9,10 @@ export class UnauthorizedError extends ApiError {
     constructor() { super(401, 'unauthorised'); }
 }
 
+export class ForbiddenError extends ApiError {
+    constructor() { super(403, 'forbidden'); }
+}
+
 /** 404 — messages used: 'progressUnavailable', 'summaryUnavailable', 'notFound' */
 export class NotFoundError extends ApiError {
     constructor(message = 'notFound') { super(404, message); }
@@ -19,7 +23,7 @@ export class ValidationError extends ApiError {
     constructor(message: string) { super(400, message); }
 }
 
-/** 503 — messages used: 'progressUnavailable', 'summaryUnavailable', 'recommendationUnavailable' */
+/** 503 — messages used: 'authUnavailable', 'progressUnavailable', 'summaryUnavailable', 'recommendationUnavailable' */
 export class UnavailableError extends ApiError {
     constructor(message: string) { super(503, message); }
 }

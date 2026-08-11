@@ -1,6 +1,6 @@
 # DAS 7 Backend Architecture — Parent Insight Dashboard
 
-> **Status:** describes the service as built and running. Design settled 2026-07-28; the `insight` schema was applied to the shared database on 2026-07-29. Where a decision has a condition that ought to force a rethink, that trigger is recorded inline rather than left implicit.
+> **Status:** describes the service as built and running. Design settled 2026-07-28; all six root migrations were applied to the ESC Supabase project on 2026-08-11. The first five provide the shared insight/worksheet foundation, while `0006_public_responses.sql` provisions DAS1's public response table. Where a decision has a condition that ought to force a rethink, that trigger is recorded inline rather than left implicit.
 
 ## 1. What this service does
 
@@ -44,8 +44,9 @@ flowchart LR
     subgraph Browser
         FE[React dashboard\n../frontend]
     end
+    VITE[Root Vite dev server\n/api/insights proxy]
     subgraph Backend["DAS 7 backend (one Node process)"]
-        API[Express API\n/api/*]
+        API[Express API\nroot-mounted routes]
         SCHED[Scheduler\nsetInterval tick]
         SVC[Services]
         REPOS[Repos]
@@ -56,7 +57,8 @@ flowchart LR
     AUTH[Supabase Auth\nJWKS]
     BREVO[Brevo API]
 
-    FE -- "Bearer JWT" --> API
+    FE -- "Bearer JWT" --> VITE
+    VITE -- "strip /api/insights" --> API
     API --> SVC
     SCHED --> SVC
     SVC --> REPOS
@@ -68,7 +70,10 @@ flowchart LR
 ```
 
 - **One process** runs both the HTTP API and the notification scheduler. There is no separate worker deployment.
-- In the integrated platform, Traefik routes `/api/insights/*` to this service and **strips the prefix**, so the service mounts its routes at the **root** (`/health`, `/me`, `/students/*`, `/parents/*`) — the public prefix belongs to the gateway, never to the app. This matches DAS 1 and DAS 3, which are also reached prefix-free over the internal network. The frontend's Vite dev proxy performs the same match-and-strip against `localhost:4000`, so the app sees identical paths in both environments.
+- DAS7 runs directly on the host at `localhost:4000`. The root Vite dev server is
+  the sole browser-facing proxy: it routes `/api/insights/*` to DAS7 and strips
+  that prefix, while the service mounts routes at the root (`/health`, `/me`,
+  `/students/*`, `/parents/*`). Production hosting is outside this local setup.
 - The database is the **centralized Supabase instance shared by all subsystems**. DAS 7 owns its own Postgres schema (`insight`) and never touches other services' schemas (schema-per-service rule from `OVERALL_ARCHITECTURE.md`).
 
 ## 4. Layers and directory structure
@@ -85,10 +90,6 @@ Data shapes (`Student`, `ProgressRecord`, …) are plain TypeScript interfaces i
 backend/
 ├── package.json / tsconfig.json / tsconfig.build.json / jest.config.cjs
 ├── .env.example / Dockerfile / .dockerignore / README.md
-├── db/migrations/
-│   ├── 0001_insight_schema.sql             # all DDL, idempotent (§9.2)
-│   ├── 0002_grants_and_rls.sql             # service_role grants, RLS armed (§9.3)
-│   └── README.md                           # how migrations are applied + the Applied log
 ├── scripts/seed.ts                         # demo parents/students/progress (service_role)
 ├── src/
 │   ├── index.ts                # entrypoint: config → deps → createApp().listen → scheduler.start
@@ -151,7 +152,7 @@ Defined by the mock frontend (`frontend/src/api/client.ts`, `summaryApi.ts`, `re
 { ok: false, error: string }  // failure — error string is shown/logged by the UI
 ```
 
-Paths below are the routes **as the service mounts them**. Browsers reach them through the gateway, which prepends `/api/insights` (§3) — so `/me` here is `GET /api/insights/me` from the frontend.
+Paths below are the routes **as the service mounts them**. Browsers reach them through the root Vite proxy with `/api/insights` prepended (§3) — so `/me` here is `GET /api/insights/me` from the frontend.
 
 | # | Method | Path | Returns (`data`) |
 |---|---|---|---|
@@ -182,16 +183,14 @@ There is **no REST endpoint for notifications** — that flow is timer-driven (�
 1. Read `Authorization: Bearer <token>`. Missing or malformed → **401**.
 2. Verify the JWT locally with `jose`: `jwtVerify(token, key, { issuer: SUPABASE_URL + '/auth/v1' })`. Invalid/expired token → **401**, and the reason is never disclosed to the caller.
 
-   Two signing modes are supported, resolved **once** when the middleware is constructed rather than per request. If `SUPABASE_JWT_SECRET` is set, tokens are verified as legacy symmetric **HS256** against that secret. Otherwise verification is asymmetric against the JWKS (Supabase's public signing keys, from `<SUPABASE_URL>/auth/v1/.well-known/jwks.json`), fetched via `createRemoteJWKSet` and cached in memory — re-fetched only if an unknown key id appears (key rotation). Either way there is **no network call per request**. Audience is deliberately not checked: Supabase issues `aud: 'authenticated'` for every user, so it distinguishes nothing here; ownership is decided by the parent row in step 3.
-3. Map the token's `sub` claim (the Supabase Auth user id) to a row in `insight.parents` via `auth_user_id`. No row → **401** (a valid platform user who isn't a registered parent here).
+   Verification is asymmetric against the JWKS (Supabase's public signing keys, from `<SUPABASE_URL>/auth/v1/.well-known/jwks.json`), fetched via `createRemoteJWKSet` and cached in memory — re-fetched only if an unknown key id appears (key rotation). There is **no network call per request**. Audience is deliberately not checked: Supabase issues `aud: 'authenticated'` for every user, so it distinguishes nothing here; ownership is decided by the parent row in step 3.
+3. Map the token's `sub` claim (the Supabase Auth user id) to a row in `insight.parents` via `auth_user_id`. No row → **403** (a valid platform user in the wrong group).
 4. Attach the parent to the request (`req.parent`).
 
 **Authorization** (may you see this?) — enforced in backend code:
 
 - `requireOwnStudent(req, studentId)` — checks `parent_students` for the (caller, student) pair. **No row → 404 `progressUnavailable`.** By construction, a student that doesn't exist and a student that belongs to someone else produce the *same* query miss and the *same* error — a caller cannot probe which student ids exist.
 - `requireOwnParent(req, parentId)` — preferences routes; a mismatched `parentId` → **404**. This closes the IDOR that exists in the mock backend (which accepts any `parentId`).
-
-**Dev fallback (temporary):** the current frontend sends no tokens yet. If `AUTH_DEV_SUB` is set **and** `NODE_ENV !== 'production'`, a request without an `Authorization` header is treated as that user id. One fenced `if`; delete it once the frontend wires up Supabase login.
 
 ### 6.1 Database access model: service_role now, RLS later
 
@@ -237,7 +236,7 @@ The "Notify Parent" flow (sequence diagram 7_2) is **not an HTTP flow** — its 
 
 **Scheduler:** an in-process `setInterval` (default tick 15 min, `SCHEDULER_TICK_MS`) calling `runDueNotifications`, started from `index.ts` when `SCHEDULER_ENABLED=true`, with `start()`/`stop()` and a catch that never lets an error escape.
 
-*Why in-process rather than a separate worker:* one container, one deploy, one `.env`; the volume is tiny; due-ness is computed per tick, so a crash just delays work to the next tick; and a separate process would need exactly the job-lease coordination machinery this design deleted. **Revisit trigger:** running multiple API replicas (they would double-send) — that's the point to split the scheduler out or add a job table.
+*Why in-process rather than a separate worker:* one host process and one `.env`; the volume is tiny; due-ness is computed per tick, so a crash just delays work to the next tick; and a separate process would need exactly the job-lease coordination machinery this design deleted. **Revisit trigger:** running multiple API replicas (they would double-send) — that's the point to split the scheduler out or add a job table.
 
 ## 8. Error model
 
@@ -246,19 +245,20 @@ Small typed hierarchy in `src/errors.ts`; one Express error middleware maps them
 | Class | Status | `error` strings used |
 |---|---|---|
 | `UnauthorizedError` | 401 | `unauthorised` |
+| `ForbiddenError` | 403 | `forbidden` |
 | `NotFoundError` | 404 | `progressUnavailable` (missing/unowned student), `summaryUnavailable` (no summary for recommendations), `notFound` (catch-all route, unknown parent) |
 | `ValidationError` | 400 | human-readable, e.g. `` `frequency` must be one of: Weekly, Fortnightly, Monthly.`` |
-| `UnavailableError` | 503 | `progressUnavailable` (no records), `summaryUnavailable` (LLM failed), `recommendationUnavailable` (LLM failed) |
+| `UnavailableError` | 503 | `authUnavailable` (JWKS unavailable), `progressUnavailable` (no records), `summaryUnavailable` (LLM failed), `recommendationUnavailable` (LLM failed) |
 | anything else | 500 | `internalError` (real error logged server-side only) |
 
 ## 9. Database schema — `insight` on the shared Supabase
 
-**Applied state (2026-07-29):** migrations `0001_insight_schema.sql` and `0002_grants_and_rls.sql` are live on the hosted instance — 8 tables, `service_role`-only grants, RLS enabled with no policies. The `db/migrations/README.md` "Applied" table is the authoritative record; this section describes what those files create.
+**Applied state (2026-08-11):** all six root migrations are live on the ESC project (`vhppezszezjppgoqhbpf`). Migrations `0001_insight_schema.sql` through `0005_parent_auth_user_constraint.sql` provide the insight/worksheet foundation; `0006_public_responses.sql` provisions DAS1's public response table. The `insight` schema has its eight tables, service-role-only grants, RLS enabled with no policies, and required Auth-backed parent profiles. The shared [`db/migrations/README.md`](../../../db/migrations/README.md) history is the authoritative record; this section describes what the initial DAS7 files create.
 
-Two one-time project settings are also in place, and both are invisible in the DDL:
-
-- The `insight` schema is on the Data API's **Exposed schemas** list (Dashboard → Settings → API). Without it every query fails `PGRST106 Invalid schema: insight` even though the tables exist.
-- Privileges are granted (§9.3). Without them every query fails `42501 permission denied for schema insight`.
+The ESC Data API exposes the `insight` and `worksheet` schemas. Browser `anon` and
+`authenticated` roles remain denied by the migrations' grants and RLS, while the
+server-side service-role clients use the exposed schemas. This retains backend-owned
+access without treating schema exposure as browser access (§9.3).
 
 ### 9.1 Tables at a glance
 
@@ -281,7 +281,7 @@ erDiagram
 | Column | Type | Notes |
 |---|---|---|
 | `parent_id` | uuid PK | |
-| `auth_user_id` | uuid unique, **nullable** | The Supabase Auth user id (JWT `sub`). Nullable so seed data can exist before the parent signs up; a null here means "not linked to a login yet" and the row is unreachable through the API. |
+| `auth_user_id` | uuid unique, not null, FK → `auth.users.id` | The Supabase Auth user id (JWT `sub`). `0005_parent_auth_user_constraint.sql` adds the required Auth foreign key with `on delete cascade`. |
 | `name` | text not null | |
 | `email` | text not null | Account email. The address emails actually go to is `notification_preferences.recipient_email`. |
 | `mobile_number` | text not null default `''` | Carried for parity with the frontend `Parent` type; unused by any flow. |
@@ -361,7 +361,7 @@ Index `summaries_student_latest_idx (student_id, generated_at desc)` — serves 
 
 Index `email_notifications_parent_latest_idx (parent_id, sent_at desc)` — exactly the shape of that "newest send for this parent" query.
 
-### 9.2 DDL (`db/migrations/0001_insight_schema.sql`)
+### 9.2 DDL ([`db/migrations/0001_insight_schema.sql`](../../../db/migrations/0001_insight_schema.sql))
 
 Written idempotently throughout (`if not exists`), so re-running on an up-to-date database is harmless.
 
@@ -439,9 +439,9 @@ create index if not exists email_notifications_parent_latest_idx
     on insight.email_notifications (parent_id, sent_at desc);
 ```
 
-### 9.3 Grants and RLS (`db/migrations/0002_grants_and_rls.sql`)
+### 9.3 Grants and RLS ([`db/migrations/0002_grants_and_rls.sql`](../../../db/migrations/0002_grants_and_rls.sql))
 
-A schema you create yourself starts with **no privileges for anyone** — Supabase only wires privileges up automatically for `public`. Migration 0002 fixes that, and grants to `service_role` *only*: `anon` and `authenticated` deliberately get nothing, so the browser cannot reach these tables through the Data API even though the schema is exposed. All access goes through this backend.
+A schema you create yourself starts with **no privileges for anyone** — Supabase only wires privileges up automatically for `public`. Migration 0002 fixes that, and grants to `service_role` *only*: `anon` and `authenticated` deliberately get nothing, so the browser cannot reach these tables through the Data API even if schema exposure is later approved. All access goes through this backend.
 
 ```sql
 grant usage on schema insight to service_role;
@@ -462,7 +462,7 @@ alter table insight.email_notifications      enable row level security;
 
 **RLS is enabled with no policies.** That is a no-op today — `service_role` bypasses RLS (§6.1) — but it **fails safe**: if anyone later grants access to `authenticated`, RLS-on-with-no-policies denies everything, whereas RLS-off-plus-grant would be wide open. Adding the real per-row policies is step 2 of the §6.1 migration path; the tables are already armed for them.
 
-**Migration management:** numbered SQL files in `db/migrations/`, applied manually via the Supabase SQL editor by a human, who then records the date and filename in the "Applied" table in `db/migrations/README.md` — that table is the only record of what the shared database actually contains. Never renumber or rewrite an applied file; add a new one. (The Supabase CLI's linked-project workflow would add per-developer setup and a shared migration-history table across three teams — not worth it for a schema expected to change a handful of times. The files are written so they can drop into `supabase/migrations/` unchanged if the team adopts the CLI later.)
+**Migration management:** numbered SQL files in the root [`db/migrations/`](../../../db/migrations/) directory are applied manually via the Supabase SQL editor by a human. Never renumber or rewrite an applied file; add a new one.
 
 **Data provenance:** progress data is **seeded** (`scripts/seed.ts`) this iteration — no live ingestion from other subsystems. If DAS 7 later needs real assessment data, the platform rule is to call the owning service's API (e.g. `GET /api/screening/results/{childId}`), never to read another service's tables.
 
@@ -536,9 +536,7 @@ Harness notes:
 | `SUPABASE_SERVICE_ROLE_KEY` | server-only secret — never in frontend or git |
 | `SUPABASE_DB_SCHEMA` | `insight` |
 | `SUPABASE_JWKS_URL` | optional override; defaults to `${SUPABASE_URL}/auth/v1/.well-known/jwks.json` |
-| `SUPABASE_JWT_SECRET` | set only if the project still issues legacy HS256 tokens (§6); blank selects the JWKS path |
-| `AUTH_DEV_SUB` | dev-only tokenless fallback (§6); ignored in production |
-| `SEED_AUTH_USER_ID` | `scripts/seed.ts` only — the auth user the demo parent is linked to. Blank leaves `auth_user_id` null, which makes the seeded parent unreachable through the API. Use a *third* auth user, not either `TEST_USER_*`: the integration harness owns those two parent rows and refuses to run if it finds one mapped to a parent it did not create. |
+| `SEED_AUTH_USER_ID` | `scripts/seed.ts` only — required Auth user ID for the demo parent. Use a *third* Auth user, not either `TEST_USER_*`: the integration harness owns those two parent rows and refuses to run if it finds one mapped to a parent it did not create. |
 | `LLM_PROVIDER` | `stub` (default) \| `openrouter`; `anthropic` \| `openai` \| `gemini` are accepted but unimplemented |
 | `LLM_API_KEY`, `LLM_MODEL`, `LLM_TIMEOUT_MS` | required by `openrouter`; model ids are `vendor/model`, e.g. `google/gemini-2.0-flash-exp:free` |
 | `EMAIL_PROVIDER` | `brevo` \| `fake` |
@@ -549,14 +547,15 @@ Harness notes:
 | `TEST_SUPABASE_REF` | tests only — safety guard (§11) |
 | `TEST_USER_A_EMAIL/PASSWORD`, `TEST_USER_B_*` | tests only — pre-created auth users |
 
-## 13. Runtime and deployment
+## 13. Runtime
 
-One container, one process, serving the API and running the notification timer.
+One host process serves the API and runs the notification timer. DAS7 is not part
+of the DAS3 Docker stack.
 
 - **Startup** builds everything once at module scope in `index.ts`: config → Supabase client → the seven repos → LLM and email adapters → the three services → `Deps` → `createApp()`. A missing or contradictory environment variable fails here, not on the first request that needs it.
-- **Binding** is `0.0.0.0:4000`, not localhost, so Traefik can reach the container. The startup log is one line naming the schema and the selected providers, which is usually enough to diagnose a misconfigured deploy without opening a shell.
-- **Shutdown** on `SIGINT`/`SIGTERM` stops the scheduler, then closes the server, then exits — so `docker stop` returns promptly instead of waiting out the 10s `SIGKILL` fallback.
-- **Node 22 or newer is required.** `@supabase/supabase-js` reaches for a native `WebSocket` during `createClient()`, which Node 20 does not provide: a Node 20 image builds cleanly and then dies on startup. The `Dockerfile` is a two-stage build shipping `dist/` plus production dependencies on `node:22-alpine`, with no environment values baked in.
+- **Binding** is `0.0.0.0:4000`, which lets the root Vite proxy reach the host service. The startup log is one line naming the schema and selected providers.
+- **Shutdown** on `SIGINT`/`SIGTERM` stops the scheduler, then closes the server, then exits cleanly.
+- **Node 22 or newer is required.** `@supabase/supabase-js` reaches for a native `WebSocket` during `createClient()`, which Node 20 does not provide.
 
 ## 14. Glossary (for non-backend readers)
 

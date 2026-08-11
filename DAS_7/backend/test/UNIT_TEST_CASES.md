@@ -34,10 +34,10 @@ run offline against in-file fakes — no database, no network, no API keys.
 
 | ID | Feature / Use Case | Precondition | Input | Expected Output | Expected Postcondition |
 | --- | --- | --- | --- | --- | --- |
-| UT-13 | Accept a valid token and resolve the parent | `supabaseJwtSecret` configured; token signed with it, issuer `${supabaseUrl}/auth/v1`, `sub` matches a parent row | Request with `Authorization: Bearer <token>` | Middleware calls `next()` | `req.parent` set to the matching parent |
-| UT-14 | Reject an expired token | Same, but `exp` in the past | Request with that token | Throws `UnauthorizedError` (401, message `unauthorised`) | `req.parent` unset; the reason is never disclosed to the caller |
-| UT-15 | Reject a valid token whose user is not a registered parent | Token verifies; `parentRepo.byAuthUserId` returns `null` | Request with that token | Throws `UnauthorizedError` (401) | `req.parent` unset |
-| UT-16 | Fence the dev fallback out of production | `authDevSub` set; `nodeEnv="production"` | Request with **no** `Authorization` header | Throws `UnauthorizedError` (401) | The fallback parent is never looked up |
+| UT-13 | Accept a valid token and resolve the parent | Token is signed by the configured JWKS key, issuer `${supabaseUrl}/auth/v1`, `sub` matches a parent row | Request with `Authorization: Bearer <token>` | Middleware calls `next()` | `req.parent` set to the matching parent |
+| UT-14 | Reject an invalid token | Token is expired, signed by an unknown key, has another issuer, or lacks `sub` | Request with that token | Throws `UnauthorizedError` (401, message `unauthorised`) | `req.parent` unset; the reason is never disclosed to the caller |
+| UT-15 | Reject a valid token whose user is not a registered parent | Token verifies; `parentRepo.byAuthUserId` returns `null` | Request with that token | Throws `ForbiddenError` (403, message `forbidden`) | `req.parent` unset |
+| UT-16 | Require a bearer token | No `Authorization` header or malformed header | Request to a protected route | Throws `UnauthorizedError` (401) | No parent lookup occurs |
 | UT-17 | Make an unowned student indistinguishable from a missing one | `studentRepo.isGuardian` returns `false` | `requireOwnStudent(repo, parentA, "s-of-parentB")` | Throws `NotFoundError` with message `progressUnavailable` | Byte-identical to the result for a nonexistent student id — no existence oracle |
 | UT-18 | Reject access to another parent's account | Caller is `parent-1` | `requireOwnParent(parent1, "parent-2")` | Throws `NotFoundError` (404 `notFound`) | Closes the IDOR the mock backend had |
 

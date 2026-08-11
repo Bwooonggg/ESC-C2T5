@@ -102,15 +102,14 @@ async function main(): Promise<void> {
     const config = loadConfig();
     const client = createDbClient(config);
 
-    const authUserId = (process.env.SEED_AUTH_USER_ID ?? '').trim() || null;
-    if (authUserId === null) {
-        console.log(
-            'SEED_AUTH_USER_ID not set — seeding the parent with auth_user_id = null. '
-            + 'Set it to the Supabase auth user id of the demo login and re-run to link them.',
+    const authUserId = (process.env.SEED_AUTH_USER_ID ?? '').trim();
+    if (authUserId === '') {
+        throw new Error(
+            'SEED_AUTH_USER_ID is required because insight.parents.auth_user_id must reference '
+            + 'an existing Supabase Auth user.',
         );
-    } else {
-        console.log(`Linking the demo parent to auth user ${authUserId}.`);
     }
+    console.log(`Linking the demo parent to auth user ${authUserId}.`);
 
     console.log(`Seeding schema "${config.supabaseDbSchema}" at ${config.supabaseUrl} …`);
 

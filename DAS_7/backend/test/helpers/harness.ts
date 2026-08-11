@@ -57,7 +57,7 @@ export interface TestHarness {
     studentB1: Student;
     llm: LlmControl;
     email: FakeEmailControl;
-    /** Creates + registers an extra parent (no students, no preference, no auth user). */
+    /** Replaces test user B's profile with an extra parent for notifier tests. */
     createParent(): Promise<Parent>;
     /** Creates + registers an extra student for cleanup. */
     createStudent(opts: { parentId: string; withProgress: boolean }): Promise<Student>;
@@ -148,9 +148,7 @@ export async function createHarness(): Promise<TestHarness> {
         );
     }
 
-    // The dev fallback would let unauthenticated requests through as a fixed
-    // parent, which is exactly what the auth suite is checking for.
-    const config: AppConfig = { ...loadConfig(), authDevSub: null, emailProvider: 'fake' };
+    const config: AppConfig = { ...loadConfig(), emailProvider: 'fake' };
     const client = createDbClient(config);
 
     const parentRepo = createParentRepo(client);
@@ -186,7 +184,7 @@ export async function createHarness(): Promise<TestHarness> {
     const parentIds: string[] = [];
     const studentIds: string[] = [];
 
-    async function insertParent(authUserId: string | null): Promise<Parent> {
+    async function insertParent(authUserId: string): Promise<Parent> {
         const parentId = randomUUID();
         const { data, error } = await client
             .from('parents')
@@ -313,7 +311,10 @@ export async function createHarness(): Promise<TestHarness> {
         studentB1,
         llm,
         email,
-        createParent: () => insertParent(null),
+        createParent: async () => {
+            await releaseAuthUser(sessionB.authUserId);
+            return insertParent(sessionB.authUserId);
+        },
         createStudent: insertStudent,
         cleanup,
     };

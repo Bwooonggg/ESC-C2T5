@@ -1,18 +1,4 @@
 services:
-  frontend:
-    build:
-      context: frontend
-      dockerfile: Dockerfile
-      args:
-        VITE_LANGGRAPH_URL: /api/worksheet
-    image: das-agent-frontend:dev
-    restart: unless-stopped
-    ports:
-      - "${FRONTEND_PORT:-3000}:80"
-    depends_on:
-      langgraph-dev:
-        condition: service_healthy
-
   langgraph-dev:
     build:
       context: .
@@ -20,17 +6,21 @@ services:
     image: das-agent:dev
     restart: unless-stopped
     env_file:
-      - path: .env.shipit
+      - path: .env
         required: false
     environment:
       PORT: "2024"
-      DATABASE_URI: postgresql://postgres:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env or .env.shipit}@postgres:5432/${POSTGRES_DB:-langgraph}
+      DATABASE_URI: postgresql://postgres:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@postgres:5432/${POSTGRES_DB:-langgraph}
       REDIS_URI: redis://redis:6379/0
       MILVUS_DB_PATH: /app/data/milvus/docling.db
       RUN_INGEST: "false"
       HF_HOME: /data/huggingface
+    ports:
+      - "2024:2024"
     volumes:
       - model-cache:/data/huggingface
+      # langgraph dev persists its in-memory runtime state in this directory.
+      - langgraph-state:/app/.langgraph_api
     depends_on:
       postgres:
         condition: service_healthy
@@ -53,7 +43,7 @@ services:
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-langgraph}
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env or .env.shipit}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
@@ -79,3 +69,4 @@ volumes:
   postgres-data:
   redis-data:
   model-cache:
+  langgraph-state:

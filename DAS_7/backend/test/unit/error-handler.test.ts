@@ -4,7 +4,7 @@ import type { AppConfig } from '../../src/config.js';
 import type { Deps } from '../../src/deps.js';
 import { createApp } from '../../src/app.js';
 import {
-    ApiError, NotFoundError, UnauthorizedError, UnavailableError, ValidationError,
+    ApiError, ForbiddenError, NotFoundError, UnauthorizedError, UnavailableError, ValidationError,
 } from '../../src/errors.js';
 import { errorHandler, notFoundHandler } from '../../src/http/error-handler.js';
 
@@ -37,10 +37,12 @@ describe('errorHandler', () => {
 
     const cases: Array<{ name: string; error: ApiError; status: number; message: string }> = [
         { name: 'UnauthorizedError', error: new UnauthorizedError(), status: 401, message: 'unauthorised' },
+        { name: 'ForbiddenError', error: new ForbiddenError(), status: 403, message: 'forbidden' },
         { name: 'NotFoundError (default)', error: new NotFoundError(), status: 404, message: 'notFound' },
         { name: 'NotFoundError (custom)', error: new NotFoundError('progressUnavailable'), status: 404, message: 'progressUnavailable' },
         { name: 'ValidationError', error: new ValidationError('frequency must be Weekly, Fortnightly or Monthly'), status: 400, message: 'frequency must be Weekly, Fortnightly or Monthly' },
         { name: 'UnavailableError', error: new UnavailableError('summaryUnavailable'), status: 503, message: 'summaryUnavailable' },
+        { name: 'UnavailableError (auth)', error: new UnavailableError('authUnavailable'), status: 503, message: 'authUnavailable' },
         { name: 'ApiError (direct)', error: new ApiError(501, 'notImplemented'), status: 501, message: 'notImplemented' },
     ];
 
@@ -92,8 +94,6 @@ describe('createApp', () => {
         supabaseServiceRoleKey: 'service-role-key',
         supabaseDbSchema: 'insight',
         supabaseJwksUrl: 'https://example.supabase.co/auth/v1/.well-known/jwks.json',
-        supabaseJwtSecret: null,
-        authDevSub: null,
         llmProvider: 'stub',
         llmApiKey: null,
         llmModel: null,

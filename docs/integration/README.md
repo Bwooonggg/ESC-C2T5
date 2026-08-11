@@ -16,14 +16,15 @@ matches the implementation.
 - The root Vite configuration proxies `/api/screening`, `/api/worksheet`, and
   `/api/insights` to the three local backends.
 - DAS1 is public and has a standalone frontend.
-- DAS3 has a LangGraph backend and standalone frontend, but does not verify
-  Supabase JWTs.
+- DAS3 has a LangGraph backend and standalone frontend, authenticates Supabase JWTs,
+  authorizes teacher profiles, and rejects parents.
 - DAS7 verifies Supabase JWTs and maps `sub` to
   `insight.parents.auth_user_id`.
-- The root frontend has one Supabase client. Separate worksheet and insight
-  sessions are not implemented yet.
+- The root frontend has one Supabase client. The independent worksheet and insight
+  sessions and UI described in `FRONTEND_PLAN.md` are not implemented yet.
 - Brevo remains the DAS7 production email provider.
-- Docker and Traefik are no longer part of the target deployment.
+- Docker is retained only for the local DAS3 backend, PostgreSQL, and Redis stack.
+  Traefik is not used.
 
 ## Shared completion conditions
 
@@ -35,8 +36,8 @@ Integration is complete when:
 - DAS7 accepts parents and rejects teachers.
 - Worksheet and insight sessions can exist and sign out independently.
 - Each frontend section calls only its own backend.
-- The full system runs without Docker or Traefik.
-- The production proxy or CORS choice has been tested in the chosen host.
+- DAS1 and DAS7 run directly on the host, while only DAS3 uses Docker Compose.
+- The root Vite proxy connects the local frontend to all three backends.
 - `README.md`, `API_CONTRACTS.md`, and `docs/ARCHITECTURE.md` describe the code as
   implemented.
 
@@ -47,5 +48,5 @@ After the completion conditions pass:
 1. Move any operational information that still matters into the root README or
    permanent architecture document.
 2. Remove obsolete standalone frontend references.
-3. Decide whether to delete the old Docker and Traefik files.
+3. Remove unused frontend and Traefik configuration from the DAS3 Compose setup.
 4. Delete `docs/integration/`.

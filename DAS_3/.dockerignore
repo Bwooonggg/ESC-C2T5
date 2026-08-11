@@ -6,6 +6,7 @@
 .idea
 .langgraph_api
 .pytest_cache
+.pytest-das3-*
 __pycache__
 *.py[cod]
 *.db

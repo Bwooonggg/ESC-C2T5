@@ -20,6 +20,8 @@ backend/tests/
   integration/          # IT-01..IT-09 — Supertest against app.ts
                          # IT-06 (real MySQL) is skipped unless RUN_DB_INTEGRATION_TESTS=1
                          # points real DB_HOST/DB_USER/DB_PASSWORD/DB_NAME at a disposable schema
+                         # publicProxyContract.test.ts starts the root Vite proxy and proves
+                         # /api/screening is stripped before the public backend receives it
 
 demo_app/tests/
   setup.ts, mocks/       # MSW server + baseline handlers
@@ -40,4 +42,5 @@ npm run test:coverage --prefix backend   # coverage report for screeningSession.
 Each backend test file gets its own throwaway `SESSIONS_FILE` (a temp path,
 never `backend/data/sessions.json`), so the suite is safe to run repeatedly
 and in parallel. `claudeService.ts` is stubbed per-file with `vi.mock` so no
-`VITE_ANTHROPIC_API_KEY` is needed to run the suite.
+`VITE_ANTHROPIC_API_KEY` is only needed for live Claude calls; the test suite
+stubs them and does not require it.

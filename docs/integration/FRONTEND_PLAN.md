@@ -157,8 +157,9 @@ Completion check:
 This phase follows the feature lanes because it depends on their API clients. It
 also depends on the backend identity checks described in `BACKEND_PLAN.md`.
 
-- [ ] After worksheet login, call the DAS3 identity check or first protected
-  endpoint to confirm that the account has a teacher profile.
+- [ ] After worksheet login, make a small authenticated LangGraph thread search to
+  confirm that the account has a teacher profile. Do not add a separate DAS3
+  identity endpoint.
 - [ ] After insights login, call `/api/insights/me` to confirm that the account has
   a parent profile.
 - [ ] On `401`, keep the other service's session and send the user to the matching
@@ -193,6 +194,7 @@ all three sections have been merged.
 - [ ] A `401` from one backend does not clear the other session.
 - [ ] Wrong-group access produces the access-denied flow.
 - [ ] Every route works through the Vite proxy with the three local backends.
+- [ ] The worksheet client works with the DAS3 container exposed on port `2024`.
 - [ ] `npm run frontend:test` passes.
 - [ ] `npm run frontend:build` passes.
 

@@ -22,8 +22,6 @@ const config = {
     supabaseServiceRoleKey: 'service-role-key',
     supabaseDbSchema: 'insight',
     supabaseJwksUrl: 'https://example.supabase.co/auth/v1/.well-known/jwks.json',
-    supabaseJwtSecret: null,
-    authDevSub: null,
     llmProvider: 'stub',
     llmApiKey: null,
     llmModel: null,

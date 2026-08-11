@@ -33,6 +33,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 COPY docker-entrypoint.sh /usr/local/bin/render-entrypoint.sh
-RUN chmod 0755 /usr/local/bin/render-entrypoint.sh
+RUN sed -i 's/\r$//' /usr/local/bin/render-entrypoint.sh && \
+    chmod 0755 /usr/local/bin/render-entrypoint.sh
 
 ENTRYPOINT ["/usr/local/bin/render-entrypoint.sh"]

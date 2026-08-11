@@ -22,7 +22,7 @@ cp .env.example .env
 
 The only two required values are `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`;
 everything else has a working default (`LLM_PROVIDER=stub`, `EMAIL_PROVIDER=fake`,
-scheduler off). Apply `db/migrations/*.sql` through the Supabase dashboard, then
+scheduler off). Apply `../../db/migrations/*.sql` through the Supabase dashboard, then
 load the demo dataset:
 
 ```bash
@@ -30,15 +30,15 @@ npm run seed
 ```
 
 Set `SEED_AUTH_USER_ID` to the Supabase Auth user id of your demo login before
-seeding, so the seeded parent is reachable from a browser session — and set
-`AUTH_DEV_SUB` to the same id if you want tokenless local requests to work.
+seeding. Parent profiles require a matching Auth user.
 
 ```bash
 npm run dev
 ```
 
-The API listens on `http://localhost:4000`. The frontend's Vite dev server proxies
-`/api` to that port, so the browser stays on one origin.
+The API runs directly on the host at `http://localhost:4000`. The root Vite dev
+server is the sole browser-facing proxy and forwards `/api/insights` to that port
+after stripping the prefix, so the browser stays on one origin.
 
 Other scripts: `npm run typecheck`, `npm run build`, `npm start` (runs `dist/`),
 `npm test`.
@@ -54,9 +54,9 @@ Other scripts: `npm run typecheck`, `npm run build`, `npm start` (runs `dist/`),
 | `POST` | `/students/:studentId/recommendations` | suggestions from the stored summary |
 | `GET`/`PUT` | `/parents/:parentId/preferences` | notification preferences |
 
-These are internal service paths. Browser callers prepend the public gateway
-prefix `/api/insights`; Traefik and the Vite development proxy strip it before
-forwarding.
+These are internal service paths. Browser callers prepend `/api/insights`; the
+root Vite proxy strips that prefix before forwarding to the host process on port
+`4000`.
 
 Every response uses one envelope: `{ ok: true, data }` or `{ ok: false, error }`.
 
@@ -122,16 +122,11 @@ keep `service_role` only where no user is in context (the scheduler and the seed
 The code-level `requireOwn*` checks stay either way; RLS would become the second layer,
 not a replacement.
 
-## Deployment
+## Runtime
 
-`Dockerfile` is a two-stage build: compile with dev dependencies, ship `dist/` plus
-production `node_modules` on `node:22-alpine`. The service listens on `0.0.0.0:4000` so
-Traefik can reach it, and no environment values are baked into the image.
-
-```bash
-docker build -t das7-backend .
-docker run --env-file .env -p 4000:4000 das7-backend
-```
+DAS7 runs directly on the host, not in the DAS3 Docker stack. Use `npm run dev` for
+development, or `npm run build` followed by `npm start`, and keep it on port `4000`
+for the root Vite proxy.
 
 Node 22 or newer is required at runtime: `@supabase/supabase-js` needs a native
 `WebSocket`, which Node 20 does not provide.

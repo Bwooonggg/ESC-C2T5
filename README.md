@@ -82,11 +82,28 @@ available for local development and tests.
 
 - Node.js 22 or newer and npm
 - Python 3.12 for DAS3
+- Docker Desktop for the persistent local DAS3 stack
 - A Supabase project for DAS3 and DAS7 authentication and DAS7 data
 - Provider credentials required by the service you are running
 
 Never commit a real `.env` file. Copy the relevant `.env.example` and add secrets
 only to the copied environment file.
+
+### Start everything
+
+After installing each package's dependencies and creating the four environment
+files, start the complete local backend/frontend stack from the repository root:
+
+```powershell
+.\scripts\start-dev.ps1
+```
+
+The script waits for all four ports and writes service output under `.dev/logs`.
+Stop only the processes it started, while preserving Docker volumes, with:
+
+```powershell
+.\scripts\stop-dev.ps1
+```
 
 ### Centralized frontend
 
@@ -116,16 +133,15 @@ environment variables. DAS1 does not require a user login.
 
 ### DAS3 backend
 
-From `DAS_3/`, create a Python 3.12 virtual environment, install
-`requirements.txt`, copy `.env.example` to `.env`, then run:
+From `DAS_3/`, copy `.env.example` to `.env`, fill in the backend credentials,
+then start the persistent backend stack:
 
 ```powershell
-langgraph dev
+docker compose up --build
 ```
 
-LangGraph defaults to port `2024` in this setup. DAS3 JWT verification has not been
-implemented yet, so do not expose it as a teacher service until the integration
-checklist is complete.
+Compose runs LangGraph, PostgreSQL, and Redis and publishes LangGraph on host port
+`2024`. DAS3 verifies Supabase JWTs and requires a matching teacher profile.
 
 ### DAS7 backend
 
@@ -168,20 +184,14 @@ run protocol, while DAS1 and DAS7 use their existing JSON formats. Shared rules
 cover routing, JWT transport, status codes, and errors. See
 [API_CONTRACTS.md](API_CONTRACTS.md).
 
-## Deployment
+## Runtime scope
 
-Docker and Traefik are not part of the target architecture. Existing Docker files
-are retained as legacy files until the non-container setup has been verified.
+Production hosting is out of scope. The target local setup uses Docker only for
+the DAS3 LangGraph, PostgreSQL, and Redis stack. The centralized frontend, DAS1,
+and DAS7 run directly on the host. Traefik is not used.
 
-The production host must choose one of these browser routing options:
-
-1. Proxy the three `/api/*` prefixes through the frontend origin, as Vite does
-   locally.
-2. Give the frontend three backend URLs and configure a strict CORS allowlist on
-   each backend.
-
-The hosting provider has not been chosen, so the repository does not commit to one
-production option yet.
+The DAS3 Compose file is backend-only; its PostgreSQL, Redis, and model-cache
+volumes preserve local service data across container restarts.
 
 ## Data handling
 

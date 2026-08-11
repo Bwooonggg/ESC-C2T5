@@ -96,9 +96,9 @@ ID to one account group:
 - The existing DAS7 parent profile is `insight.parents`, linked through
   `auth_user_id`.
 
-An account belongs to exactly one group. Administrators create or invite accounts
-and add the matching profile. Provisioning must reject an auth user ID that is
-already assigned to the other group.
+An account belongs to exactly one group. For local testing, an administrator
+creates a confirmed test user in the Supabase Dashboard and manually inserts the
+matching profile. The same Auth user ID must not be inserted into both tables.
 
 This is logical separation inside one Supabase project. A backend service-role key
 can bypass RLS and may have access to more than one schema, so it does not provide
@@ -179,28 +179,29 @@ reveal whether an email address is registered.
 
 See [../API_CONTRACTS.md](../API_CONTRACTS.md) for transport and response details.
 
-## Development and production routing
+## Local routing
 
 The root Vite server currently proxies all three API prefixes and removes the
 prefix before forwarding. The browser sees requests to its own origin, so local
 development does not need CORS.
 
-Vite's development proxy is not part of a production build. Production must use
-one of these options:
+Production hosting is out of scope. If that changes, the team must choose between
+same-origin hosting rewrites and separate backend URLs with strict CORS
+allowlists.
 
-1. Configure the hosting platform to proxy the same `/api/*` prefixes.
-2. Point the frontend at separate backend URLs and allow the deployed frontend
-   origin through CORS on each backend.
+## Local runtime model
 
-If separate URLs are used, the CORS allowlist should contain the exact frontend
-origin. Protected backends should not use a wildcard origin.
+The frontend, DAS1, and DAS7 run directly on the host. DAS3 uses Docker Compose for
+its LangGraph development server. Its old frontend container is removed because the
+root frontend replaces it. The LangGraph container exposes port `2024` to the
+existing Vite proxy. Traefik is not used.
 
-## Deployment model
-
-The frontend and three backends run as four processes. They can be deployed and
-updated separately. Docker and Traefik are not part of this target. Existing
-container files remain in the repository until the team verifies the replacement
-deployment and chooses whether to remove them.
+Supabase remains separate from DAS3's local runtime and stores Auth users and teacher
+or parent profiles. The settled free local workflow uses `langgraph dev`, which
+persists durable state in the named `langgraph-state` volume mounted at
+`/app/.langgraph_api`. The Compose PostgreSQL and Redis services are retained but
+unused by that development server. A PostgreSQL-backed `langgraph up` deployment
+requires LangSmith access and a license.
 
 Configuration comes from environment files or the deployment platform's secret
 store. Real Supabase service-role, LLM, and Brevo keys must never appear in the

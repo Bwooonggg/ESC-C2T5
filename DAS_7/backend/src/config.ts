@@ -7,8 +7,6 @@ export interface AppConfig {
     supabaseServiceRoleKey: string;
     supabaseDbSchema: string;                    // default 'insight'
     supabaseJwksUrl: string;                     // default `${supabaseUrl}/auth/v1/.well-known/jwks.json`
-    supabaseJwtSecret: string | null;            // legacy HS256 fallback (see Phase 3)
-    authDevSub: string | null;                   // dev-only tokenless fallback
     llmProvider: 'stub' | 'openrouter' | 'anthropic' | 'openai' | 'gemini';
     llmApiKey: string | null;
     llmModel: string | null;
@@ -90,8 +88,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
         supabaseJwksUrl:
             optional(env, 'SUPABASE_JWKS_URL')
             ?? `${url.replace(/\/+$/, '')}/auth/v1/.well-known/jwks.json`,
-        supabaseJwtSecret: optional(env, 'SUPABASE_JWT_SECRET'),
-        authDevSub: optional(env, 'AUTH_DEV_SUB'),
         llmProvider: oneOf(env, 'LLM_PROVIDER', LLM_PROVIDERS, 'stub'),
         llmApiKey: optional(env, 'LLM_API_KEY'),
         llmModel: optional(env, 'LLM_MODEL'),

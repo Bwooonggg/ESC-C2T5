@@ -4,10 +4,10 @@ Quick reference for the centralized frontend team: how to talk to the Parent Ins
 
 ## Where to send requests
 
-Always call **`/api/insights/...`** — the same relative path in every environment.
-
-- **Integrated deployment:** Traefik matches `/api/insights/*`, **strips that prefix**, and forwards to us.
-- **Local dev against our service alone:** the service listens on port **4000** and mounts its routes at the **root** (`/health`, `/me`, `/students/...`). Point the Vite proxy at it and strip the prefix exactly as Traefik does:
+Always call **`/api/insights/...`** from the centralized frontend. The root Vite
+dev server is the sole browser-facing proxy. DAS7 runs directly on the host at
+port **4000** and mounts its routes at the **root** (`/health`, `/me`,
+`/students/...`); the root Vite configuration strips the public prefix:
 
 ```ts
 proxy: {
@@ -18,7 +18,9 @@ proxy: {
 }
 ```
 
-Because both the gateway and the dev proxy strip, our service sees the same paths in both environments — and your code never needs an environment variable or a per-environment base URL.
+The browser therefore stays on the root frontend origin while DAS7 receives its
+prefix-free service paths. Production hosting is outside the current local
+integration scope.
 
 ## Logging in
 
@@ -29,20 +31,8 @@ Authorization: Bearer <supabase access token>
 ```
 
 - No/invalid/expired token → `401`.
-- A logged-in user who isn't a registered parent in our system also gets `401`.
+- A logged-in user who isn't a registered parent in our system gets `403`.
 - Parents can only see **their own** children and settings. Asking for someone else's returns `404` — exactly as if it didn't exist.
-
-### Local tokenless fallback
-
-The shared frontend now sends the active Supabase access token. For backend-only
-development, the service can still accept **tokenless** requests when `AUTH_DEV_SUB`
-is set and `NODE_ENV` is not `production`; each one is treated as a single fixed
-seeded parent.
-
-- Dev only, and it fails closed: in production a tokenless request is always `401`.
-- A **present but invalid** header never falls back to it. Send *no* `Authorization` header at all, or a valid token — a stale or malformed token gives `401`, not the dev parent. (This trips people up while debugging.)
-- The fallback is unnecessary when testing through the shared frontend and must not
-  be configured in production.
 
 ## Response format
 
@@ -109,11 +99,13 @@ Good to know:
 | Status | `error` value | Meaning / what to show |
 |---|---|---|
 | 401 | `unauthorised` | Not logged in (or session expired) → send to login |
+| 403 | `forbidden` | Signed in with an account that is not a parent → show access denied |
 | 404 | `progressUnavailable` | Unknown student, or not this parent's child. **Not retryable** — re-fetch `/me` and check the student ids |
 | 503 | `progressUnavailable` | Student has no progress data yet |
 | 503 | `summaryUnavailable` | Summary couldn't be generated right now → retry later |
 | 404 | `summaryUnavailable` | Recommendations requested before any summary exists (load the dashboard first) |
 | 503 | `recommendationUnavailable` | Recommendation couldn't be generated right now |
+| 503 | `authUnavailable` | Authentication keys are temporarily unavailable → retry later without signing out |
 | 400 | *(readable sentence)* | Bad preferences input — safe to display as-is |
 | 404 | `notFound` | Wrong URL or someone else's parentId |
 | 500 | `internalError` | Our bug — show a generic error |
