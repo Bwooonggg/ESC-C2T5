@@ -9,6 +9,7 @@ export default defineConfig(({ mode }) => {
       __DAS1_API_URL__: JSON.stringify(env.VITE_DAS1_API_URL || '/api/screening'),
       __DAS3_API_URL__: JSON.stringify(env.VITE_DAS3_API_URL || '/api/worksheet'),
       __DAS7_API_URL__: JSON.stringify(env.VITE_DAS7_API_URL || '/api/insights'),
+      __USE_STUBS__: JSON.stringify(env.VITE_USE_STUBS === 'true'),
     },
     server: {
       proxy: {

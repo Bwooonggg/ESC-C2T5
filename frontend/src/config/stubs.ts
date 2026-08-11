@@ -1,3 +1,6 @@
-/** Set by index.html only for an explicitly enabled localhost preview. */
-const previewGlobal = globalThis as typeof globalThis & { __DIAL_USE_STUBS__?: boolean };
-export const USE_STUBS = previewGlobal.__DIAL_USE_STUBS__ === true;
+declare const __USE_STUBS__: boolean;
+
+/** Preview data is available only when explicitly enabled on localhost. */
+export const USE_STUBS = (typeof __USE_STUBS__ === "undefined" ? false : __USE_STUBS__)
+    && (globalThis.location?.hostname === "localhost"
+        || globalThis.location?.hostname === "127.0.0.1");
