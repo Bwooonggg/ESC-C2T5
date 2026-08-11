@@ -198,17 +198,15 @@ threads, PostgreSQL data, Redis data, and model cache.
 
 ### Dummy login accounts
 
-The supplied env files contain the dummy account credentials. Passwords stay in
-those ignored files rather than this committed README because the accounts issue
-real ESC Supabase sessions.
+Use these dummy accounts for local development and testing:
 
 | Account | Email | Password | Purpose |
 | --- | --- | --- | --- |
-| Primary teacher | `TEST_TEACHER_EMAIL` in `DAS_3/.env` | `TEST_TEACHER_PASSWORD` in `DAS_3/.env` | Normal Worksheet login |
-| Teacher B | `TEST_TEACHER_B_EMAIL` in `DAS_3/.env` | `TEST_TEACHER_B_PASSWORD` in `DAS_3/.env` | Verifies that teachers cannot access each other's threads |
-| Demo parent | `DEMO_PARENT_EMAIL` in `DAS_7/backend/.env` | `DEMO_PARENT_PASSWORD` in `DAS_7/backend/.env` | Normal Parent Insights login with seeded student data |
-| Test parent A | `TEST_USER_A_EMAIL` in `DAS_7/backend/.env` | `TEST_USER_A_PASSWORD` in `DAS_7/backend/.env` | Hosted integration tests |
-| Test parent B | `TEST_USER_B_EMAIL` in `DAS_7/backend/.env` | `TEST_USER_B_PASSWORD` in `DAS_7/backend/.env` | Cross-parent ownership tests |
+| Primary teacher | `esc.teacher.local@example.com` | `0tRMN8XRk6AsUpgwg78FO1fYWPqrAgC-` | Normal Worksheet login |
+| Teacher B | `esc.teacher-b.local@example.com` | `JaVWNS088zw0KQyhnsynwwuM17zpclNO` | Verifies that teachers cannot access each other's threads |
+| Demo parent | `esc.parent.local@example.com` | `LEPRJt9r4f-J9dLrnVFG4jixQW0lUxie` | Normal Parent Insights login with seeded student data |
+| Test parent A | `das7.testa@example.com` | `das7.testa` | Hosted integration tests |
+| Test parent B | `das7.testb@example.com` | `das7.testb` | Cross-parent ownership tests |
 
 Use the primary teacher at `/worksheet/login` and the demo parent at
 `/insights/login`. The A/B accounts exist primarily for authorization tests and
