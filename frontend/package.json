@@ -11,6 +11,7 @@
     "test": "jest"
   },
   "dependencies": {
+    "@langchain/langgraph-sdk": "^1.9.28",
     "@supabase/supabase-js": "^2.110.8",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

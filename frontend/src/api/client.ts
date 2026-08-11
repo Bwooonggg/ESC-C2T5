@@ -8,6 +8,18 @@ import type {
     Summary,
 } from "../types/domain";
 import { getAccessToken } from "./auth";
+import { USE_STUBS } from "../config/stubs";
+import { stubInsightsRequest } from "../stubs/insights";
+
+export class InsightsApiError extends Error {
+    readonly status: number;
+
+    constructor(message: string, status: number) {
+        super(message);
+        this.name = "InsightsApiError";
+        this.status = status;
+    }
+}
 
 // The typed API client. Components call the functions at the bottom of this
 // file and never touch fetch, URLs, or the response envelope themselves.
@@ -31,8 +43,10 @@ import { getAccessToken } from "./auth";
  * TypeScript checks the rest of the chain against it.
  */
 export async function request<T>(path: string, init?: RequestInit): Promise<T> {
+    if (USE_STUBS) return stubInsightsRequest<T>(path, init);
+
     const headers = new Headers(init?.headers);
-    headers.set("Authorization", `Bearer ${await getAccessToken()}`);
+    headers.set("Authorization", `Bearer ${await getAccessToken("insights")}`);
 
     const response = await fetch(createApiUrl(path), { ...init, headers });
 
@@ -48,9 +62,15 @@ export async function request<T>(path: string, init?: RequestInit): Promise<T> {
         );
     }
 
+    if ((response.status === 401 || response.status === 403) && typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("dial:auth-failure", {
+            detail: { service: "insights", status: response.status },
+        }));
+    }
+
     // An error envelope carries a real message; prefer it over the bare status.
-    if (!body.ok) throw new Error(body.error);
-    if (!response.ok) throw new Error(`Request to ${path} failed: ${response.status}.`);
+    if (!body.ok) throw new InsightsApiError(body.error, response.status);
+    if (!response.ok) throw new InsightsApiError(`Request to ${path} failed: ${response.status}.`, response.status);
 
     return body.data;
 }

@@ -3,28 +3,41 @@
     align-items: center;
     justify-content: space-between;
     gap: 24px;
-    padding: 24px 28px;
+    padding: 14px 20px;
     background: var(--bg-subtle);
-    border: 1px solid var(--border);
-    border-left: 4px solid var(--accent);
-    border-radius: var(--radius);
+    border: 1px solid #e3e3e3;
+    border-top: 3px solid var(--accent);
+    border-radius: 4px;
 }
 
 .identity {
     display: flex;
-    align-items: baseline;
-    gap: 28px;
+    align-items: center;
+    gap: 32px;
     flex-wrap: wrap;
+}
+
+.studentHeading { min-width: 190px; }
+
+.eyebrow {
+    margin: 0 0 1px;
+    color: var(--accent-dark);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .1em;
+    text-transform: uppercase;
 }
 
 .name {
     margin: 0;
-    font-size: 28px;
+    color: var(--navy);
+    font-size: 23px;
+    line-height: 1.2;
 }
 
 .meta {
     display: flex;
-    gap: 28px;
+    gap: 24px;
     flex-wrap: wrap;
 }
 
@@ -38,7 +51,7 @@
 
 .metaValue {
     margin: 2px 0 0;
-    font-size: 15px;
+    font-size: 14px;
     color: var(--text);
 }
 

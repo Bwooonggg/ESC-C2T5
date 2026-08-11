@@ -39,6 +39,17 @@ export function DashboardApp() {
                 }
             } catch (error) {
                 if (!cancelled) {
+                    const status = typeof error === 'object' && error && 'status' in error
+                        ? Number(error.status)
+                        : 0
+                    if (status === 401) {
+                        navigate('/insights/login', { replace: true })
+                        return
+                    }
+                    if (status === 403) {
+                        navigate('/access-denied/insights', { replace: true })
+                        return
+                    }
                     setParentError(
                         error instanceof Error
                             ? error.message
@@ -53,11 +64,11 @@ export function DashboardApp() {
         return () => {
             cancelled = true
         }
-    }, [])
+    }, [navigate])
 
     async function handleLogout() {
-        await logout()
-        navigate('/login')
+        await logout('insights')
+        navigate('/insights/login')
     }
 
     const selectedStudent = students.find(

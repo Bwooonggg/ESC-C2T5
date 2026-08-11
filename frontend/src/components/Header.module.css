@@ -1,46 +1,45 @@
 .topBar {
-    height: 4px;
+    height: 5px;
     background: var(--accent);
 }
 
 .header {
     display: flex;
     align-items: center;
-    gap: 32px;
-    padding: 20px 32px;
-    border-bottom: 1px solid var(--border);
+    gap: 24px;
+    height: 61px;
+    min-height: 61px;
+    padding: 0 24px;
+    border-bottom: 1px solid #eeeeee;
+    background: #ffffff;
+    box-shadow: 0 4px 18px rgba(77, 77, 77, 0.05);
 }
 
 .brand {
     display: flex;
     align-items: center;
     gap: 12px;
+    color: inherit;
+    text-decoration: none;
 }
 
-.logo {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 44px;
-    height: 44px;
-    border-radius: 10px;
-    background: var(--accent-bg);
-    color: var(--accent);
-    font-weight: 500;
-    font-size: 14px;
-    letter-spacing: 0.04em;
+.logoImage {
+    width: 38px;
+    height: 39px;
+    object-fit: contain;
     flex: none;
 }
 
 .title {
     margin: 0;
-    font-size: 18px;
-    color: var(--text-h);
+    font-size: 16px;
+    color: var(--navy);
+    font-weight: 700;
 }
 
 .subtitle {
     margin: 0;
-    font-size: 13px;
+    font-size: 10px;
     color: var(--text-muted);
 }
 
@@ -57,7 +56,7 @@
     background: none;
     border: none;
     color: var(--text-muted);
-    font-size: 16px;
+    font-size: 13px;
     text-decoration: none;
 }
 
@@ -66,7 +65,8 @@
 }
 
 .navLinkActive {
-    color: var(--accent);
+    color: var(--accent-dark);
+    font-weight: 700;
 }
 
 .navLinkActive::after {
@@ -74,14 +74,14 @@
     position: absolute;
     left: 0;
     right: 0;
-    bottom: -21px;
-    height: 2px;
-    background: var(--accent);
+    bottom: -13px;
+    height: 3px;
+    background: var(--accent-dark);
 }
 
 .signedIn {
     margin-left: auto;
-    font-size: 14px;
+    font-size: 11px;
     color: var(--text-muted);
     white-space: nowrap;
 }
@@ -95,8 +95,15 @@
     background: transparent;
     color: var(--accent);
     border: 1px solid var(--accent-border);
-    border-radius: var(--radius);
-    padding: 6px 14px;
-    font-size: 14px;
+    border-radius: 999px;
+    padding: 5px 11px;
+    font-size: 11px;
     white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+    .header { flex-wrap: wrap; gap: 14px 20px; padding: 14px 20px; }
+    .signedIn { order: 3; margin-left: 0; }
+    .nav { order: 4; width: 100%; }
+    .navLinkActive::after { bottom: -8px; }
 }
