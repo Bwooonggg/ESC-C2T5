@@ -1,169 +1,199 @@
-# D.I.A.L — DAS Individualised AI-Based Learning System
+# D.I.A.L
 
-> An AI-powered learning-support platform built for the **Dyslexia Association of Singapore (DAS)**, helping learners who learn differently receive individualised, differentiated support.
+D.I.A.L is a student project for the Dyslexia Association of Singapore (DAS). This
+repository contains three parts of the wider D.I.A.L system:
 
-**Course:** SUTD 50.003 — Elements of Software Construction · **Team:** C2T5
-**Industry Partner:** Dyslexia Association of Singapore (DAS)
+| Service | User | Purpose | Access |
+| --- | --- | --- | --- |
+| DAS1 Screening | Public | Runs a non-diagnostic screening flow | No login |
+| DAS3 Worksheet | Teachers | Generates teaching worksheets from DAS material | Teacher login |
+| DAS7 Insights | Parents | Shows student progress, summaries, recommendations, and email preferences | Parent login |
 
----
+The target system has one React frontend and three separately run backends. The
+backends stay independent. A page in the frontend calls only the backend that owns
+that page.
 
-## Overview
+## Project status
 
-DAS empowers people who learn differently — including those with dyslexia — to reach their potential. **D.I.A.L** is DAS's mega project suite to bring individualisation and differentiation to their programmes using AI. The full suite spans **seven** subsystems; this repository implements a **strongly-connected subset of three**:
+DAS1, DAS3, and DAS7 already have separate working implementations. The root
+`frontend/` is the starting point for the centralized frontend, but it currently
+contains the DAS7 interface. DAS1 and DAS3 still have their own frontend folders.
 
-| # | Subsystem | What it does |
-|---|-----------|--------------|
-| **DAS 1** | **Learning Screening Engine** | A non-diagnostic screening questionnaire that uses an ML model to indicate a learner's *likelihood* of conditions such as dyslexia or ADHD, and summarises results on an educator dashboard. |
-| **DAS 3** | **Adaptive Learning Activity Generator** | Lets an educational therapist input a student profile and generates downloadable learning worksheets using Retrieval-Augmented Generation (RAG) over DAS teaching materials. |
-| **DAS 7** | **Parent Insight Dashboard** | Lets parents track their child's educational progress with AI-generated summaries and recommendations, plus email notifications. |
+The planned routes for the centralized frontend are:
 
-> The remaining subsystems (DAS 2 Cognitive Profiling, DAS 4 Error Pattern Analyzer, DAS 5 Progress Monitoring, DAS 6 Intervention Recommendation) are **out of scope** for this repository.
+| Route | Service |
+| --- | --- |
+| `/` | Homepage with links to the three services |
+| `/screening/*` | DAS1 public screening pages |
+| `/worksheet/login` | DAS3 teacher login |
+| `/worksheet/*` | DAS3 teacher pages |
+| `/insights/login` | DAS7 parent login |
+| `/insights/*` | DAS7 parent pages |
 
----
+The permanent design is in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). The
+temporary integration checklist is in
+[docs/integration/README.md](docs/integration/README.md). Remove the integration
+folder after the centralized frontend and DAS3 authentication are complete.
 
-## Subsystems in detail
+## Repository layout
 
-### DAS 1 — Learning Screening Engine
-- A **freely accessible, 24/7** screening test that routes users by age.
-- Collects responses and sends them to an **ML classification model** that predicts literacy-risk indicators.
-- Results are stored and surfaced to educators via a **dashboard summarising student performance**.
-- **Non-diagnostic** — framed as a "fun questionnaire," not a clinical assessment.
-- Personal data is **anonymised** (hashed user IDs; individuals are not identifiable by full name or NRIC).
-
-### DAS 3 — Adaptive Learning Activity Generator
-- An **educational therapist** submits requirements / a student profile.
-- The system retrieves relevant DAS resources (policies, guidelines, teaching content) from a **knowledge base**, then prompts an **LLM** to generate worksheet content (RAG pipeline).
-- The formatted worksheet is provided as a **downloadable attachment**.
-- Proof-of-concept is scoped to **a single band level** (e.g. Band A) to manage complexity.
-
-### DAS 7 — Parent Insight Dashboard
-- Parents log in to a **role-secured** dashboard to track their child's progress.
-- **Get Summary** (`<<include>>`) — an AI summary of the child's progress.
-- **Get Recommendations** (`<<extend>>`) — AI-generated recommendations to help the child.
-- **Notify Parent** — a scheduled job emails parents a short progress summary.
-
----
-
-## Use cases
-
-**General**
-- Sign Up — user registers with email verification via an external email server.
-- Log In — user authenticates with email/password + verification code.
-
-**DAS 1 — Learning Screening Engine**
-- Screen User — take a screening test → ML prediction → optionally store profile + results.
-
-**DAS 3 — Adaptive Learning Activity Generator**
-- Generate Worksheet — therapist requirements → RAG retrieval → LLM generation → download.
-
-**DAS 7 — Parent Insight Dashboard**
-- Track Child's Progress — includes *Get Summary*, extends *Get Recommendations*.
-- Notify Parent — periodic email notification with a progress summary.
-
----
-
-## Tech stack
-
-| Layer | Technology |
-|-------|------------|
-| Frontend | React + Vite + TypeScript |
-| Backend | Node.js + Express + TypeScript (JSON over REST) |
-| Screening ML (DAS 1) | ML classification model for literacy-risk prediction |
-| Content generation (DAS 3) | RAG — vector database + embeddings + LLM API *(provider TBD)* |
-| Summaries (DAS 7) | LLM API for summarisation & recommendations |
-| Repo tooling | Monorepo; each subsystem owns its `package.json` + lockfile |
-
-> **Not yet finalised:** hosting environment (local vs DAS/SUTD-provided — pending client ICT confirmation) and the specific LLM / vector-DB providers. No strict accuracy target is required; ~75–80% is acceptable for the proof of concept.
-
----
-
-## Repository structure
-
-```
+```text
 ESC-C2T5/
-├─ package.json          # root manifest — convenience scripts
-├─ frontend/             # shared React/Vite frontend (DAS 7 connected first)
-│  ├─ src/               # app source
-│  └─ test/              # Jest unit tests
-├─ DAS_1/                # screening service and its current standalone UI
-├─ DAS_3/                # LangGraph worksheet service and its current standalone UI
-├─ DAS_7/                # DAS 7 — Parent Insight Dashboard
-│  └─ backend/           # Express API, insight generation, and Brevo email scheduler
-├─ Files/                # project handout, briefs, and reference materials
-└─ README.md
+|-- frontend/               Centralized React frontend, with DAS7 connected first
+|-- DAS_1/                  Public screening backend and current standalone UI
+|-- DAS_3/                  LangGraph worksheet backend and current standalone UI
+|-- DAS_7/backend/          Parent insights API and Brevo email scheduler
+|-- DAS_7/frontend/         Older standalone DAS7 frontend
+|-- docs/                   System architecture and temporary integration notes
+|-- Files/                  Project briefs and reference material
+|-- API_CONTRACTS.md        Browser-facing API and error conventions
+`-- README.md
 ```
 
-The root frontend is the canonical browser application. It currently exposes DAS 7 and
-reserves stable API prefixes for DAS 1 and DAS 3. Each package keeps its own lockfile.
-See [`API_CONTRACTS.md`](API_CONTRACTS.md) for the shared routing and auth rules.
+Each package owns its dependencies and lockfile. There is no plan to merge the
+three backends.
 
----
+## Architecture summary
 
-## Getting started
+DAS1 is public. DAS3 and DAS7 share one Supabase Auth project, but use different
+profile tables and independent browser sessions:
 
-**Prerequisites:** Node.js 22+ and npm.
+- A teacher account belongs only to DAS3.
+- A parent account belongs only to DAS7.
+- Accounts are created or invited by an administrator.
+- The worksheet and insights sessions use different browser storage keys, so a
+  teacher and a parent can be logged in at the same time on one browser.
+- Each protected request carries the JWT for that service in the `Authorization`
+  header.
+- DAS3 checks for a teacher profile. DAS7 checks for a parent profile.
+- The frontend uses Supabase for authentication only. Application data goes
+  through the relevant backend.
 
-```bash
-# 1. Install the shared frontend and DAS 7 backend
-npm run das7:install
+Logging out of Worksheet must not log the user out of Insights, and the reverse is
+also true. Supabase service-role credentials stay in backend environment files.
+Only the Supabase URL and publishable key may be sent to the browser.
 
-# 2. Create frontend/.env from frontend/.env.example and set the
-#    Supabase URL and publishable key.
+DAS7 keeps Brevo as its production email provider. The fake provider remains
+available for local development and tests.
 
-# 3. Start the DAS 7 backend            → http://localhost:4000
-npm run das7:backend
+## Local development
 
-# 4. In a second terminal, the frontend → http://localhost:5173
-npm run das7:dev
+### Prerequisites
+
+- Node.js 22 or newer and npm
+- Python 3.12 for DAS3
+- A Supabase project for DAS3 and DAS7 authentication and DAS7 data
+- Provider credentials required by the service you are running
+
+Never commit a real `.env` file. Copy the relevant `.env.example` and add secrets
+only to the copied environment file.
+
+### Centralized frontend
+
+```powershell
+npm run frontend:install
+npm run frontend:dev
 ```
 
-Start the backend first. Vite sends `/api/insights/*` to DAS 7 and strips the
-public prefix, matching the production gateway. Protected calls include the current
-Supabase JWT. The signed-in Supabase user's `sub` must match an `insight.parents.auth_user_id`.
+The frontend runs at `http://localhost:5173`. Its Vite development server proxies:
 
-### Available scripts
+- `/api/screening/*` to DAS1 at `http://127.0.0.1:4173`
+- `/api/worksheet/*` to DAS3 at `http://localhost:2024`
+- `/api/insights/*` to DAS7 at `http://localhost:4000`
 
-**Root** — thin wrappers that delegate into the shared frontend and DAS 7 backend.
-| Script | Action |
-|--------|--------|
-| `npm run das7:install` | Install the shared frontend and DAS 7 backend |
-| `npm run das7:dev` | Run the shared frontend dev server (`vite`, :5173) |
-| `npm run das7:backend` | Run the DAS 7 backend (`tsx watch`, :4000) |
-| `npm run das7:build` | Build the frontend and DAS 7 backend |
-| `npm run das7:test` | Run frontend and DAS 7 backend tests |
-| `npm run das7:lint` | Run the frontend lint script |
+These are same-origin browser requests, so the backends do not need CORS during
+local development.
 
-**`frontend/`**
-| Script | Action |
-|--------|--------|
-| `npm run dev` | Vite dev server |
-| `npm run build` | Type-check + production build |
-| `npm run preview` | Preview the production build |
-| `npm run test` | Jest unit tests |
-| `npm run lint` | Run the configured frontend lint command |
+### DAS1 backend
 
----
+```powershell
+npm install --prefix DAS_1/backend
+npm run dev --prefix DAS_1/backend
+```
 
-## Development process & roadmap
+The backend defaults to port `4173`. Check `DAS_1/backend/config.ts` for its current
+environment variables. DAS1 does not require a user login.
 
-The team follows an **iterative model** (Requirement → Design → Development → Testing → Deployment, repeated per iteration), chosen because the AI/ML components are hard to specify up-front and user feedback loops are expected.
+### DAS3 backend
 
-| Weeks | Milestone | Focus |
-|-------|-----------|-------|
-| Week 7 | Setup | Repos, project setup, basic REST APIs, UI layouts, AI architecture & RAG workflow |
-| Week 8 | **Project Meeting 2** | Connect UI ↔ backend over REST, refine API responses, begin unit testing (frontend + backend) |
-| Weeks 9–10 | **Project Meeting 3** | Integration testing, verify RAG accuracy, error-state tests, end-to-end testing |
-| Weeks 11–12 | Final | Robustness / fuzz testing (e.g. prompt-guideline bypass checks), report & documentation |
+From `DAS_3/`, create a Python 3.12 virtual environment, install
+`requirements.txt`, copy `.env.example` to `.env`, then run:
 
----
+```powershell
+langgraph dev
+```
+
+LangGraph defaults to port `2024` in this setup. DAS3 JWT verification has not been
+implemented yet, so do not expose it as a teacher service until the integration
+checklist is complete.
+
+### DAS7 backend
+
+```powershell
+npm install --prefix DAS_7/backend
+npm run dev --prefix DAS_7/backend
+```
+
+Copy `DAS_7/backend/.env.example` to `DAS_7/backend/.env` first. The backend defaults
+to port `4000`. Use `EMAIL_PROVIDER=brevo` with a valid `BREVO_API_KEY` and verified
+`EMAIL_FROM` address when real email delivery is required. Use the fake provider
+for local work and tests.
+
+## Tests
+
+Run each package's tests from the repository root:
+
+```powershell
+npm test --prefix DAS_1
+python -m pytest DAS_3/tests
+npm test --prefix DAS_3/frontend
+npm run frontend:test
+npm test --prefix DAS_7/backend
+```
+
+Some DAS3 integration tests load the committed Milvus seed and may load model
+weights. DAS7 integration tests require a deliberately configured test Supabase
+project and skip themselves when the required variables are absent.
+
+## API conventions
+
+The frontend uses one API client per service:
+
+- `/api/screening` for DAS1
+- `/api/worksheet` for DAS3
+- `/api/insights` for DAS7
+
+The response bodies remain service specific. DAS3 uses the LangGraph thread and
+run protocol, while DAS1 and DAS7 use their existing JSON formats. Shared rules
+cover routing, JWT transport, status codes, and errors. See
+[API_CONTRACTS.md](API_CONTRACTS.md).
+
+## Deployment
+
+Docker and Traefik are not part of the target architecture. Existing Docker files
+are retained as legacy files until the non-container setup has been verified.
+
+The production host must choose one of these browser routing options:
+
+1. Proxy the three `/api/*` prefixes through the frontend origin, as Vite does
+   locally.
+2. Give the frontend three backend URLs and configure a strict CORS allowlist on
+   each backend.
+
+The hosting provider has not been chosen, so the repository does not commit to one
+production option yet.
+
+## Data handling
+
+- DAS1 screening results are not clinical diagnoses and must not be presented as
+  such.
+- Do not store full names or NRIC values in DAS1 screening records.
+- Do not expose Supabase service-role keys, LLM keys, or Brevo keys to frontend
+  code.
+- Return the same `404 Not Found` response when a protected record is absent or
+  belongs to another user. This avoids revealing whether the record exists.
 
 ## Team
 
-**C2T5** — Brian Wong, Toh Shijie, Patrick Liu, Michael Soh, Le Bin, Vincent Alexander, Mahek Zaveri, Jia Zhi.
-
----
-
-## Notes & data handling
-
-- The DAS 1 screener is **non-diagnostic** and must not be presented as a clinical assessment.
-- User data is **anonymised** — hashed IDs only; no full names or NRIC stored in identifiable form.
+C2T5: Brian Wong, Toh Shijie, Patrick Liu, Michael Soh, Le Bin, Vincent Alexander,
+Mahek Zaveri, and Jia Zhi.
