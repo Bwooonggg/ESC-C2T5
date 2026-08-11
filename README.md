@@ -98,19 +98,22 @@ available for local development and tests.
 - A Supabase project for DAS3 and DAS7 authentication and DAS7 data
 - Provider credentials required by the service you are running
 
-Never commit a real `.env` file. Copy the relevant `.env.example` and add secrets
-only to the copied environment file.
+### Set up a fresh clone
 
-Create the four runtime environment files before starting the complete stack:
+The following steps assume that a project maintainer has given you the four
+configured environment files. Place each file at the exact path shown:
 
-```powershell
-Copy-Item frontend/.env.example frontend/.env
-Copy-Item DAS_1/backend/.env.example DAS_1/backend/.env
-Copy-Item DAS_3/.env.example DAS_3/.env
-Copy-Item DAS_7/backend/.env.example DAS_7/backend/.env
-```
+| File | Used by |
+| --- | --- |
+| `frontend/.env` | Browser-safe Supabase and API proxy configuration |
+| `DAS_1/backend/.env` | Screening backend providers and database access |
+| `DAS_3/.env` | Worksheet providers, Supabase authorization, and Docker |
+| `DAS_7/backend/.env` | Insights, Supabase, LLM, and email configuration |
 
-Install the host-side packages once:
+Never commit these files. The matching `.env.example` files document their
+expected variables but do not contain working credentials.
+
+From the repository root, install the three host-side packages once:
 
 ```powershell
 npm install --prefix frontend
@@ -118,10 +121,13 @@ npm install --prefix DAS_1/backend
 npm install --prefix DAS_7/backend
 ```
 
-### Start everything
+Docker installs the DAS3 Python dependencies while building its image, so no
+host-side Python installation is needed just to run the application. Start
+Docker Desktop before continuing.
 
-After installing each package's dependencies and creating the four environment
-files, start the complete local backend/frontend stack from the repository root:
+### Run with the PowerShell scripts
+
+Start the complete local backend/frontend stack from the repository root:
 
 ```powershell
 .\scripts\start-dev.ps1
@@ -142,6 +148,71 @@ The services are then available at:
 | DAS1 backend | `http://localhost:4173` |
 | DAS3 LangGraph API | `http://localhost:2024` |
 | DAS7 backend | `http://localhost:4000` |
+
+If local PowerShell policy prevents scripts from running, use a process-scoped
+bypass without changing the machine-wide policy:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\start-dev.ps1
+```
+
+### Run in separate terminals
+
+To see each service's logs directly, open four PowerShell terminals at the
+repository root and run one block in each terminal.
+
+Terminal 1 — DAS3 Docker stack:
+
+```powershell
+docker compose --project-directory DAS_3 up --build
+```
+
+Terminal 2 — DAS1 screening backend:
+
+```powershell
+npm run dev --prefix DAS_1/backend
+```
+
+Terminal 3 — DAS7 insights backend:
+
+```powershell
+npm run dev --prefix DAS_7/backend
+```
+
+Terminal 4 — centralized frontend:
+
+```powershell
+npm run dev --prefix frontend
+```
+
+Open `http://localhost:5173` after all four services are ready. Stop the three
+host processes with `Ctrl+C`. Stop the Docker stack from the repository root
+with:
+
+```powershell
+docker compose --project-directory DAS_3 down
+```
+
+Do not add `-v` unless you intentionally want to delete the persisted DAS3
+threads, PostgreSQL data, Redis data, and model cache.
+
+### Dummy login accounts
+
+The supplied env files contain the dummy account credentials. Passwords stay in
+those ignored files rather than this committed README because the accounts issue
+real ESC Supabase sessions.
+
+| Account | Email | Password | Purpose |
+| --- | --- | --- | --- |
+| Primary teacher | `TEST_TEACHER_EMAIL` in `DAS_3/.env` | `TEST_TEACHER_PASSWORD` in `DAS_3/.env` | Normal Worksheet login |
+| Teacher B | `TEST_TEACHER_B_EMAIL` in `DAS_3/.env` | `TEST_TEACHER_B_PASSWORD` in `DAS_3/.env` | Verifies that teachers cannot access each other's threads |
+| Demo parent | `DEMO_PARENT_EMAIL` in `DAS_7/backend/.env` | `DEMO_PARENT_PASSWORD` in `DAS_7/backend/.env` | Normal Parent Insights login with seeded student data |
+| Test parent A | `TEST_USER_A_EMAIL` in `DAS_7/backend/.env` | `TEST_USER_A_PASSWORD` in `DAS_7/backend/.env` | Hosted integration tests |
+| Test parent B | `TEST_USER_B_EMAIL` in `DAS_7/backend/.env` | `TEST_USER_B_PASSWORD` in `DAS_7/backend/.env` | Cross-parent ownership tests |
+
+Use the primary teacher at `/worksheet/login` and the demo parent at
+`/insights/login`. The A/B accounts exist primarily for authorization tests and
+may not retain application profiles after the test harness cleans up.
 
 ### Frontend preview stubs
 
