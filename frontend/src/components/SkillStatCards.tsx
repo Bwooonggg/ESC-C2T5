@@ -9,7 +9,12 @@ export function SkillStatCards({ records }: { records: ProgressRecord[] }) {
     if (areas.length === 0) return null;
 
     return (
-        <div className={styles.grid}>
+        <section className={styles.section} aria-labelledby="skill-scores-heading">
+            <div className={styles.headingRow}>
+                <h2 id="skill-scores-heading">Latest skill scores</h2>
+                <p>Change since the previous assessment</p>
+            </div>
+            <div className={styles.grid}>
             {areas.map((area) => {
                 const stat = deltas[area];
                 if (!stat) return null;
@@ -43,6 +48,7 @@ export function SkillStatCards({ records }: { records: ProgressRecord[] }) {
                     </div>
                 );
             })}
-        </div>
+            </div>
+        </section>
     );
 }

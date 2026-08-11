@@ -81,6 +81,7 @@ describe("request", () => {
 
         const headers = fetchMock.mock.calls[0][1].headers as Headers;
         expect(headers.get("Authorization")).toBe("Bearer test-access-token");
+        expect(getAccessTokenMock).toHaveBeenCalledWith("insights");
     });
 
     it("does not call the backend when there is no authenticated session", async () => {

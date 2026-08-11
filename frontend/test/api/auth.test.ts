@@ -1,41 +1,30 @@
-import { getAccessToken } from "../../src/api/auth";
-import { supabase } from "../../src/lib/supabaseClient";
+import { getAccessToken, logout } from "../../src/api/auth";
+import { insightsSupabase, worksheetSupabase } from "../../src/lib/supabaseClients";
 
-jest.mock("../../src/lib/supabaseClient", () => ({
-    supabase: {
-        auth: {
-            getSession: jest.fn(),
-            signUp: jest.fn(),
-            signInWithPassword: jest.fn(),
-            signOut: jest.fn(),
-        },
-    },
+jest.mock("../../src/lib/supabaseClients", () => ({
+    worksheetSupabase: { auth: { getSession: jest.fn(), signOut: jest.fn(), signInWithPassword: jest.fn() } },
+    insightsSupabase: { auth: { getSession: jest.fn(), signOut: jest.fn(), signInWithPassword: jest.fn() } },
 }));
 
-const getSessionMock = jest.mocked(supabase.auth.getSession);
+afterEach(() => jest.resetAllMocks());
 
-afterEach(() => {
-    jest.resetAllMocks();
-});
-
-describe("getAccessToken", () => {
-    it("returns the current session's access token", async () => {
-        getSessionMock.mockResolvedValue({
-            data: {
-                session: { access_token: "current-token" },
-            },
-            error: null,
-        } as Awaited<ReturnType<typeof supabase.auth.getSession>>);
-
-        await expect(getAccessToken()).resolves.toBe("current-token");
+describe("service-specific authentication", () => {
+    it("reads the worksheet token only from the worksheet session", async () => {
+        jest.mocked(worksheetSupabase.auth.getSession).mockResolvedValue({ data: { session: { access_token: "teacher-token" } }, error: null } as Awaited<ReturnType<typeof worksheetSupabase.auth.getSession>>);
+        await expect(getAccessToken("worksheet")).resolves.toBe("teacher-token");
+        expect(insightsSupabase.auth.getSession).not.toHaveBeenCalled();
     });
 
-    it("rejects when no user is signed in", async () => {
-        getSessionMock.mockResolvedValue({
-            data: { session: null },
-            error: null,
-        } as Awaited<ReturnType<typeof supabase.auth.getSession>>);
+    it("reads the insights token only from the insights session", async () => {
+        jest.mocked(insightsSupabase.auth.getSession).mockResolvedValue({ data: { session: { access_token: "parent-token" } }, error: null } as Awaited<ReturnType<typeof insightsSupabase.auth.getSession>>);
+        await expect(getAccessToken("insights")).resolves.toBe("parent-token");
+        expect(worksheetSupabase.auth.getSession).not.toHaveBeenCalled();
+    });
 
-        await expect(getAccessToken()).rejects.toThrow("Authentication required.");
+    it("uses local sign-out so the other service remains signed in", async () => {
+        jest.mocked(worksheetSupabase.auth.signOut).mockResolvedValue({ error: null });
+        await logout("worksheet");
+        expect(worksheetSupabase.auth.signOut).toHaveBeenCalledWith({ scope: "local" });
+        expect(insightsSupabase.auth.signOut).not.toHaveBeenCalled();
     });
 });

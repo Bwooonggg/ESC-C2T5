@@ -1,13 +1,13 @@
 .page {
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: 12px;
 }
 
 .columns {
     display: grid;
-    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
-    gap: 20px;
+    grid-template-columns: minmax(0, 1.8fr) minmax(270px, .8fr);
+    gap: 12px;
     align-items: start;
 }
 
@@ -19,9 +19,10 @@
 
 .chartCard {
     background: var(--bg-subtle);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 20px 24px;
+    border: 1px solid #e3e3e3;
+    border-top: 3px solid var(--accent);
+    border-radius: 4px;
+    padding: 12px 14px 14px;
 }
 
 .chartHeaderRow {
@@ -29,14 +30,15 @@
     align-items: baseline;
     justify-content: space-between;
     gap: 12px;
-    margin: 0 0 16px;
-    padding-bottom: 12px;
+    margin: 0 0 10px;
+    padding-bottom: 8px;
     border-bottom: 1px solid var(--border);
 }
 
 .chartHeading {
     margin: 0;
-    font-size: 18px;
+    color: var(--navy);
+    font-size: 15px;
 }
 
 .chartMeta {
@@ -49,5 +51,5 @@
 .sidebar {
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: 12px;
 }

@@ -1,28 +1,29 @@
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
-import './App.css'
-import { ProtectedRoute } from './components/ProtectedRoute'
-import { DashboardApp } from './pages/DashboardApp'
-import { LoginPage } from './pages/LoginPage'
-import { SignupPage } from './pages/SignupPage'
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import "./App.css";
+import { ProtectedRoute } from "./components/ProtectedRoute";
+import { ServiceLayout } from "./components/ServiceLayout";
+import { DashboardApp } from "./pages/DashboardApp";
+import { HomePage } from "./pages/HomePage";
+import { LoginPage } from "./pages/LoginPage";
+import { NotFoundPage } from "./pages/NotFoundPage";
+import { AccessDeniedPage } from "./pages/AccessDeniedPage";
+import { ScreeningApp } from "./screening/ScreeningApp";
+import { WorksheetApp } from "./worksheet/WorksheetApp";
 
-function App() {
-  return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/signup" element={<SignupPage />} />
-        <Route
-          path="/"
-          element={
-            <ProtectedRoute>
-              <DashboardApp />
-            </ProtectedRoute>
-          }
-        />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </BrowserRouter>
-  )
+export default function App() {
+    return (
+        <BrowserRouter>
+            <Routes>
+                <Route path="/" element={<HomePage />} />
+                <Route path="/screening/*" element={<ServiceLayout title="Screening"><ScreeningApp /></ServiceLayout>} />
+                <Route path="/worksheet/login" element={<LoginPage service="worksheet" />} />
+                <Route path="/insights/login" element={<LoginPage service="insights" />} />
+                <Route path="/worksheet/*" element={<ProtectedRoute service="worksheet"><ServiceLayout title="Worksheet Builder"><WorksheetApp /></ServiceLayout></ProtectedRoute>} />
+                <Route path="/insights/*" element={<ProtectedRoute service="insights"><DashboardApp /></ProtectedRoute>} />
+                <Route path="/access-denied/:service" element={<AccessDeniedPage />} />
+                <Route path="/login" element={<Navigate to="/insights/login" replace />} />
+                <Route path="*" element={<NotFoundPage />} />
+            </Routes>
+        </BrowserRouter>
+    );
 }
-
-export default App

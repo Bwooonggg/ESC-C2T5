@@ -17,7 +17,10 @@ export function StudentBanner({
     return (
         <section className={styles.banner}>
             <div className={styles.identity}>
-                <h1 className={styles.name}>{student.name}</h1>
+                <div className={styles.studentHeading}>
+                    <p className={styles.eyebrow}>Student progress record</p>
+                    <h1 className={styles.name}>{student.name}</h1>
+                </div>
                 <div className={styles.meta}>
                     <div>
                         <p className={styles.metaLabel}>Band</p>
