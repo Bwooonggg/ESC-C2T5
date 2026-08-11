@@ -174,7 +174,7 @@ Contract details the frontend depends on:
 - `Recommendation.content` is a single string with `\n`-separated lines; it is keyed to a `summaryId`, not directly to the student.
 - `Summary.generatedAt` / `Recommendation.generatedAt` are full ISO 8601 datetimes.
 
-There is **no REST endpoint for notifications** — that flow is timer-driven (§7). There are also no login/signup/refresh endpoints — Supabase Auth owns those; the frontend will talk to Supabase directly with `supabase-js`.
+Scheduled notifications remain timer-driven (§7). `POST /parents/:parentId/notifications` is the authenticated parent-owned manual-send path and reuses the same notifier service. There are no login/signup/refresh endpoints — Supabase Auth owns those; the frontend talks to Supabase directly with `supabase-js`.
 
 ## 6. Authentication and authorization
 

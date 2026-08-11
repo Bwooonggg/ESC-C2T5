@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getPreferences, savePreferences } from "../api/client";
+import { getPreferences, savePreferences, sendUpdateNow } from "../api/client";
 import bannerStyles from "../components/StudentBanner.module.css";
 import type { NotificationFrequency, NotificationPreference, Parent } from "../types/domain";
 import styles from "./EmailUpdatesPage.module.css";
@@ -11,16 +11,14 @@ type Status =
 
 const FREQUENCIES: NotificationFrequency[] = ["Weekly", "Fortnightly", "Monthly"];
 
-// A deliberately invalid address, for exercising the save-validation path
-// without having to type one in by hand each time.
-const INVALID_EMAIL_SAMPLE = "not-an-email";
-
 export function EmailUpdatesPage({ parent, childrenCount }: { parent: Parent; childrenCount: number }) {
     const [status, setStatus] = useState<Status>({ kind: "loading" });
     const [prefs, setPrefs] = useState<NotificationPreference | null>(null);
     const [saving, setSaving] = useState(false);
     const [saveError, setSaveError] = useState<string | null>(null);
     const [saved, setSaved] = useState(false);
+    const [sending, setSending] = useState(false);
+    const [sendStatus, setSendStatus] = useState<{ kind: "ok" | "error"; message: string } | null>(null);
 
     useEffect(() => {
         let cancelled = false;
@@ -64,6 +62,28 @@ export function EmailUpdatesPage({ parent, childrenCount }: { parent: Parent; ch
             );
         } finally {
             setSaving(false);
+        }
+    }
+
+    async function handleSendNow() {
+        if (!prefs || !prefs.enabled) return;
+        setSending(true);
+        setSaveError(null);
+        setSaved(false);
+        setSendStatus(null);
+
+        try {
+            const savedPreferences = await savePreferences(parent.parentId, prefs);
+            setPrefs(savedPreferences);
+            await sendUpdateNow(parent.parentId);
+            setSendStatus({ kind: "ok", message: `Progress update sent to ${savedPreferences.recipientEmail}.` });
+        } catch (error) {
+            setSendStatus({
+                kind: "error",
+                message: error instanceof Error ? error.message : "Unable to send the progress update.",
+            });
+        } finally {
+            setSending(false);
         }
     }
 
@@ -162,20 +182,20 @@ export function EmailUpdatesPage({ parent, childrenCount }: { parent: Parent; ch
                     <div className={styles.buttonRow}>
                         <button
                             type="button"
-                            className={styles.primaryButton}
+                            className={styles.secondaryButton}
                             onClick={handleSave}
-                            disabled={saving}
+                            disabled={saving || sending}
                         >
                             {saving ? "Saving…" : "Save changes"}
                         </button>
                         <button
                             type="button"
-                            className={styles.secondaryButton}
-                            onClick={() =>
-                                setPrefs({ ...prefs, recipientEmail: INVALID_EMAIL_SAMPLE })
-                            }
+                            className={styles.primaryButton}
+                            onClick={handleSendNow}
+                            disabled={saving || sending || !prefs.enabled}
+                            title={!prefs.enabled ? "Turn on progress emails to send an update" : undefined}
                         >
-                            Try an invalid email
+                            {sending ? "Sending…" : "Send update now"}
                         </button>
                     </div>
 
@@ -186,6 +206,14 @@ export function EmailUpdatesPage({ parent, childrenCount }: { parent: Parent; ch
                     )}
                     {saved && !saveError && (
                         <p className={`${styles.status} ${styles.statusOk}`}>Saved.</p>
+                    )}
+                    {sendStatus && (
+                        <p
+                            className={`${styles.status} ${sendStatus.kind === "ok" ? styles.statusOk : styles.statusError}`}
+                            role={sendStatus.kind === "error" ? "alert" : "status"}
+                        >
+                            {sendStatus.message}
+                        </p>
                     )}
                 </div>
             )}

@@ -184,6 +184,11 @@ button {
   white-space: nowrap;
 }
 
+.accessibility-menu button > span {
+  flex: none;
+  color: inherit;
+}
+
 .accessibility-menu button:hover { background: #f2f2f2; }
 .accessibility-menu button[aria-pressed="true"] { color: #ffffff; background: var(--navy); }
 .contrast-icon { width: 13px; height: 13px; border: 1.5px solid currentColor; border-radius: 50%; background: linear-gradient(90deg, currentColor 50%, transparent 50%); }

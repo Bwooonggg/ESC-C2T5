@@ -3,6 +3,7 @@ import {
     getPreferences,
     request,
     savePreferences,
+    sendUpdateNow,
     trackProgress,
 } from "../../src/api/client";
 import type { NotificationPreference } from "../../src/types/domain";
@@ -159,5 +160,16 @@ describe("savePreferences", () => {
         );
 
         await expect(savePreferences("p1", prefs)).rejects.toThrow(/frequency` must be one of/);
+    });
+});
+
+describe("sendUpdateNow", () => {
+    it("POSTs to the signed-in parent's notification endpoint", async () => {
+        const fetchMock = mockFetch(okEnvelope({ outcome: "parentNotified" }));
+
+        await sendUpdateNow("p1");
+
+        expect(fetchMock.mock.calls[0][0]).toBe("/api/insights/parents/p1/notifications");
+        expect(fetchMock.mock.calls[0][1].method).toBe("POST");
     });
 });

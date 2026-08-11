@@ -111,3 +111,14 @@ export function savePreferences(
         }),
     });
 }
+
+// POST /api/insights/parents/:parentId/notifications
+// Sends immediately and does not alter the normal scheduled-delivery timer.
+export function sendUpdateNow(
+    parentId: string,
+): Promise<{ outcome: "parentNotified" }> {
+    return request<{ outcome: "parentNotified" }>(
+        `/parents/${parentId}/notifications`,
+        { method: "POST" },
+    );
+}

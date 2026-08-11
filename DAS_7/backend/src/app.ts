@@ -5,6 +5,7 @@ import { errorHandler, notFoundHandler } from './http/error-handler.js';
 import { healthRoutes } from './http/routes/health.routes.js';
 import { meRoutes } from './http/routes/me.routes.js';
 import { preferencesRoutes } from './http/routes/preferences.routes.js';
+import { notificationRoutes } from './http/routes/notifications.routes.js';
 import { studentsRoutes } from './http/routes/students.routes.js';
 
 /**
@@ -27,6 +28,7 @@ export function createApp(deps: Deps): express.Express {
     app.use('/me', meRoutes(deps));
     app.use('/students', studentsRoutes(deps));
     app.use('/parents', preferencesRoutes(deps));
+    app.use('/parents', notificationRoutes(deps));
 
     app.use(notFoundHandler);
     app.use(errorHandler);

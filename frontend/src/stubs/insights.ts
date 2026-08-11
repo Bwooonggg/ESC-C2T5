@@ -110,5 +110,10 @@ export async function stubInsightsRequest<T>(path: string, init?: RequestInit): 
         return preference as T;
     }
 
+    if (/^\/parents\/[^/]+\/notifications$/.test(normalizedPath) && init?.method === "POST") {
+        if (!preference.enabled) throw new Error("Turn on progress emails before sending an update.");
+        return { outcome: "parentNotified" } as T;
+    }
+
     throw new Error(`No preview response is configured for ${normalizedPath}.`);
 }

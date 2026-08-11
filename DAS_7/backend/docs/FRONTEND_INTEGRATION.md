@@ -53,6 +53,7 @@ Every response (success or error) is wrapped the same way:
 | `POST /students/:studentId/recommendations` | `Recommendation` — generates fresh advice. **No request body.** Call on button click, not on page load. |
 | `GET /parents/:parentId/preferences` | `NotificationPreference` — email settings (returns sensible defaults if never saved) |
 | `PUT /parents/:parentId/preferences` | `NotificationPreference` — saves email settings |
+| `POST /parents/:parentId/notifications` | `{ outcome: "parentNotified" }` — sends a progress update immediately |
 | `GET /health` | `{ ok: true }` — no auth needed |
 
 (Paths above are shown **without** the `/api/insights` prefix — prepend it to every one. See "Where to send requests".)
@@ -112,6 +113,6 @@ Good to know:
 
 ## Email notifications
 
-There is **no endpoint** for sending notification emails — a background timer in our service sends periodic summary emails based on each parent's saved preference (enabled per deployment via `SCHEDULER_ENABLED`, off by default). The frontend only needs the two preferences endpoints (a settings screen with an on/off toggle, a frequency dropdown, and an email field).
+A background timer sends periodic summary emails based on each parent's saved preference (enabled per deployment via `SCHEDULER_ENABLED`, off by default). The authenticated manual-send endpoint lets a parent request the same combined update immediately; it does not change or reset the normal schedule.
 
 Questions → DAS 7 team. Full technical details: `ARCHITECTURE.md` in this folder.
