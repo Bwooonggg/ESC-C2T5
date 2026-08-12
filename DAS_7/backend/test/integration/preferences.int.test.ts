@@ -32,7 +32,7 @@ describeIntegration('preferences API (integration)', () => {
         });
     });
 
-    it('PUT saves a valid body and a later GET reads it back', async () => {
+    it('IT7B-H01 saves valid notification preferences and reads them back', async () => {
         const body = { enabled: true, frequency: 'Fortnightly', recipientEmail: 'a@test.dev' };
         const expected = { parentId: h.parentA.parentId, ...body };
 

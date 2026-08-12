@@ -48,7 +48,7 @@ describeIntegration('auth integration (IT7A-06)', () => {
     });
 
     describe('protected student routes', () => {
-        it('IT7A-06 (authn): rejects track-progress without a token', async () => {
+        it('IT7A-H04 rejects track-progress without a token', async () => {
             const res = await request(h.app)
                 .get(`/students/${h.studentA1.studentId}/track-progress`);
 
@@ -56,7 +56,7 @@ describeIntegration('auth integration (IT7A-06)', () => {
             expect(res.body).toEqual({ ok: false, error: 'unauthorised' });
         });
 
-        it("IT7A-06 (authz): another parent's student is indistinguishable from a nonexistent one", async () => {
+        it("IT7A-H03 hides a foreign student like a nonexistent one", async () => {
             const foreign = await request(h.app)
                 .get(`/students/${h.studentB1.studentId}/track-progress`)
                 .set('Authorization', `Bearer ${h.tokenA}`);

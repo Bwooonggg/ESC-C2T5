@@ -9,6 +9,7 @@
  */
 import { randomUUID } from 'node:crypto';
 import type { Express } from 'express';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import type { AppConfig } from '../../src/config.js';
 import { loadConfig } from '../../src/config.js';
 import { createApp } from '../../src/app.js';
@@ -48,8 +49,11 @@ export interface FakeEmailControl {
 export interface TestHarness {
     app: Express;                 // real app: real Supabase repos, real auth, fakes below
     deps: Deps;                   // the exact deps the app was built with
+    db: SupabaseClient;           // service-role test client for persistence assertions
     tokenA: string;               // real JWT for test parent A
     tokenB: string;               // real JWT for test parent B
+    authUserIdA: string;
+    authUserIdB: string;
     parentA: Parent;              // has studentA1 (with progress) and studentA2 (no progress)
     parentB: Parent;              // has studentB1 (no progress)
     studentA1: Student;
@@ -302,8 +306,11 @@ export async function createHarness(): Promise<TestHarness> {
     return {
         app,
         deps,
+        db: client,
         tokenA: sessionA.accessToken,
         tokenB: sessionB.accessToken,
+        authUserIdA: sessionA.authUserId,
+        authUserIdB: sessionB.authUserId,
         parentA,
         parentB,
         studentA1,

@@ -17,7 +17,7 @@ describeIntegration('recommendations (IT7A)', () => {
         expect(res.status).toBe(200);
     }
 
-    it('IT7A-03 creates a recommendation keyed to the stored summary', async () => {
+    it('IT7A-H02 requests a persisted recommendation through HTTP', async () => {
         await primeSummary(h.studentA1.studentId);
         const stored = await h.deps.summaryRepo.latestByStudent(h.studentA1.studentId);
 
