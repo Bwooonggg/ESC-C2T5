@@ -62,6 +62,24 @@ three backends.
 
 ## Architecture summary
 
+```text
+User ──► Homepage
+            │
+            ▼
+            ├──► Frontend | DAS1 ──► DAS1 backend ────────────────────────────────────┐
+            ├──► DAS3 login ──┬──► Frontend | DAS3 ──► DAS3 backend ──────────────────┤
+            │                 └──────────────────────────────────────────────────────►│
+            └──► DAS7 login ──┬──► Frontend | DAS7 ──► DAS7 backend ──────────────────┤
+                              └──────────────────────────────────────────────────────►│
+                                                                                      ▼
+                                                                               Shared Supabase
+```
+
+The frontend is one application with a separate area for each DAS service. DAS1
+is available directly from the homepage, while DAS3 and DAS7 have their own login
+flows. Each frontend area calls its matching backend, and the frontend and all
+three backends connect to the shared Supabase project.
+
 DAS1 is public. DAS3 and DAS7 share one Supabase Auth project, but use different
 profile tables and independent browser sessions:
 
@@ -200,12 +218,16 @@ Use these dummy accounts for local development and testing:
 | Primary teacher | `esc.teacher.local@example.com` | `0tRMN8XRk6AsUpgwg78FO1fYWPqrAgC-` | Normal Worksheet login |
 | Teacher B | `esc.teacher-b.local@example.com` | `JaVWNS088zw0KQyhnsynwwuM17zpclNO` | Verifies that teachers cannot access each other's threads |
 | Demo parent | `esc.parent.local@example.com` | `LEPRJt9r4f-J9dLrnVFG4jixQW0lUxie` | Normal Parent Insights login with seeded student data |
+| Separate demo parent | `esc.parent.separate@example.com` | `S2Y9Dqz7xCiaCoLh4N5lDvv7Aa1!` | Demonstrates parent-account separation with access only to Chloe Tan |
 | Test parent A | `das7.testa@example.com` | `das7.testa` | Hosted integration tests |
 | Test parent B | `das7.testb@example.com` | `das7.testb` | Cross-parent ownership tests |
 
 Use the primary teacher at `/worksheet/login` and the demo parent at
-`/insights/login`. The A/B accounts exist primarily for authorization tests and
-may not retain application profiles after the test harness cleans up.
+`/insights/login`. The separate demo parent is Daniel Tan and is linked only to
+Chloe Tan; use it to confirm that one parent cannot view another parent's students
+or progress. The A/B accounts exist primarily for authorization tests and may not
+retain application profiles after the test harness cleans up. These are shared
+demonstration credentials and must not be reused for production accounts.
 
 ### Frontend preview stubs
 
@@ -332,5 +354,4 @@ volumes preserve local service data across container restarts.
 
 ## Team
 
-C2T5: Brian Wong, Toh Shijie, Patrick Liu, Michael Soh, Le Bin, Vincent Alexander,
-Mahek Zaveri, and Jia Zhi.
+C2T5: Brian Wong, Toh Shijie, Patrick Liu, Michael Soh, Le Bin, Vincent Alexander, Mahek Zaveri, and Jia Zhi.

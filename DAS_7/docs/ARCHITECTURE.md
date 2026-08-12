@@ -74,7 +74,7 @@ flowchart LR
   the sole browser-facing proxy: it routes `/api/insights/*` to DAS7 and strips
   that prefix, while the service mounts routes at the root (`/health`, `/me`,
   `/students/*`, `/parents/*`). Production hosting is outside this local setup.
-- The database is the **centralized Supabase instance shared by all subsystems**. DAS 7 owns its own Postgres schema (`insight`) and never touches other services' schemas (schema-per-service rule from `OVERALL_ARCHITECTURE.md`).
+- The database is the **centralized Supabase instance shared by all subsystems**. DAS 7 owns its own Postgres schema (`insight`) and never touches other services' schemas (see the root [`docs/ARCHITECTURE.md`](../../docs/ARCHITECTURE.md)).
 
 ## 4. Layers and directory structure
 
@@ -89,7 +89,7 @@ Data shapes (`Student`, `ProgressRecord`, …) are plain TypeScript interfaces i
 ```
 DAS_7/
 ├── package.json / tsconfig.json / tsconfig.build.json / jest.config.cjs
-├── .env.example / Dockerfile / .dockerignore / README.md
+├── .env.example / README.md
 ├── scripts/seed.ts                         # demo parents/students/progress (service_role)
 ├── src/
 │   ├── index.ts                # entrypoint: config → deps → createApp().listen → scheduler.start

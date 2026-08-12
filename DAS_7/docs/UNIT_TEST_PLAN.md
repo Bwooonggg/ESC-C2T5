@@ -240,5 +240,4 @@ These units execute before, below, or beside the sequence-diagram activations. T
 | Supabase repository fake | Use an immediate fluent fake that records `from`, `select`, filters, ordering, limits, and write payloads, then resolves the row's `{ data, error }` pair. It does not replace database integration testing. |
 | Fixed time | Use Jest fake timers and a fixed system clock for freshness, due-time, route Date, and scheduler rows. Restore timers after every test. |
 | Provider cleanup | Restore `fetch`, `AbortSignal.timeout`, console spies, and clock state after every row. Assert that configured API keys never appear in thrown messages. |
-| Archived tests | Exclude `OLDTEST_` files from Jest discovery before implementing this plan. Their names may still match the configured test pattern. |
 | Deferred integration work | Real Supabase ordering, constraints, generated values, RLS, provider schemas, credentials, email delivery, and the end-to-end activation order belong in the later sequence-diagram integration suite. |
