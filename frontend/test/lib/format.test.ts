@@ -30,7 +30,7 @@ function seed(dates: string[], areas: SkillArea[] = SKILL_AREAS): ProgressRecord
 const DATES = ["2026-01-20", "2026-03-17", "2026-05-19"];
 
 describe("toChartRows", () => {
-    it("pivots a student's 18 records into 3 rows of 6 skill areas", () => {
+    it("UT-LOGIN-U20-01 pivots a student's 18 records into 3 rows of 6 skill areas", () => {
         const rows = toChartRows(seed(DATES));
 
         // The real shape: 6 areas x 3 dates in, one row per date out.
@@ -42,7 +42,7 @@ describe("toChartRows", () => {
         }
     });
 
-    it("keys each row by date and carries the score across", () => {
+    it("UT-LOGIN-U20-02 keys each row by date and carries the score across", () => {
         const rows = toChartRows([
             {
                 recordId: "r1",
@@ -65,19 +65,19 @@ describe("toChartRows", () => {
         expect(rows).toEqual([{ date: "2026-01-20", Spelling: 41, Writing: 46 }]);
     });
 
-    it("sorts rows by date even when records arrive out of order", () => {
+    it("UT-LOGIN-U20-03 sorts rows by date even when records arrive out of order", () => {
         const shuffled = [...seed(DATES)].reverse();
 
         expect(toChartRows(shuffled).map((row) => row.date)).toEqual(DATES);
     });
 
-    it("returns no rows for no records, rather than throwing", () => {
+    it("UT-LOGIN-U20-04 returns no rows for no records, rather than throwing", () => {
         // The empty state has to be representable — a student with no
         // assessments yet is a real case, not an error.
         expect(toChartRows([])).toEqual([]);
     });
 
-    it("leaves a skill area undefined on dates it was not assessed", () => {
+    it("UT-LOGIN-U20-05 leaves a skill area undefined on dates it was not assessed", () => {
         const records = seed(["2026-01-20"], ["Spelling"]).concat(
             seed(["2026-03-17"], ["Writing"]),
         );
@@ -90,7 +90,7 @@ describe("toChartRows", () => {
 });
 
 describe("presentSkillAreas", () => {
-    it("returns areas in fixed SKILL_AREAS order, not the order records arrive", () => {
+    it("UT-LOGIN-U21-01 returns areas in fixed SKILL_AREAS order, not the order records arrive", () => {
         const records = seed(["2026-01-20"], ["Comprehension", "Phonological Awareness"]);
 
         // Colour is assigned by this order, so it must not follow the data.
@@ -100,26 +100,26 @@ describe("presentSkillAreas", () => {
         ]);
     });
 
-    it("omits areas absent from the data, so the legend has no phantom series", () => {
+    it("UT-LOGIN-U21-02 omits areas absent from the data, so the legend has no phantom series", () => {
         expect(presentSkillAreas(seed(DATES, ["Spelling"]))).toEqual(["Spelling"]);
     });
 });
 
 describe("series identity", () => {
-    it("gives every skill area a colour and a dash slot", () => {
+    it("UT-LOGIN-U22-01 gives every skill area a colour and a dash slot", () => {
         for (const area of SKILL_AREAS) {
             expect(skillAreaColor[area]).toMatch(/^var\(--series-[1-6]\)$/);
             expect(Object.prototype.hasOwnProperty.call(skillAreaDash, area)).toBe(true);
         }
     });
 
-    it("assigns a distinct colour slot per skill area", () => {
+    it("UT-LOGIN-U22-02 assigns a distinct colour slot per skill area", () => {
         const slots = SKILL_AREAS.map((area) => skillAreaColor[area]);
 
         expect(new Set(slots).size).toBe(SKILL_AREAS.length);
     });
 
-    it("assigns a distinct dash pattern per skill area", () => {
+    it("UT-LOGIN-U22-03 assigns a distinct dash pattern per skill area", () => {
         // This is the secondary encoding. If two series share a pattern AND sit
         // close in hue, colourblind readers cannot tell them apart.
         const dashes = SKILL_AREAS.map((area) => skillAreaDash[area]);
@@ -129,11 +129,11 @@ describe("series identity", () => {
 });
 
 describe("formatDate", () => {
-    it("renders an ISO date readably", () => {
+    it("UT-LOGIN-U23-01 renders an ISO date readably", () => {
         expect(formatDate("2026-01-20")).toBe("20 Jan 2026");
     });
 
-    it("passes through anything unparseable instead of showing 'Invalid Date'", () => {
+    it("UT-LOGIN-U23-02 passes through anything unparseable instead of showing 'Invalid Date'", () => {
         expect(formatDate("not-a-date")).toBe("not-a-date");
     });
 });

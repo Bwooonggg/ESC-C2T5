@@ -38,7 +38,7 @@ afterEach(() => {
 });
 
 describe("getSummary", () => {
-    it("interpolates the studentId into the request path", async () => {
+    it("UT-LOGIN-U17-01 interpolates the studentId into the request path", async () => {
         const envelope: ApiEnvelope<Summary> = { ok: true, data: SUMMARY };
         const fetchMock = mockFetch(envelope);
 
@@ -49,19 +49,19 @@ describe("getSummary", () => {
         expect(fetchMock.mock.calls[0][0]).not.toContain("{studentId}");
     });
 
-    it("unwraps the envelope and returns the Summary", async () => {
+    it("UT-LOGIN-U17-02 unwraps the envelope and returns the Summary", async () => {
         mockFetch({ ok: true, data: SUMMARY } satisfies ApiEnvelope<Summary>);
 
         await expect(getSummary("s1")).resolves.toEqual(SUMMARY);
     });
 
-    it("throws the server's message when the envelope reports failure", async () => {
+    it("UT-LOGIN-U17-03 throws the server's message when the envelope reports failure", async () => {
         mockFetch({ ok: false, error: "progressUnavailable" }, { ok: false, status: 503 });
 
         await expect(getSummary("s1")).rejects.toThrow("progressUnavailable");
     });
 
-    it("throws a readable error when the response is not JSON", async () => {
+    it("UT-LOGIN-U17-04 throws a readable error when the response is not JSON", async () => {
         global.fetch = jest.fn().mockResolvedValue({
             ok: false,
             status: 502,
