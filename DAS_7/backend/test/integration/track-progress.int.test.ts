@@ -10,7 +10,7 @@ describeIntegration('track progress (IT7A)', () => {
     beforeEach(() => h.llm.reset());
     afterAll(async () => { await h?.cleanup(); });
 
-    it('IT7A-01/02 returns progress with a generated summary, then reuses it', async () => {
+    it('IT7A-H01 tracks progress through the authenticated HTTP endpoint', async () => {
         const res = await request(h.app)
             .get(`/students/${h.studentA1.studentId}/track-progress`)
             .set('Authorization', `Bearer ${h.tokenA}`);
@@ -52,7 +52,7 @@ describeIntegration('track progress (IT7A)', () => {
         expect(viaSummary.body.data.summaryId).toBe(viaTrack.body.data.summary.summaryId);
     });
 
-    it('IT7A-04 returns 404 progressUnavailable for a student that does not exist', async () => {
+    it('IT7A-H03 returns 404 progressUnavailable for a student that does not exist', async () => {
         const res = await request(h.app)
             .get(`/students/${randomUUID()}/track-progress`)
             .set('Authorization', `Bearer ${h.tokenA}`);
@@ -61,7 +61,7 @@ describeIntegration('track progress (IT7A)', () => {
         expect(res.body).toEqual({ ok: false, error: 'progressUnavailable' });
     });
 
-    it('IT7A-04 returns 404 progressUnavailable for another parent\'s student', async () => {
+    it('IT7A-H03 returns 404 progressUnavailable for another parent\'s student', async () => {
         const res = await request(h.app)
             .get(`/students/${h.studentB1.studentId}/track-progress`)
             .set('Authorization', `Bearer ${h.tokenA}`);

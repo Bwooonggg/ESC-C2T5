@@ -28,3 +28,6 @@ dist-ssr
 *.sln
 *.sw?
 .agents
+
+# Selenium failure evidence
+test/ui/das7/artifacts/

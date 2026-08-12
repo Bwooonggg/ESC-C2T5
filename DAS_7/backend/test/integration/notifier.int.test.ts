@@ -36,7 +36,7 @@ describeIntegration('notifier (integration)', () => {
         return { parent, student, recipientEmail };
     }
 
-    it('IT7B-01/03 — notifies the parent, stores the summary and records the send', async () => {
+    it('IT7B-S01 prepares, sends, and records a parent notification', async () => {
         const { parent, student, recipientEmail } = await dueParent();
         const before = h.email.history.length;
 
@@ -59,7 +59,7 @@ describeIntegration('notifier (integration)', () => {
             .resolves.not.toBeNull();
     });
 
-    it('IT7B-02 — a failing email provider leaves no notification behind', async () => {
+    it('IT7B-S02 leaves notification history unchanged when delivery fails', async () => {
         const { parent } = await dueParent();
         const before = h.email.history.length;
         const lastSentBefore = await h.deps.emailNotificationRepo.lastSentAt(parent.parentId);
@@ -73,7 +73,7 @@ describeIntegration('notifier (integration)', () => {
             .resolves.toBe(lastSentBefore);
     });
 
-    it('IT7B-04 — an unavailable LLM fails the notification without sending', async () => {
+    it('IT7B-S03 stops notification preparation when insight generation fails', async () => {
         const { parent } = await dueParent({ withProgress: true });
         const before = h.email.history.length;
         h.llm.mode = 'fail';
@@ -86,7 +86,7 @@ describeIntegration('notifier (integration)', () => {
             .resolves.toBeNull();
     });
 
-    it('IT7B-05 — a student with no progress fails the notification', async () => {
+    it('IT7B-S03 stops notification preparation when progress is unavailable', async () => {
         const { parent } = await dueParent({ withProgress: false });
         const before = h.email.history.length;
 
@@ -108,12 +108,12 @@ describeIntegration('notifier (integration)', () => {
         expect(h.email.history.slice(before)).toHaveLength(0);
     });
 
-    describe('IT7B-06 — scheduler tick', () => {
+    describe('Level 4 scheduler cluster', () => {
         afterEach(() => {
             jest.useRealTimers();
         });
 
-        it('sweeps due parents on a timer tick', async () => {
+        it('IT7B-T01 notifies a due parent on a scheduler tick', async () => {
             const { recipientEmail } = await dueParent();
 
             // Fake timers prove the tick fires; the sweep it starts is real network
@@ -137,6 +137,36 @@ describeIntegration('notifier (integration)', () => {
             // runDueNotifications legitimately sweeps every enabled preference in
             // the shared test database, so assert by recipient rather than count.
             expect(h.email.history.some(e => e.to === recipientEmail)).toBe(true);
+        });
+
+        it('IT7B-T02 skips a parent whose notification is not yet due', async () => {
+            const { parent, recipientEmail } = await dueParent();
+            const sentAt = new Date();
+            await expect(h.deps.notifierService.notifyParent(parent.parentId, sentAt))
+                .resolves.toBe('parentNotified');
+            const deliveriesBefore = h.email.history.filter(e => e.to === recipientEmail).length;
+
+            const sweeps: Array<Promise<Array<{ parentId: string; outcome: string }>>> = [];
+            jest.useFakeTimers();
+            jest.setSystemTime(new Date(sentAt.getTime() + 1000));
+            const scheduler = createScheduler(now => {
+                const sweep = h.deps.notifierService.runDueNotifications(now);
+                sweeps.push(sweep);
+                return sweep;
+            }, 1000);
+
+            scheduler.start();
+            await jest.advanceTimersByTimeAsync(1000);
+            scheduler.stop();
+            jest.useRealTimers();
+
+            expect(sweeps).toHaveLength(1);
+            const [results] = await Promise.all(sweeps);
+            expect(results).not.toContainEqual(expect.objectContaining({
+                parentId: parent.parentId,
+            }));
+            expect(h.email.history.filter(e => e.to === recipientEmail))
+                .toHaveLength(deliveriesBefore);
         });
     });
 });
