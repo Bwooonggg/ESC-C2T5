@@ -214,7 +214,11 @@ Then run:
 npm run seed
 ```
 
-The seed is repeatable. It upserts fixed demonstration records in the `insight` schema rather than duplicating them. Use a separate demonstration user—not either integration-test user—because the integration harness temporarily owns and removes its test users' parent profiles.
+The seed is repeatable. It upserts fixed demonstration records in the `insight`
+schema rather than duplicating them. It creates three students and 108 progress
+records across six assessment dates, including temporary dips and recoveries.
+Use a separate demonstration user—not either integration-test user—because the
+integration harness temporarily owns and removes its test users' parent profiles.
 
 #### Account-separation demonstration
 
