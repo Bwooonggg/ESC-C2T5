@@ -10,5 +10,6 @@
         "noEmit": true,
         "types": ["node", "jest"]
     },
-    "include": ["src", "test", "scripts"]
+    "include": ["src", "test", "scripts"],
+    "exclude": ["test/integration", "test/helpers/OLDTEST_harness.ts", "test/helpers/OLDTEST_test-auth.ts"]
 }
