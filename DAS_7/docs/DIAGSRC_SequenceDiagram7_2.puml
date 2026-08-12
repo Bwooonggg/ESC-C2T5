@@ -4,6 +4,12 @@ title Use Case DAS 7 - Notify Parent
 hide footbox
 skinparam backgroundColor white
 skinparam shadowing false
+skinparam sequenceParticipant {
+  fontColor<<hidden>> transparent
+  borderColor<<hidden>> transparent
+  backgroundColor<<hidden>> transparent
+}
+skinparam sequenceLifeLineBorderColor<<hidden>> transparent
 
 actor Parent
 actor Clock
@@ -11,6 +17,7 @@ participant EmailUpdatesUI as UI
 participant NotificationController as Controller
 participant Scheduler
 participant NotifierService as Notifier
+participant " " as NotifierCall <<hidden>> #transparent
 participant InsightService as Insight
 participant SupabaseRepository as Repository
 participant LLMAdapter as Adapter
@@ -59,10 +66,8 @@ else scheduled notification run
     deactivate Database
     Repository --> Notifier : sentAt or null
     deactivate Repository
-    Notifier -> Notifier : isDue(sentAt, frequency, now)
-    activate Notifier
-    Notifier --> Notifier : true or false
-    deactivate Notifier
+    Notifier -> NotifierCall ++ : isDue(sentAt, frequency, now)
+    return true or false
   end
 end
 
@@ -113,6 +118,7 @@ alt notification can be prepared
 
   Notifier -> Email : sendEmail(recipientEmail, subject, body)
   activate Email
+  Email ->x] : email
   Email --> Notifier : sent
   deactivate Email
   Notifier -> Repository : saveNotification(parentId, email)
