@@ -1,6 +1,7 @@
 import type { NextFunction, Request, Response } from 'express'
 import {
   appendMessage,
+  assertNotCompleted,
   attachContact,
   attachReport,
   DomainError,
@@ -79,6 +80,10 @@ export async function finishScreener(req: SessionRequest, res: Response): Promis
   const { notes } = req.body as { notes?: unknown }
 
   let session = await sessions.requireById(req.params.id)
+  // attachReport enforces this too, but only after the report exists; checking
+  // here keeps a finished session from costing another Claude call.
+  assertNotCompleted(session)
+
   if (typeof notes === 'string') {
     session = setNotes(session, notes)
   }

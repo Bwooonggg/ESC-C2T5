@@ -1,5 +1,5 @@
 import type { ScreenerType, ScreeningSession } from '../../demo_app/shared/types.ts'
-import { readAll, writeAll } from './fileStore.ts'
+import { readAll, updateAll } from './fileStore.ts'
 import { createSession, DomainError } from './screeningSession.ts'
 
 /**
@@ -27,9 +27,9 @@ export async function requireById(id: string): Promise<ScreeningSession> {
 }
 
 export async function save(session: ScreeningSession): Promise<ScreeningSession> {
-  const table = await readAll()
-  table[session.id] = session
-  await writeAll(table)
+  await updateAll((table) => {
+    table[session.id] = session
+  })
   return session
 }
 

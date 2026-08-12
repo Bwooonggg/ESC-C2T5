@@ -5,7 +5,13 @@ import type {
   ScreeningSession,
 } from '../../shared/types'
 
-const API_BASE_URL = 'http://127.0.0.1:4173'
+/**
+ * Same-origin by default, so the browser talks to whatever host serves the app
+ * and Vite's dev proxy (see vite.config.ts) forwards /api to the backend. An
+ * absolute base here would break any setup where the backend is not reachable
+ * at that exact host from the browser — WSL, containers, a phone on the LAN.
+ */
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? ''
 
 /**
  * Transport only. Every call returns the server's updated session, which the
