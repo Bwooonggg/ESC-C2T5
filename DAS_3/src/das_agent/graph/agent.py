@@ -23,8 +23,6 @@ def build_workflow(retriever: KnowledgeBaseRetriever, worksheet_llm):
         },
     )
 
-    # A clarification reply is saved as a HumanMessage, then intent detection
-    # runs again with the complete conversation.
     workflow.add_edge("ask_clarification", "wait_for_clarification")
     workflow.add_edge("wait_for_clarification", "get_intent")
 
@@ -39,8 +37,6 @@ def agent_init(retriever: KnowledgeBaseRetriever, worksheet_llm):
 
 
 def route_decision(state: State) -> str:
-    # get_intent runs before this router. Proceed only when it extracted the two
-    # required worksheet fields; otherwise ask the user for clarification.
     valid_qn_type = state.get("qn_type") in ("MCQ", "Open_ended")
     valid_topic = bool(str(state.get("topic") or "").strip())
     if valid_qn_type and valid_topic:

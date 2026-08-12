@@ -269,7 +269,6 @@ async def ask_clarification_node(state: State):
     for question in missing:
         prompt_msg = prompt_msg + "\n- " + question
 
-    # This actually persists — appears as a normal assistant turn in ANY client
     return {"messages": [AIMessage(content=prompt_msg)], "pending_fields": missing}
 
 

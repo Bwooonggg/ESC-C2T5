@@ -76,7 +76,7 @@ async def test_nothing_missing_produces_empty_pending_fields():
 
     assert result["pending_fields"] == []
     msg = result["messages"][0].content
-    assert "- " not in msg  # no bullet lines when nothing's missing
+    assert "- " not in msg  
 
 
 @pytest.mark.asyncio

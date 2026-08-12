@@ -36,6 +36,7 @@ Python 3.12 is required.
 python3.12 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
+pip install -e .
 ```
 
 Run the LangGraph development server:
@@ -48,6 +49,7 @@ Run Python tests:
 
 ```sh
 python -m pytest tests/
+pip install hypothesis
 ```
 
 Integration tests use the committed Milvus seed and may download or load model weights:
