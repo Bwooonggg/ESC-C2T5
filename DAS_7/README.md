@@ -322,6 +322,41 @@ or:
 
 Common statuses are `400` for preference validation, `401` for missing or invalid authentication, `403` for an authenticated non-parent account, `404` for hidden/unavailable resources, `503` for provider or authentication-key infrastructure failures, and `500` for an unexpected internal failure.
 
+### Error responses
+
+All DAS7 API errors use the same envelope:
+
+```json
+{ "ok": false, "error": "reason" }
+```
+
+The current error values and their meanings are:
+
+| Status | `error` value | Meaning |
+|---|---|---|
+| `400` | `Request body must be an object.` | A notification-preference body is not a JSON object. |
+| `400` | `` `enabled` must be true or false. `` | `enabled` is missing or is not Boolean. |
+| `400` | `` `frequency` must be one of: Weekly, Fortnightly, Monthly. `` | The notification frequency is invalid. |
+| `400` | `` `recipientEmail` must be a valid email address. `` | The notification recipient is not a valid email address. |
+| `400` | `invalidJson` | Express could not parse the JSON request body. |
+| `401` | `unauthorised` | The bearer token is missing or malformed, JWT verification failed, the token expired, the issuer is wrong, or the verified JWT has no `sub`. The response deliberately does not reveal which authentication check failed. |
+| `403` | `forbidden` | The JWT is valid, but its `sub` has no matching `insight.parents` profile. This includes authenticated teacher-only accounts. |
+| `404` | `notFound` | The route does not exist, the requested parent is not the signed-in parent, or another parent-scoped resource is unavailable. |
+| `404` | `progressUnavailable` | The student is nonexistent or is not owned by the signed-in parent. Both cases intentionally return the same response. |
+| `404` | `summaryUnavailable` | Recommendation generation requires a stored summary, but none exists. |
+| `413` | `requestTooLarge` | The JSON request body exceeds Express's configured limit. |
+| `500` | `internalError` | An unexpected backend or database error occurred. Internal details are logged but not returned. |
+| `503` | `authUnavailable` | The Supabase JWKS endpoint or key set is temporarily unavailable or unusable. |
+| `503` | `progressUnavailable` | Progress data required to complete the request is unavailable. |
+| `503` | `summaryUnavailable` | Summary generation or persistence failed. |
+| `503` | `recommendationUnavailable` | Recommendation generation or persistence failed. |
+| `503` | `notificationFailed` | Immediate notification preparation or delivery failed. |
+
+The frontend treats `401` as a signal to return to the Insights login page and
+`403` as a signal to show the Insights access-denied page. It should use both the
+HTTP status and the error envelope rather than inferring the result from the error
+text alone.
+
 ## Provider setup
 
 ### OpenRouter
