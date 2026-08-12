@@ -87,7 +87,7 @@ Three layers, one responsibility each:
 Data shapes (`Student`, `ProgressRecord`, …) are plain TypeScript interfaces in `src/types.ts`, mirroring the frontend's `src/types/domain.ts` — they carry no behavior. (TypeScript interfaces are erased at compile time; the *behavior* half of the class diagram's model classes lives in `services/`.)
 
 ```
-backend/
+DAS_7/
 ├── package.json / tsconfig.json / tsconfig.build.json / jest.config.cjs
 ├── .env.example / Dockerfile / .dockerignore / README.md
 ├── scripts/seed.ts                         # demo parents/students/progress (service_role)
@@ -253,7 +253,7 @@ Small typed hierarchy in `src/errors.ts`; one Express error middleware maps them
 
 ## 9. Database schema — `insight` on the shared Supabase
 
-**Applied state (2026-08-11):** all six root migrations are live on the ESC project (`vhppezszezjppgoqhbpf`). Migrations `0001_insight_schema.sql` through `0005_parent_auth_user_constraint.sql` provide the insight/worksheet foundation; `0006_public_responses.sql` provisions DAS1's public response table. The `insight` schema has its eight tables, service-role-only grants, RLS enabled with no policies, and required Auth-backed parent profiles. The shared [`db/migrations/README.md`](../../../db/migrations/README.md) history is the authoritative record; this section describes what the initial DAS7 files create.
+**Applied state (2026-08-11):** all six root migrations are live on the ESC project (`vhppezszezjppgoqhbpf`). Migrations `0001_insight_schema.sql` through `0005_parent_auth_user_constraint.sql` provide the insight/worksheet foundation; `0006_public_responses.sql` provisions DAS1's public response table. The `insight` schema has its eight tables, service-role-only grants, RLS enabled with no policies, and required Auth-backed parent profiles. The shared [`db/migrations/README.md`](../../db/migrations/README.md) history is the authoritative record; this section describes what the initial DAS7 files create.
 
 The ESC Data API exposes the `insight` and `worksheet` schemas. Browser `anon` and
 `authenticated` roles remain denied by the migrations' grants and RLS, while the
@@ -361,7 +361,7 @@ Index `summaries_student_latest_idx (student_id, generated_at desc)` — serves 
 
 Index `email_notifications_parent_latest_idx (parent_id, sent_at desc)` — exactly the shape of that "newest send for this parent" query.
 
-### 9.2 DDL ([`db/migrations/0001_insight_schema.sql`](../../../db/migrations/0001_insight_schema.sql))
+### 9.2 DDL ([`db/migrations/0001_insight_schema.sql`](../../db/migrations/0001_insight_schema.sql))
 
 Written idempotently throughout (`if not exists`), so re-running on an up-to-date database is harmless.
 
@@ -439,7 +439,7 @@ create index if not exists email_notifications_parent_latest_idx
     on insight.email_notifications (parent_id, sent_at desc);
 ```
 
-### 9.3 Grants and RLS ([`db/migrations/0002_grants_and_rls.sql`](../../../db/migrations/0002_grants_and_rls.sql))
+### 9.3 Grants and RLS ([`db/migrations/0002_grants_and_rls.sql`](../../db/migrations/0002_grants_and_rls.sql))
 
 A schema you create yourself starts with **no privileges for anyone** — Supabase only wires privileges up automatically for `public`. Migration 0002 fixes that, and grants to `service_role` *only*: `anon` and `authenticated` deliberately get nothing, so the browser cannot reach these tables through the Data API even if schema exposure is later approved. All access goes through this backend.
 
@@ -462,7 +462,7 @@ alter table insight.email_notifications      enable row level security;
 
 **RLS is enabled with no policies.** That is a no-op today — `service_role` bypasses RLS (§6.1) — but it **fails safe**: if anyone later grants access to `authenticated`, RLS-on-with-no-policies denies everything, whereas RLS-off-plus-grant would be wide open. Adding the real per-row policies is step 2 of the §6.1 migration path; the tables are already armed for them.
 
-**Migration management:** numbered SQL files in the root [`db/migrations/`](../../../db/migrations/) directory are applied manually via the Supabase SQL editor by a human. Never renumber or rewrite an applied file; add a new one.
+**Migration management:** numbered SQL files in the root [`db/migrations/`](../../db/migrations/) directory are applied manually via the Supabase SQL editor by a human. Never renumber or rewrite an applied file; add a new one.
 
 **Data provenance:** progress data is **seeded** (`scripts/seed.ts`) this iteration — no live ingestion from other subsystems. If DAS 7 later needs real assessment data, the platform rule is to call the owning service's API (e.g. `GET /api/screening/results/{childId}`), never to read another service's tables.
 

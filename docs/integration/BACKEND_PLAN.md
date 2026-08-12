@@ -70,7 +70,7 @@ The steps in this lane are sequential.
 
 1. Create the root `db/migrations/` directory.
 2. Move the existing DAS7 Supabase migrations from
-   `DAS_7/backend/db/migrations/` into the root migration history.
+   `DAS_7/db/migrations/` into the root migration history.
 3. Update migration documentation and any script paths that refer to the old
    directory.
 4. Add a migration for the `worksheet` schema and `worksheet.teachers`.
@@ -182,7 +182,7 @@ Completion check with fakes:
 
 ### Lane 2C: DAS7 authorization cleanup
 
-Owner: `DAS_7/backend/`.
+Owner: `DAS_7/`.
 
 - [ ] Add `ForbiddenError` with a generic `403` response.
 - [ ] Keep malformed, expired, wrong-issuer, and invalidly signed JWTs as `401`.
@@ -286,8 +286,8 @@ reference is configured.
 ### DAS7
 
 ```powershell
-npm test --prefix DAS_7/backend
-npm run build --prefix DAS_7/backend
+npm test --prefix DAS_7
+npm run build --prefix DAS_7
 ```
 
 Keep real Brevo sending disabled in automated tests.

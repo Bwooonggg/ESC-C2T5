@@ -22,7 +22,7 @@ cp .env.example .env
 
 The only two required values are `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`;
 everything else has a working default (`LLM_PROVIDER=stub`, `EMAIL_PROVIDER=fake`,
-scheduler off). Apply `../../db/migrations/*.sql` through the Supabase dashboard, then
+scheduler off). Apply `../db/migrations/*.sql` through the Supabase dashboard, then
 load the demo dataset:
 
 ```bash

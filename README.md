@@ -39,10 +39,6 @@ Current functionality includes:
   authenticated **Send update now** action.
 - Local browser preview stubs for all three services when `VITE_USE_STUBS=true`.
 
-`DAS_7/frontend/` is the older standalone DAS7 interface. It remains in the repository
-as a reference but is not started by the root development scripts and does not affect
-the centralized frontend.
-
 The permanent design is in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Historical
 implementation plans remain under `docs/integration/` until that temporary folder is
 cleaned up; they should not be treated as the current runtime guide.
@@ -54,8 +50,7 @@ ESC-C2T5/
 |-- frontend/               Centralized React frontend for DAS1, DAS3, and DAS7
 |-- DAS_1/                  Public screening backend and legacy service files
 |-- DAS_3/                  Authenticated LangGraph worksheet backend
-|-- DAS_7/backend/          Parent insights API and Brevo email scheduler
-|-- DAS_7/frontend/         Legacy standalone DAS7 frontend (not started)
+|-- DAS_7/                  Parent insights API and Brevo email scheduler
 |-- docs/                   System architecture and temporary integration notes
 |-- Files/                  Project briefs and reference material
 |-- API_CONTRACTS.md        Browser-facing API and error conventions
@@ -108,7 +103,7 @@ configured environment files. Place each file at the exact path shown:
 | `frontend/.env` | Browser-safe Supabase and API proxy configuration |
 | `DAS_1/backend/.env` | Screening backend providers and database access |
 | `DAS_3/.env` | Worksheet providers, Supabase authorization, and Docker |
-| `DAS_7/backend/.env` | Insights, Supabase, LLM, and email configuration |
+| `DAS_7/.env` | Insights, Supabase, LLM, and email configuration |
 
 Never commit these files. The matching `.env.example` files document their
 expected variables but do not contain working credentials.
@@ -118,7 +113,7 @@ From the repository root, install the three host-side packages once:
 ```powershell
 npm install --prefix frontend
 npm install --prefix DAS_1/backend
-npm install --prefix DAS_7/backend
+npm install --prefix DAS_7
 ```
 
 Docker installs the DAS3 Python dependencies while building its image, so no
@@ -176,7 +171,7 @@ npm run dev --prefix DAS_1/backend
 Terminal 3 — DAS7 insights backend:
 
 ```powershell
-npm run dev --prefix DAS_7/backend
+npm run dev --prefix DAS_7
 ```
 
 Terminal 4 — centralized frontend:
@@ -271,11 +266,11 @@ Compose runs LangGraph, PostgreSQL, and Redis and publishes LangGraph on host po
 ### DAS7 backend
 
 ```powershell
-npm install --prefix DAS_7/backend
-npm run dev --prefix DAS_7/backend
+npm install --prefix DAS_7
+npm run dev --prefix DAS_7
 ```
 
-Copy `DAS_7/backend/.env.example` to `DAS_7/backend/.env` first. The backend defaults
+Copy `DAS_7/.env.example` to `DAS_7/.env` first. The backend defaults
 to port `4000`. Use `EMAIL_PROVIDER=brevo` with a valid `BREVO_API_KEY` and verified
 `EMAIL_FROM` address when real email delivery is required. Use the fake provider
 for local work and tests. Scheduled emails use the parent's saved frequency; the
@@ -292,7 +287,7 @@ npm test --prefix DAS_1
 python -m pytest DAS_3/tests
 npm test --prefix DAS_3/frontend
 npm run frontend:test
-npm test --prefix DAS_7/backend
+npm test --prefix DAS_7
 ```
 
 Some DAS3 integration tests load the committed Milvus seed and may load model
