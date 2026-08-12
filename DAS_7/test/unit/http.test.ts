@@ -25,6 +25,33 @@ describe('HTTP routes', () => {
     it.each([['UT-DAS7-U15-01', 'parentNotified', 200, 'parentNotified'], ['UT-DAS7-U15-02', 'notificationFailed', 503, 'notificationFailed']] as const)('%s reports manual notification outcome', async (_id, outcome, status, error) => { const d = mockDeps(); d.notifierService.notifyParent.mockResolvedValue(outcome); const res = await request(routeApp(notificationRoutes(d))).post('/p1/notifications'); expect(res.status).toBe(status); if (status === 200) expect(res.body.data.outcome).toBe(outcome); else expect(res.body.error).toBe(error); expect(d.notifierService.notifyParent).toHaveBeenCalledWith('p1', expect.any(Date)); });
 });
 
+describe('JSON request errors', () => {
+    function jsonApp() {
+        const app = express();
+        app.use(express.json({ limit: '100kb', strict: true }));
+        app.post('/body', (_req, res) => res.json({ ok: true }));
+        app.use(errorHandler);
+        return app;
+    }
+
+    it('UT-DAS7-U33-01 malformed JSON is a controlled 400', async () => {
+        const res = await request(jsonApp())
+            .post('/body')
+            .set('Content-Type', 'application/json')
+            .send('{"enabled":');
+        expect(res.status).toBe(400);
+        expect(res.body).toEqual({ ok: false, error: 'invalidJson' });
+    });
+
+    it('UT-DAS7-U33-02 oversized JSON is a controlled 413', async () => {
+        const res = await request(jsonApp())
+            .post('/body')
+            .send({ recipientEmail: `${'a'.repeat(110_000)}@example.test` });
+        expect(res.status).toBe(413);
+        expect(res.body).toEqual({ ok: false, error: 'requestTooLarge' });
+    });
+});
+
 describe('authorization helpers', () => {
     it('UT-DAS7-U29-01 guardian resolves', async () => { const repo = { isGuardian: jest.fn().mockResolvedValue(true) } as any; await expect(requireOwnStudent(repo, parent, 's1')).resolves.toBeUndefined(); });
     it('UT-DAS7-U29-02 non-guardian rejects hidden not-found', async () => { const repo = { isGuardian: jest.fn().mockResolvedValue(false) } as any; await expect(requireOwnStudent(repo, parent, 's1')).rejects.toEqual(expect.objectContaining({ message: 'progressUnavailable' })); });

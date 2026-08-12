@@ -3,6 +3,8 @@ dist/
 coverage/
 .ts-jest/
 .env
+fuzzing/preference/build/
+fuzzing/preference/failures/
 .env.*
 !.env.example
 !.env.integration.example

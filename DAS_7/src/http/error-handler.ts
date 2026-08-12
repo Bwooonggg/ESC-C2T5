@@ -16,6 +16,19 @@ export const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
         fail(res, err.status, err.message);
         return;
     }
+
+    // Express' JSON parser rejects malformed and oversized request bodies before
+    // a route runs. Keep these client-input failures out of the opaque 500 path.
+    const parserError = err as { status?: unknown; type?: unknown };
+    if (parserError.status === 413 || parserError.type === 'entity.too.large') {
+        fail(res, 413, 'requestTooLarge');
+        return;
+    }
+    if (parserError.status === 400 || parserError.type === 'entity.parse.failed') {
+        fail(res, 400, 'invalidJson');
+        return;
+    }
+
     console.error(err);
     fail(res, 500, 'internalError');
 };
