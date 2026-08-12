@@ -1,71 +1,156 @@
 @startuml
-title DAS 7 - Notify Parent (as implemented, backend v2)
+title Use Case DAS 7 - Notify Parent
 
 hide footbox
 skinparam backgroundColor white
+skinparam shadowing false
 
+actor Parent
 actor Clock
-participant "Scheduler" as Scheduler
-participant "NotifierService" as Notifier
-participant "Repositories\n(Supabase)" as Repo
-participant "InsightService" as Insight
-participant "EmailProvider\n(Brevo)" as Email
+participant EmailUpdatesUI as UI
+participant NotificationController as Controller
+participant Scheduler
+participant NotifierService as Notifier
+participant InsightService as Insight
+participant SupabaseRepository as Repository
+participant LLMAdapter as Adapter
+actor Supabase as Database <<Secondary Actor>>
+actor "LLM Provider" as LLM <<Secondary Actor>>
+actor "Email Provider" as Email <<Secondary Actor>>
 
-note over Clock, Email
-  This flow has no HTTP endpoint. It is driven by an in-process
-  timer, and its outcomes are the return values
-  parentNotified / notificationFailed - not status codes.
-end note
-
-Clock -> Scheduler : tick (every SCHEDULER_TICK_MS)
-Scheduler -> Notifier : runDueNotifications(now)
-Notifier -> Repo : preferenceRepo.listEnabled()
-Repo --> Notifier : NotificationPreference[]
-
-loop for each enabled preference
-  Notifier -> Repo : emailNotificationRepo.lastSentAt(parentId)
-  Repo --> Notifier : last sent time or null
-  Notifier -> Notifier : isDue(lastSentAt, frequency, now)
-
-  alt not due yet
-    note right of Notifier : skipped until the\ninterval has elapsed
-  else due
-    Notifier -> Notifier : notifyParent(parentId, now)
-    Notifier -> Repo : parentRepo.byId / studentRepo.listByParent
-    Repo --> Notifier : Parent and Student[]
-
-    alt preference disabled, parent missing, or no students
-      Notifier --> Scheduler : notificationFailed
-    else ready to summarise
-      loop for each student
-        Notifier -> Insight : getSummary(studentId)
-
-        alt summary available (reused or freshly generated and stored)
-          Insight --> Notifier : Summary
-        else no progress, or generator unavailable
-          Insight --> Notifier : UnavailableError
-          note right of Notifier : caught and logged;\nnothing is sent
-          Notifier --> Scheduler : notificationFailed
-        end
-      end
-
-      Notifier -> Email : send(to, subject, body)
-
-      alt email accepted by the provider
-        Email ->x] : Email to parent
-        Email --> Notifier : sent
-        Notifier -> Repo : emailNotificationRepo.insert(...)
-        note right of Notifier : the send happens first,\nso a failed send leaves no record
-        Repo --> Notifier : recorded
-        Notifier --> Scheduler : parentNotified
-      else provider unreachable or rejected the send
-        Email --> Notifier : EmailSendError
-        Notifier --> Scheduler : notificationFailed
-      end
-    end
+alt parent sends an update now
+  Parent -> UI : sendUpdateNow()
+  activate UI
+  UI -> Controller : savePreferences(parentId, preferences)
+  activate Controller
+  Controller -> Repository : upsertPreference(preferences)
+  activate Repository
+  Repository -> Database : upsertPreference(preferences)
+  activate Database
+  Database --> Repository : NotificationPreference
+  deactivate Database
+  Repository --> Controller : NotificationPreference
+  deactivate Repository
+  Controller --> UI : NotificationPreference
+  deactivate Controller
+  UI -> Controller : notifyParent(parentId)
+  activate Controller
+  Controller -> Notifier : notifyParent(parentId, now)
+  activate Notifier
+else scheduled notification run
+  Clock -> Scheduler : tick(now)
+  activate Scheduler
+  Scheduler -> Notifier : runDueNotifications(now)
+  activate Notifier
+  Notifier -> Repository : listEnabledPreferences()
+  activate Repository
+  Repository -> Database : selectEnabledPreferences()
+  activate Database
+  Database --> Repository : NotificationPreference[]
+  deactivate Database
+  Repository --> Notifier : NotificationPreference[]
+  deactivate Repository
+  loop each enabled preference
+    Notifier -> Repository : getLastSentAt(parentId)
+    activate Repository
+    Repository -> Database : selectLastSentAt(parentId)
+    activate Database
+    Database --> Repository : sentAt or null
+    deactivate Database
+    Repository --> Notifier : sentAt or null
+    deactivate Repository
+    Notifier -> Notifier : isDue(sentAt, frequency, now)
+    activate Notifier
+    Notifier --> Notifier : true or false
+    deactivate Notifier
   end
 end
 
-Scheduler --> Clock : outcomes per parent
+Notifier -> Repository : getNotificationData(parentId)
+activate Repository
+Repository -> Database : selectParentPreferenceAndStudents(parentId)
+activate Database
+Database --> Repository : Parent, Preference, Student[]
+deactivate Database
+Repository --> Notifier : Parent, Preference, Student[]
+deactivate Repository
+
+alt notification can be prepared
+  loop each linked student
+    Notifier -> Insight : getSummary(studentId)
+    activate Insight
+    Insight -> Repository : getProgressAndSummary(studentId)
+    activate Repository
+    Repository -> Database : selectProgressAndLatestSummary(studentId)
+    activate Database
+    Database --> Repository : ProgressRecord[], Summary or null
+    deactivate Database
+    Repository --> Insight : ProgressRecord[], Summary or null
+    deactivate Repository
+
+    opt summary is missing or stale
+      Insight -> Adapter : generateSummary(student, records)
+      activate Adapter
+      Adapter -> LLM : generateSummary(progress)
+      activate LLM
+      LLM --> Adapter : summary
+      deactivate LLM
+      Adapter --> Insight : summary
+      deactivate Adapter
+      Insight -> Repository : saveSummary(studentId, summary)
+      activate Repository
+      Repository -> Database : insertSummary(studentId, summary)
+      activate Database
+      Database --> Repository : Summary
+      deactivate Database
+      Repository --> Insight : Summary
+      deactivate Repository
+    end
+
+    Insight --> Notifier : Summary
+    deactivate Insight
+  end
+
+  Notifier -> Email : sendEmail(recipientEmail, subject, body)
+  activate Email
+  Email --> Notifier : sent
+  deactivate Email
+  Notifier -> Repository : saveNotification(parentId, email)
+  activate Repository
+  Repository -> Database : insertEmailNotification(parentId, email)
+  activate Database
+  Database --> Repository : notificationRecorded()
+  deactivate Database
+  Repository --> Notifier : notificationRecorded()
+  deactivate Repository
+
+  alt parent initiated the notification
+    Notifier --> Controller : parentNotified()
+    deactivate Notifier
+    Controller --> UI : parentNotified()
+    deactivate Controller
+    UI --> Parent : displaySentConfirmation()
+    deactivate UI
+  else scheduler initiated the notification
+    Notifier --> Scheduler : parentNotified()
+    deactivate Notifier
+    Scheduler --> Clock : notificationRunComplete()
+    deactivate Scheduler
+  end
+else notification cannot be prepared
+  alt parent initiated the notification
+    Notifier --> Controller : notificationFailed()
+    deactivate Notifier
+    Controller --> UI : notificationFailed()
+    deactivate Controller
+    UI --> Parent : displayTryAgainMessage()
+    deactivate UI
+  else scheduler initiated the notification
+    Notifier --> Scheduler : notificationFailed()
+    deactivate Notifier
+    Scheduler --> Clock : notificationRunComplete()
+    deactivate Scheduler
+  end
+end
 
 @enduml
