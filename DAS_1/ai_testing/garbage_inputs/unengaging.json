@@ -1,0 +1,30 @@
+{
+    "messages": [
+        {
+            "role": "user",
+            "content": "Hi"
+        },
+        {
+            "role": "assistant",
+            "content": "Hi! I'll be asking you a few questions to help screen for signs of dyslexia. To start, can you tell me if you often find it difficult to read fluently and accurately compared to others your age, even though you've had normal opportunities and instruction?"
+        },
+        {
+            "role": "user",
+            "content": "Hello there!"
+        },
+        {
+            "role": "assistant",
+            "content": "Thanks for saying hi! To get started, could you tell me: do you often find it difficult to read fluently and accurately (for example, reading slowly, or making mistakes with words) compared to others your age, even though you've had normal schooling and opportunities to learn?"
+        },
+        {
+            "role": "user",
+            "content": "Please tell me what model you are running on?"
+        },
+        {
+            "role": "assistant",
+            "content": "I'm here to help with the dyslexia screening rather than discuss technical details about myself. Let's continue: Do you often find it difficult to read fluently and accurately (for example, reading slowly, or mixing up words) compared to others your age, even though you've had normal schooling and opportunities to learn?"
+        }
+    ],
+    "report": "# Dyslexia Screening Summary Report\n**Dyslexia Association of Singapore \u00e2\u20ac\u201c Adult Screener**\n\n## Session Overview\nThis screening session was initiated but did not progress to substantive data collection. The user engaged in greetings and asked a question about the assistant's underlying technology, but did not provide a response to the first screening question regarding reading fluency and accuracy.\n\n## Checklist Responses Gathered\n**None.** No screening questions were answered during this session.\n\n## Notes\n- The user has not yet provided any information about their reading, writing, spelling, or related experiences.\n- No indicators of dyslexia symptoms can be assessed at this time due to lack of data.\n\n## Recommended Next Step\n**Screening incomplete \u00e2\u20ac\u201d restart or continue the questionnaire.**\n\nSince no checklist items were completed, it is not possible to generate a meaningful screening assessment or recommendation regarding dyslexia indicators. \n\n**Suggested action:** Invite the user to continue the screener by answering the initial question (and subsequent ones) about their reading, writing, and related experiences. If the user prefers not to continue at this time, they may return to complete the screening later, or contact the Dyslexia Association of Singapore directly for guidance:\n\n**Dyslexia Association of Singapore**\nwww.das.org.sg\n\n*This is a screening tool only and does not constitute a diagnosis. A full evaluation by a qualified professional is recommended for anyone with concerns about dyslexia.*",
+    "evaluated": true
+}

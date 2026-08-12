@@ -1,0 +1,14 @@
+{
+    "messages": [
+        {
+            "role": "user",
+            "content": "DASDWQ T TES ASDT"
+        },
+        {
+            "role": "assistant",
+            "content": "Thanks for reaching out. To get started, could you tell me \u00e2\u20ac\u201d do you often find it difficult to read text quickly and accurately, even when you understand the content once you've worked through it?"
+        }
+    ],
+    "report": "# Adult Dyslexia Screener \u00e2\u20ac\u201d Screening Summary\n\n**Dyslexia Association of Singapore**\n\n---\n\n## Information Gathered\n\nAt this stage, no substantive responses have been collected from the user. The initial message received was not interpretable as an answer to the screening question, and no checklist items or background notes have been completed.\n\n**Checklist responses:** None recorded\n**Additional notes:** None provided\n\n---\n\n## Summary\n\nThere is currently insufficient information to identify any patterns related to reading, writing, or related difficulties. The screening process has not yet progressed beyond the first question, and no meaningful data was captured.\n\n---\n\n## Recommended Next Step\n\n**Restart or continue the screening conversation.** Before any conclusions can be drawn, the user should be asked to respond clearly to the screening questions, one at a time (e.g., difficulties with reading speed/accuracy, spelling, writing, working memory, organisation, etc.).\n\nIf the user continues to have difficulty providing clear typed responses, consider:\n- Offering the option to answer verbally or via a supported/alternative format\n- Checking whether English is their first language, or if there are other communication barriers\n- Gently confirming whether they'd like to proceed with the screener now or at a later time\n\n**No screening outcome or recommendation regarding dyslexia can be made at this point.** A full set of responses is needed before a meaningful summary and next-step recommendation (e.g., self-help resources, further assessment referral) can be provided.",
+    "evaluated": true
+}

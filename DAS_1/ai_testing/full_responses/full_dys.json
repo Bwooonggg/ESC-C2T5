@@ -1,0 +1,58 @@
+{
+    "id": "7ff17b16-8015-4984-a82b-eae8412ee14c",
+    "screenerType": "adult",
+    "stage": "report",
+    "messages": [
+        {
+            "role": "user",
+            "content": "I am having problems with reading"
+        },
+        {
+            "role": "assistant",
+            "content": "Thanks for sharing that. Could you tell me a bit more about your reading difficulties? For example, do you struggle with reading speed, understanding what you read, pronouncing words, or something else?"
+        },
+        {
+            "role": "user",
+            "content": "Both"
+        },
+        {
+            "role": "assistant",
+            "content": "Thanks for clarifying. Do you also notice difficulties with spelling or writing, such as mixing up letters, reversing words, or trouble organizing your thoughts on paper?"
+        },
+        {
+            "role": "user",
+            "content": "I do"
+        },
+        {
+            "role": "assistant",
+            "content": "Thank you. Have you experienced these kinds of reading, spelling, or writing difficulties since childhood, or is this something that's come on more recently?"
+        },
+        {
+            "role": "user",
+            "content": "Since childhood"
+        },
+        {
+            "role": "assistant",
+            "content": "Do these difficulties affect your daily life or work, for example following instructions, managing time, remembering sequences of information, or organizing tasks?"
+        },
+        {
+            "role": "user",
+            "content": "Yes they do"
+        },
+        {
+            "role": "assistant",
+            "content": "Do you know if anyone in your family, such as parents or siblings, has had similar reading, spelling, or learning difficulties, or a diagnosis of dyslexia?"
+        },
+        {
+            "role": "user",
+            "content": "None of my family members have similiar difficulties"
+        }
+    ],
+    "responses": {},
+    "notes": "",
+    "report": "Screening Summary:\n\nThe individual reports longstanding difficulties (since childhood) with:\n- Reading speed and comprehension\n- Word pronunciation while reading\n- Spelling and writing, including letter/word mix-ups and difficulty organizing thoughts on paper\n\nThese difficulties are reported to affect daily life and work, including following instructions, managing time, remembering sequences, and organizing tasks. No known family history of similar difficulties or dyslexia diagnosis was reported.\n\nInterpretation: The pattern described \u00e2\u20ac\u201d early-onset, persistent difficulties across reading, spelling, and writing, with functional impact on daily/work tasks \u00e2\u20ac\u201d is consistent with characteristics commonly associated with dyslexia. The absence of a family history does not rule this out, as dyslexia can occur without a known family pattern.\n\nRecommended Next Step: It is recommended that this individual undergo a comprehensive, formal dyslexia assessment conducted by a qualified professional (such as an educational psychologist or a specialist at the Dyslexia Association of Singapore) to obtain a proper diagnosis and, if appropriate, recommendations for support strategies or accommodations.\n\nNote: This screening is not a diagnosis. It is intended only to help determine whether further professional assessment is warranted.",
+    "contact": null,
+    "createdAt": "2026-08-11T03:07:53.792Z",
+    "updatedAt": "2026-08-11T03:10:16.473Z",
+    "evaluated": true
+}

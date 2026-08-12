@@ -1,0 +1,66 @@
+{
+    "id": "25c0a138-5188-49bd-a7ea-e27ff0a80fdb",
+    "screenerType": "adult",
+    "stage": "report",
+    "messages": [
+        {
+            "role": "user",
+            "content": "Hi, I am having problems with reading"
+        },
+        {
+            "role": "assistant",
+            "content": "Thanks for reaching out. To understand your reading difficulties better, could you tell me: do you often find that you read slowly or need to re-read sentences several times to understand them?"
+        },
+        {
+            "role": "user",
+            "content": "I find myself struggling to quickly text quickly. Sometimes, I do need to re-read instructions several times in order to understand what to do"
+        },
+        {
+            "role": "assistant",
+            "content": "Thanks for sharing that. Can I ask a few more quick questions to understand your situation better? First: do you often have trouble spelling words correctly, or find that your spelling looks noticeably different when you write the same word at different times?"
+        },
+        {
+            "role": "user",
+            "content": "I don't really have much problems with spelling"
+        },
+        {
+            "role": "assistant",
+            "content": "Thanks for that. Next: do you find it hard to remember or follow multi-step spoken instructions, or do you sometimes mix up the order of letters or numbers (like dates or phone numbers)?"
+        },
+        {
+            "role": "user",
+            "content": "I can follow spoken instructions ok"
+        },
+        {
+            "role": "assistant",
+            "content": "Got it. A couple more quick ones: do you ever mix up similar-looking letters or numbers (like b/d, or transpose digits in numbers), or find tasks like reading maps, telling left from right, or managing time and deadlines particularly challenging?"
+        },
+        {
+            "role": "user",
+            "content": "No I don't"
+        },
+        {
+            "role": "assistant",
+            "content": "Thanks for answering all those. One last question: have you noticed these reading and re-reading difficulties since childhood or school days, and do they affect your work, studies, or daily life in a noticeable way?"
+        },
+        {
+            "role": "user",
+            "content": "It's been since I was in kindergarten, according to what I've been told by my family"
+        },
+        {
+            "role": "assistant",
+            "content": "Thanks for that detail. Since it's been a lifelong pattern, could you tell me how these reading difficulties currently affect you\u00e2\u20ac\u201ddo they cause noticeable problems at work, in your studies, or in everyday tasks like reading emails, forms, or texting?"
+        },
+        {
+            "role": "user",
+            "content": "It causes me problem in daily life, I've been told off before"
+        }
+    ],
+    "responses": {},
+    "notes": "",
+    "report": "Screening Summary:\n- Presenting concern: Slow reading, needing to re-read sentences/instructions/texts multiple times to understand them.\n- Spelling: No notable difficulties reported.\n- Following multi-step spoken instructions: No difficulties reported.\n- Sequencing (letters/numbers, dates, phone numbers): No difficulties reported.\n- Letter/number reversals (b/d, digit transposition): None reported.\n- Spatial/organisational tasks (maps, left-right, time management): No difficulties reported.\n- Onset: Longstanding, reported by family to be present since kindergarten/early school days.\n- Functional impact: Yes \u00e2\u20ac\u201d user reports real-world consequences, including being reprimanded (\"told off\") due to difficulties, indicating the reading/re-reading issue affects daily life and possibly work.\n\nOverall impression: The core, consistent difficulty is with reading speed and comprehension (needing to re-read text/instructions), which has been present since early childhood and continues to cause functional problems in daily life. Other common dyslexia-associated difficulties (spelling, sequencing, letter reversals, spatial/organisational skills) are not reported here, so the profile is narrower than a typical multi-domain dyslexia presentation, but the lifelong, persistent nature of the reading difficulty plus real-life impact are significant enough to warrant further attention.\n\nRecommended next step: Refer for a full formal dyslexia assessment with a qualified specialist (e.g., through the Dyslexia Association of Singapore's adult assessment service) to explore the reading and comprehension difficulties in more depth, rule out other contributing factors (e.g., vision, attention), and determine appropriate support strategies or accommodations for work/daily life.",
+    "contact": null,
+    "createdAt": "2026-08-11T02:29:30.308Z",
+    "updatedAt": "2026-08-11T02:36:13.825Z",
+    "evaluated": true
+}

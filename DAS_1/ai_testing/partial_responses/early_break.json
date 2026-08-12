@@ -1,0 +1,30 @@
+{
+    "id": "2d0cc1c8-ed45-45eb-b904-0b6ea45e9e0f",
+    "screenerType": "adult",
+    "stage": "report",
+    "messages": [
+        {
+            "role": "user",
+            "content": "Hello"
+        },
+        {
+            "role": "assistant",
+            "content": "Hi there! I'm here to help with a quick screening for signs of dyslexia. This isn't a diagnosis, just a way to understand your experiences better. To start, can you tell me: do you find reading unfamiliar words or text out loud more difficult or slower than you'd like, even as an adult?"
+        },
+        {
+            "role": "user",
+            "content": "Yes I do"
+        },
+        {
+            "role": "assistant",
+            "content": "Thanks for sharing that. Do you often find that you have to re-read sentences or paragraphs multiple times to fully understand their meaning?"
+        }
+    ],
+    "responses": {},
+    "notes": "",
+    "report": "# Dyslexia Screening Summary \u00e2\u20ac\u201d Preliminary Report\n\n**Note:** This screening is incomplete. Only one question has been answered so far, so this report reflects very limited information. It is not a diagnosis.\n\n## Responses Gathered So Far\n\n| Screening Question | Response |\n|---|---|\n| Difficulty/slowness reading unfamiliar words or text aloud | **Yes** \u00e2\u20ac\u201d reported as more difficult/slower than desired |\n| Need to re-read sentences/paragraphs to understand meaning | *Not yet answered* |\n\n## Observations\n\n- The user has confirmed one common indicator associated with dyslexia (difficulty and reduced speed when reading unfamiliar words or text aloud).\n- No further checklist items have been completed, so it is not yet possible to identify a pattern or estimate likelihood of dyslexia-related traits.\n\n## Recommended Next Step\n\nBecause only one data point has been collected, a meaningful screening outcome cannot yet be determined. The recommended next step is:\n\n1. **Continue the screening conversation** to gather responses to the remaining standard questions (e.g., difficulty with spelling, sequencing information, working memory for instructions, time management, etc.).\n2. Once a fuller set of responses is collected, a proper summary and recommendation (e.g., self-help resources, or referral to the **Dyslexia Association of Singapore** for a formal assessment) can be given.\n\n**Immediate suggestion:** Please continue answering the screening questions so a complete and accurate summary can be prepared.",
+    "contact": null,
+    "createdAt": "2026-08-11T03:19:01.801Z",
+    "updatedAt": "2026-08-11T03:20:28.931Z",
+    "evaluated": true
+}
