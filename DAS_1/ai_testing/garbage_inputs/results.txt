@@ -1,0 +1,20 @@
+garbage_inputs/nonsense_1.json
+Score: 10/10
+
+Reason: The report accurately identifies that no substantive information was gathered and correctly concludes that no screening outcome or behavioral patterns can be determined at this stage.
+
+garbage_inputs/nonsense_2.json
+Score: 10/10
+
+Reason: The report accurately identifies that the user's input was unintelligible and correctly concludes that no substantive information regarding behavioral patterns could be gathered. It provides a professional summary and appropriate, actionable next steps for the screening process.
+
+garbage_inputs/unengaging.json
+Score: 10/10
+
+Reason: The report accurately identifies that no substantive information regarding behavioral patterns was gathered and correctly concludes that no assessment can be made. It maintains professional neutrality and provides a clear, accurate summary of the interaction.
+
+garbage_inputs/full_run.json
+Score: 3/10
+
+Reason: The report fails to adhere to the expected response criteria, as it attempts to synthesize a clinical summary from nonsensical and evasive inputs rather than identifying that no substantive information could be gathered. It incorrectly treats the user's off-topic remarks as potential indicators of a condition rather than recognizing the user's failure to engage meaningfully.
+

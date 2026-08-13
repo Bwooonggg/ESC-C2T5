@@ -5,6 +5,13 @@ import type {
   ScreeningSession,
 } from '../../shared/types'
 
+/**
+ * Same-origin gateway prefix, so the browser talks to whatever host serves the
+ * app and the proxy (see vite.config.ts) strips /api/screening before
+ * forwarding to the DAS 1 backend. An absolute base here would break any setup
+ * where the backend is not reachable at that exact host from the browser —
+ * WSL, containers, a phone on the LAN.
+ */
 const API_BASE_URL = '/api/screening'
 
 /**
