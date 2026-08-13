@@ -6,7 +6,6 @@ from langchain_core.messages import HumanMessage
 from langgraph.checkpoint.memory import MemorySaver
 
 import das_agent.nodes.nodes as nodes_module
-from das_agent.nodes.nodes import get_question_count
 from das_agent.graph.agent import build_workflow
 from das_agent.worksheet.schemas import (
     GeneratedMCQWorksheet,
@@ -84,12 +83,21 @@ def _make_open_worksheet(count, topic):
     )
 
 
-def _fake_intent_llm(monkeypatch, qn_type, topic, sufficient=True, reason=None):
+def _fake_intent_llm(
+    monkeypatch,
+    qn_type,
+    topic,
+    sufficient=True,
+    reason=None,
+    question_count=None,
+):
     fake_result = MagicMock()
+    fake_result.action = "create" if sufficient else "clarify"
     fake_result.has_sufficient_info = sufficient
     fake_result.qn_type = qn_type if sufficient else None
     fake_result.topic = topic if sufficient else None
     fake_result.difficulty = "medium"
+    fake_result.question_count = question_count
     fake_result.reason = reason
 
     structured = MagicMock()
@@ -127,10 +135,14 @@ def _make_retriever():
 @settings(suppress_health_check=[HealthCheck.function_scoped_fixture], deadline=None)
 @given(valid_prompt())
 @pytest.mark.asyncio
-async def test_valid_prompts_generate_worksheet(monkeypatch, data):
-    user_prompt, qn_type, topic, _count = data
-    _fake_intent_llm(monkeypatch, qn_type=qn_type, topic=topic)
-    expected_count = get_question_count(user_prompt)
+async def test_valid_prompts(monkeypatch, data):
+    user_prompt, qn_type, topic, expected_count = data
+    _fake_intent_llm(
+        monkeypatch,
+        qn_type=qn_type,
+        topic=topic,
+        question_count=expected_count,
+    )
 
     worksheet_llm = _make_worksheet_llm(qn_type, expected_count, topic)
     retriever = _make_retriever()
@@ -146,7 +158,7 @@ async def test_valid_prompts_generate_worksheet(monkeypatch, data):
 @settings(suppress_health_check=[HealthCheck.function_scoped_fixture], deadline=None)
 @given(invalid_prompt)
 @pytest.mark.asyncio
-async def test_invalid_prompts_ask_for_clarification(monkeypatch, user_prompt):
+async def test_invalid_prompts(monkeypatch, user_prompt):
     _fake_intent_llm(
         monkeypatch,
         qn_type=None,
@@ -155,7 +167,7 @@ async def test_invalid_prompts_ask_for_clarification(monkeypatch, user_prompt):
         reason="Missing worksheet topic and/or question format.",
     )
 
-    worksheet_llm = _make_worksheet_llm("MCQ", get_question_count(user_prompt))
+    worksheet_llm = _make_worksheet_llm("MCQ", 15)
     retriever = _make_retriever()
 
     checkpointer = MemorySaver()
@@ -168,16 +180,3 @@ async def test_invalid_prompts_ask_for_clarification(monkeypatch, user_prompt):
 
     assert "generated_worksheet" not in result
     assert result.get("__interrupt__")
-
-
-
-
-@given(st.integers(min_value=1, max_value=100))
-def test_get_question_count_extracts_explicit_number(n):
-    text = f"Create {n} MCQ questions on Sight Words."
-    assert get_question_count(text) == n
-
-
-@given(st.text(min_size=0, max_size=50).filter(lambda s: not any(c.isdigit() for c in s)))
-def test_get_question_count_defaults_when_no_number(text):
-    assert get_question_count(text) == 15

@@ -49,11 +49,14 @@ def make_worksheet_llm():
 
 
 @pytest.mark.asyncio
-async def test_e2e_sufficient_info_path_produces_worksheet():
+async def test_ready_path():
     intent_response = MagicMock(
+        action="create",
+        has_sufficient_info=True,
         qn_type="MCQ",
         topic="grammar",
         difficulty="medium",
+        question_count=None,
         reason=None,
     )
 
@@ -88,10 +91,26 @@ async def test_e2e_sufficient_info_path_produces_worksheet():
 
 
 @pytest.mark.asyncio
-async def test_e2e_clarification_loop_then_succeeds():
+async def test_clarification_path():
     intent_responses = [
-        MagicMock(qn_type=None, topic=None, difficulty=None, reason="Missing quiz type and topic."),
-        MagicMock(qn_type="MCQ", topic="grammar", difficulty="medium", reason=None),
+        MagicMock(
+            action="clarify",
+            has_sufficient_info=False,
+            qn_type=None,
+            topic=None,
+            difficulty=None,
+            question_count=None,
+            reason="Missing quiz type and topic.",
+        ),
+        MagicMock(
+            action="create",
+            has_sufficient_info=True,
+            qn_type="MCQ",
+            topic="grammar",
+            difficulty="medium",
+            question_count=None,
+            reason=None,
+        ),
     ]
  
     def make_llm(*args, **kwargs):

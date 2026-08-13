@@ -46,7 +46,7 @@ async def test_partial_fields_provided(base_state):
         assert "difficulty" not in result
 
 @pytest.mark.asyncio
-async def test_no_fields_provided_falls_back_to_state(base_state):
+async def test_no_fields(base_state):
     with patch("das_agent.nodes.nodes.interrupt", return_value={}), \
             patch("das_agent.nodes.nodes.ChatOpenRouter") as mock_llm_cls:
 
@@ -57,7 +57,7 @@ async def test_no_fields_provided_falls_back_to_state(base_state):
         assert "difficulty" not in result
 
 @pytest.mark.asyncio
-async def test_dict_reply_is_persisted_for_intent_detection(base_state):
+async def test_dict_reply(base_state):
     with patch("das_agent.nodes.nodes.interrupt",
                 return_value={"qn_type": "MCQ", "difficulty": "hard", "topic": "fractions"}), \
             patch("das_agent.nodes.nodes.ChatOpenRouter"):
@@ -71,7 +71,7 @@ async def test_dict_reply_is_persisted_for_intent_detection(base_state):
 
 
 @pytest.mark.asyncio
-async def test_free_text_contains_all_requirements(base_state):
+async def test_complete_text(base_state):
     with patch("das_agent.nodes.nodes.interrupt",
                 return_value="I'd like a medium difficulty MCQ please"), \
             patch("das_agent.nodes.nodes.ChatOpenRouter") as mock_llm_cls:
@@ -85,7 +85,7 @@ async def test_free_text_contains_all_requirements(base_state):
         assert result["messages"][0].content == "I'd like a medium difficulty MCQ please"
 
 @pytest.mark.asyncio
-async def test_free_text_contains_partial_requirements(base_state):
+async def test_partial_text(base_state):
     with patch("das_agent.nodes.nodes.interrupt", return_value="make it open ended"), \
             patch("das_agent.nodes.nodes.ChatOpenRouter") as mock_llm_cls:
 
@@ -96,7 +96,7 @@ async def test_free_text_contains_partial_requirements(base_state):
         assert "difficulty" not in result
 
 @pytest.mark.asyncio
-async def test_free_text_nonsense_input(base_state):
+async def test_nonsense_text(base_state):
     with patch("das_agent.nodes.nodes.interrupt", return_value="asdkjhasdkjh banana"), \
             patch("das_agent.nodes.nodes.ChatOpenRouter") as mock_llm_cls:
 
@@ -108,7 +108,7 @@ async def test_free_text_nonsense_input(base_state):
         assert result["messages"][0].content == "asdkjhasdkjh banana"
 
 @pytest.mark.asyncio
-async def test_topic_is_not_carried_over_from_free_text_reply(base_state):
+async def test_topic_not_carried(base_state):
     with patch("das_agent.nodes.nodes.interrupt",
                 return_value="hard MCQ about photosynthesis please"), \
             patch("das_agent.nodes.nodes.ChatOpenRouter") as mock_llm_cls:
@@ -120,7 +120,7 @@ async def test_topic_is_not_carried_over_from_free_text_reply(base_state):
 
 
 @pytest.mark.asyncio
-async def test_reply_is_combined_with_original_query(base_state):
+async def test_combined_query(base_state):
     base_state["query"] = "Create 8 questions about subject-verb agreement"
 
     with patch("das_agent.nodes.nodes.interrupt", return_value="Make it MCQ"):

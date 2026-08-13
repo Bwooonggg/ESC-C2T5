@@ -17,7 +17,7 @@ retriever = KnowledgeBaseRetriever(
         )
 
 
-def test_default_milvus_path_is_relative_to_project_root(monkeypatch):
+def test_default_db_path(monkeypatch):
     monkeypatch.delenv("MILVUS_DB_PATH", raising=False)
 
     expected_path = Path(__file__).resolve().parents[1] / "data" / "milvus" / "docling.db"
@@ -26,7 +26,7 @@ def test_default_milvus_path_is_relative_to_project_root(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_retrieval_uses_combined_clarification_query():
+async def test_combined_retrieval_query():
     search_retriever = Mock()
     search_retriever.retrieve_and_rerank.return_value = []
     node = RetrieveAndRerankNode(search_retriever)
@@ -246,7 +246,7 @@ def test_rerank_from_kb_unit():
     retriever._reranker.compute_score.assert_called_once()
 
 
-def test_rerank_returns_empty_list_without_calling_the_reranker():
+def test_empty_rerank():
     retriever._reranker.compute_score.reset_mock()
 
     result = retriever.rerank(
@@ -260,7 +260,7 @@ def test_rerank_returns_empty_list_without_calling_the_reranker():
 
 @pytest.mark.integration
 @pytest.mark.asyncio
-async def test_integration_retrieve_and_rerank(integration_database_file):
+async def test_retrieve_and_rerank(integration_database_file):
     integration_retriever = create_integration_retriever(integration_database_file)
     node = RetrieveAndRerankNode(integration_retriever)
 

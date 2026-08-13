@@ -10,7 +10,7 @@ MOCK_STATE = {
 }
 
 
-def test_mcq_template_fills_all_placeholders():
+def test_mcq_fields():
     result = MULTIPLE_CHOICE_PROMPT.format(**MOCK_STATE)
 
     assert "{difficulty}" not in result
@@ -18,7 +18,7 @@ def test_mcq_template_fills_all_placeholders():
     assert "{context_docs}" not in result
 
 
-def test_open_ended_template_fills_all_placeholders():
+def test_open_fields():
     result = OPEN_ENDED_PROMPT.format(**MOCK_STATE)
 
     assert "{difficulty}" not in result
@@ -26,7 +26,7 @@ def test_open_ended_template_fills_all_placeholders():
     assert "{context_docs}" not in result
 
 
-def test_mcq_template_contains_injected_values():
+def test_mcq_values():
     result = MULTIPLE_CHOICE_PROMPT.format(**MOCK_STATE)
 
     assert "Band A as easy" in result
@@ -40,7 +40,7 @@ def test_mcq_template_contains_injected_values():
     assert "The cat sat on the mat." in result
 
 
-def test_open_ended_template_contains_injected_values():
+def test_open_values():
     result = OPEN_ENDED_PROMPT.format(**MOCK_STATE)
 
     assert "Band A as easy" in result
@@ -50,7 +50,7 @@ def test_open_ended_template_contains_injected_values():
     assert "CVC blending, sight words" in result
 
 
-def test_mcq_template_raises_on_missing_field():
+def test_missing_prompt_field():
     incomplete_state = {
         "topic": "CVC blending",
         "question_count": 15,
@@ -61,7 +61,7 @@ def test_mcq_template_raises_on_missing_field():
         MULTIPLE_CHOICE_PROMPT.format(**incomplete_state)
 
 
-def test_system_prompt_uses_defaults_when_fields_missing():
+def test_prompt_defaults():
     state = {
         "qn_type": "MCQ",
         "rankedDocs": [],
@@ -74,7 +74,7 @@ def test_system_prompt_uses_defaults_when_fields_missing():
     assert "exactly 15 multiple-choice questions" in system_prompt
 
 
-def test_system_prompt_is_fully_formatted():
+def test_prompt_formatting():
     state = {
         "qn_type": "MCQ",
         "topic": "CVC blending",
@@ -94,7 +94,7 @@ def test_system_prompt_is_fully_formatted():
     assert "The cat sat on the mat." in system_prompt
 
 
-def test_system_prompt_selects_open_ended_template():
+def test_open_selection():
     state = {
         "qn_type": "OPEN_ENDED",
         "topic": "Phonics",
@@ -109,7 +109,7 @@ def test_system_prompt_selects_open_ended_template():
     assert "Intermediate" in system_prompt
 
 
-def test_system_prompt_joins_multiple_ranked_docs():
+def test_joined_docs():
     state = {
         "qn_type": "MCQ",
         "rankedDocs": [
@@ -125,7 +125,7 @@ def test_system_prompt_joins_multiple_ranked_docs():
 
 
 @pytest.mark.parametrize("qn_type", ["MCQ", "Open_ended"])
-def test_system_prompt_does_not_request_plain_text_format(qn_type):
+def test_no_plain_text(qn_type):
     system_prompt = build_system_prompt(
         {
             "qn_type": qn_type,
