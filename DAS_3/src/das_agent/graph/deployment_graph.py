@@ -19,16 +19,30 @@ def create_production_retriever() -> KnowledgeBaseRetriever:
     )
 
 
-def create_production_worksheet_llm():
+def create_openrouter_llm(
+    model_environment_variable: str,
+    default_model: str,
+    *,
+    max_tokens: int = 4000,
+):
     return ChatOpenRouter(
-        model=os.getenv("OPENROUTER_MODEL", "qwen/qwen3.5-9b"),
+        model=os.getenv(model_environment_variable, default_model),
         temperature=0,
         reasoning={"effort": "none"},
-        max_tokens=4000,
+        max_tokens=max_tokens,
     )
 
 
 graph_dev_instance = agent_init(
     create_production_retriever(),
-    create_production_worksheet_llm(),
+    create_openrouter_llm("OPENROUTER_MODEL", "qwen/qwen3.5-9b"),
+    revision_llm=create_openrouter_llm(
+        "OPENROUTER_REVISION_MODEL",
+        "qwen/qwen3.5-27b",
+    ),
+    verifier_llm=create_openrouter_llm(
+        "OPENROUTER_VERIFIER_MODEL",
+        "qwen/qwen3.5-27b",
+        max_tokens=512,
+    ),
 )
