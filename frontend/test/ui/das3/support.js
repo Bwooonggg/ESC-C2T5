@@ -11,6 +11,10 @@ const viteEntry = path.join(frontendDirectory, "node_modules", "vite", "bin", "v
 const artifactDirectory = path.join(currentDirectory, "artifacts");
 
 export const baseUrl = process.env.DAS3_UI_BASE_URL ?? "http://127.0.0.1:5173";
+export const backendUrl = process.env.DAS3_UI_BACKEND_URL ?? "http://localhost:2024";
+
+export const testEmail = process.env.DAS3_UI_TEST_EMAIL;
+export const testPassword = process.env.DAS3_UI_TEST_PASSWORD;
 
 let viteProcess;
 let viteOutput = "";
@@ -36,8 +40,30 @@ async function waitForFrontend(timeoutMs = 20_000) {
     throw new Error(`Timed out waiting for ${baseUrl}.\n${viteOutput}`);
 }
 
+async function waitForBackend(timeoutMs = 5_000) {
+    try {
+        await fetch(backendUrl, { signal: AbortSignal.timeout(timeoutMs) });
+    } catch (error) {
+        throw new Error(
+            `Could not reach the LangGraph backend at ${backendUrl}. ` +
+                `Start it (e.g. \`langgraph dev\`) before running this suite, ` +
+                `or set DAS3_UI_BACKEND_URL if it runs elsewhere.\n${error}`,
+        );
+    }
+}
+
 export async function startPreviewFrontend() {
     if (viteProcess) return;
+
+    await waitForBackend();
+
+    if (!testEmail || !testPassword) {
+        throw new Error(
+            "DAS3_UI_TEST_EMAIL / DAS3_UI_TEST_PASSWORD must be set to a seeded " +
+                "Supabase account with worksheet access, since this suite runs " +
+                "against real auth (not stubs).",
+        );
+    }
 
     const url = new URL(baseUrl);
     viteProcess = spawn(
@@ -52,7 +78,9 @@ export async function startPreviewFrontend() {
         ],
         {
             cwd: frontendDirectory,
-            env: { ...process.env, VITE_USE_STUBS: "true" },
+            // Deliberately VITE_USE_STUBS: "false" — full-integration run against
+            // the real Supabase auth + the real /api/worksheet LangGraph backend.
+            env: { ...process.env, VITE_USE_STUBS: "false" },
             stdio: ["ignore", "pipe", "pipe"],
             windowsHide: true,
         },

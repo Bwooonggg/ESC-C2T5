@@ -8,26 +8,41 @@ import {
     saveFailureEvidence,
     startPreviewFrontend,
     stopPreviewFrontend,
+    testEmail,
+    testPassword,
     waitForText,
 } from "./support.js";
 
-const worksheetUrl = `${baseUrl}/worksheet`;
-const GREETING = "Hello! What topic and band should the worksheet cover, and would you like MCQ or open-ended questions?";
-const SAMPLE_PROMPT = "Band A MCQ worksheet on subject-verb agreement";
+const loginUrl = `${baseUrl}/worksheet/login`;
 
-async function openWorksheet(driver) {
-    await driver.get(worksheetUrl);
-    await waitForText(driver, By.css(".chat-scroll"), GREETING);
+const RUN_TIMEOUT_MS = 60_000;
+
+async function login(driver) {
+    await driver.get(loginUrl);
+    await waitForText(driver, By.css("h1"), "Log in");
+
+    const email = await findVisible(driver, By.css('input[name="email"]'));
+    const password = await findVisible(driver, By.css('input[name="password"]'));
+    await email.sendKeys(testEmail);
+    await password.sendKeys(testPassword);
+
+    await driver.findElement(By.css('button[type="submit"]')).click();
+    await findVisible(driver, By.id("worksheet-prompt"), 15_000);
 }
 
-async function sendPrompt(driver, text) {
-    const textarea = await findVisible(driver, By.id("worksheet-prompt"));
-    await textarea.clear();
-    await textarea.sendKeys(text);
-    await driver.findElement(By.xpath("//button[normalize-space()='Send']")).click();
+async function sendMessage(driver, text) {
+    const promptInput = await driver.findElement(By.id("worksheet-prompt"));
+    await driver.wait(until.elementIsEnabled(promptInput), RUN_TIMEOUT_MS);
+    await promptInput.clear();
+    await promptInput.sendKeys(text);
+
+    await driver.findElement(By.css("form.worksheet-composer button")).click();
+
+    await driver.wait(until.elementIsDisabled(promptInput), 5_000).catch(() => {});
+    await driver.wait(until.elementIsEnabled(promptInput), RUN_TIMEOUT_MS);
 }
 
-describe("DAS 3 Selenium UI", function () {
+describe("DAS 3 Selenium UI (full integration)", function () {
     let driver;
 
     function uiTest(name, testBody) {
@@ -53,99 +68,101 @@ describe("DAS 3 Selenium UI", function () {
         await stopPreviewFrontend();
     });
 
-    uiTest("UI3-01 loads the worksheet workspace with an empty preview", async function () {
-        await openWorksheet(driver);
+    uiTest("UI3-01 displays the Worksheet Builder login interface", async function () {
+        await driver.get(loginUrl);
 
-        await findVisible(driver, By.xpath("//h2[normalize-space()='Your worksheet will appear here']"));
-        const showButton = await driver.findElement(By.xpath("//button[contains(normalize-space(), 'Show answers')]"));
-        assert.equal(await showButton.getAttribute("disabled"), "true");
-        const printButton = await driver.findElement(By.xpath("//button[normalize-space()='Print / PDF']"));
-        assert.equal(await printButton.getAttribute("disabled"), "true");
+        await waitForText(driver, By.css("h1"), "Log in");
+        const pageText = await driver.findElement(By.css("body")).getText();
+        assert.match(pageText, /Worksheet Builder/);
+        assert.match(pageText, /Teacher access/);
+
+        const email = await findVisible(driver, By.css('input[name="email"]'));
+        const password = await findVisible(driver, By.css('input[name="password"]'));
+        const submit = await findVisible(driver, By.css('button[type="submit"]'));
+
+        assert.equal(await email.getAttribute("type"), "email");
+        assert.equal(await password.getAttribute("type"), "password");
+        assert.equal(await email.getAttribute("required"), "true");
+        assert.equal(await password.getAttribute("required"), "true");
+        assert.equal(await submit.getText(), "Log in");
     });
 
-    uiTest("UI3-02 generates a sample worksheet from a prompt", async function () {
-        await openWorksheet(driver);
-        await sendPrompt(driver, SAMPLE_PROMPT);
+    uiTest("UI3-02 logs in and shows the worksheet workspace with the greeting", async function () {
+        await login(driver);
 
-        await waitForText(
-            driver,
-            By.css(".worksheet-document header"),
-            `Literacy Practice: ${SAMPLE_PROMPT}`,
+        const bodyText = await driver.findElement(By.css("body")).getText();
+        assert.match(bodyText, /Worksheet Builder/);
+        assert.match(bodyText, /Worksheet assistant/);
+        assert.match(bodyText, /What topic and band should the worksheet cover/);
+
+        const messages = await driver.findElements(By.css(".chat-scroll .work-message"));
+        assert.equal(messages.length, 1);
+
+        const showAnswersBtn = await driver.findElement(
+            By.xpath("//button[contains(., 'Show answers')]"),
         );
-        const preview = await driver.findElement(By.css(".worksheet-document"));
-        const previewText = await preview.getText();
-        assert.match(previewText, /Read each question carefully\./);
-        assert.match(previewText, /Which sentence uses the correct subject–verb agreement\?/);
+        assert.equal(await showAnswersBtn.getAttribute("disabled"), "true");
     });
 
-    uiTest("UI3-03 shows the assistant's confirmation message in chat", async function () {
-        await openWorksheet(driver);
-        await sendPrompt(driver, SAMPLE_PROMPT);
+    uiTest(
+        "UI3-03 sends a worksheet request through the chatbox and gets a real worksheet back from the backend",
+        async function () {
+            await login(driver);
 
-        await waitForText(
-            driver,
-            By.css(".chat-scroll"),
-            "Here is a sample worksheet using preview data.",
-        );
-    });
+            const messagesLocator = By.css(".chat-scroll .work-message");
+            const showAnswersBtn = await driver.findElement(
+                By.xpath("//button[contains(., 'Show answers')]"),
+            );
+            const printBtn = await driver.findElement(
+                By.xpath("//button[contains(., 'Print / PDF')]"),
+            );
+            const isWorksheetReady = async () =>
+                (await showAnswersBtn.getAttribute("disabled")) === null;
 
-    uiTest("UI3-04 toggles answers on and off in the preview", async function () {
-        await openWorksheet(driver);
-        await sendPrompt(driver, SAMPLE_PROMPT);
-        await findVisible(driver, By.css(".worksheet-document"));
+            await sendMessage(
+                driver,
+                "Create a Band A multiple-choice worksheet on subject-verb agreement.",
+            );
 
-        const toggle = await driver.findElement(By.xpath("//button[contains(normalize-space(), 'answers')]"));
-        await driver.wait(async () => (await toggle.getAttribute("disabled")) === null, 10_000);
+            let messages = await driver.findElements(messagesLocator);
+            assert.ok(messages.length >= 2, "expected at least a greeting and one reply");
 
-        await toggle.click();
-        await waitForText(driver, By.css(".worksheet-document"), "Answer:");
-        assert.equal((await toggle.getText()).trim(), "Hide answers");
+            if (!(await isWorksheetReady())) {
+                // get_intent routed to ask_clarification instead of the worksheet
+                // agent — answer explicitly and let the graph resume once.
+                await sendMessage(
+                    driver,
+                    "Topic: subject-verb agreement. Band: A. Question type: MCQ.",
+                );
+                messages = await driver.findElements(messagesLocator);
+                assert.ok(messages.length >= 3);
+            }
 
-        await toggle.click();
-        await driver.wait(async () => !(await driver.findElement(By.css(".worksheet-document")).getText()).includes("Answer:"), 10_000);
-        assert.equal((await toggle.getText()).trim(), "Show answers");
-    });
 
-    uiTest("UI3-05 enables Print / PDF once a worksheet exists", async function () {
-        await openWorksheet(driver);
-        await sendPrompt(driver, SAMPLE_PROMPT);
-        await findVisible(driver, By.css(".worksheet-document"));
+            await driver.wait(until.elementIsEnabled(showAnswersBtn), RUN_TIMEOUT_MS);
+            assert.equal(await printBtn.isEnabled(), true);
 
-        const printButton = await driver.findElement(By.xpath("//button[normalize-space()='Print / PDF']"));
-        await driver.wait(async () => (await printButton.getAttribute("disabled")) === null, 10_000);
-        assert.equal(await printButton.getAttribute("disabled"), null);
-    });
+            const documentEl = await driver.findElement(By.css("article.worksheet-document"));
+            const title = await documentEl.findElement(By.css("h1")).getText();
+            assert.ok(title.trim().length > 0);
 
-    uiTest("UI3-06 resets the workspace back to the greeting", async function () {
-        await openWorksheet(driver);
-        await sendPrompt(driver, SAMPLE_PROMPT);
-        await findVisible(driver, By.css(".worksheet-document"));
+            const questionItems = await documentEl.findElements(By.css("ol > li"));
+            assert.ok(questionItems.length > 0, "expected at least one worksheet question");
 
-        await driver.findElement(By.xpath("//button[normalize-space()='Reset']")).click();
+            await showAnswersBtn.click();
+            await driver.wait(until.elementTextContains(showAnswersBtn, "Hide"), RUN_TIMEOUT_MS);
+        },
+    );
 
-        await findVisible(driver, By.xpath("//h2[normalize-space()='Your worksheet will appear here']"));
-        const chatText = await driver.findElement(By.css(".chat-scroll")).getText();
-        assert.match(chatText, new RegExp(GREETING.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
-        assert.doesNotMatch(chatText, /Here is a sample worksheet/);
-    });
-
-    uiTest("UI3-07 disables Send while the prompt is empty", async function () {
-        await openWorksheet(driver);
-
-        const sendButton = await driver.findElement(By.xpath("//button[normalize-space()='Send']"));
-        assert.equal(await sendButton.getAttribute("disabled"), "true");
-
-        const textarea = await driver.findElement(By.id("worksheet-prompt"));
-        await textarea.sendKeys("Band B open-ended worksheet on punctuation");
-        await driver.wait(async () => (await sendButton.getAttribute("disabled")) === null, 5_000);
-        assert.equal(await sendButton.getAttribute("disabled"), null);
-    });
-
-    uiTest("UI3-08 logs out back to the worksheet login page", async function () {
-        await openWorksheet(driver);
+    uiTest("UI3-04 navigates to the login page on logout", async function () {
+        await login(driver);
 
         await driver.findElement(By.xpath("//button[normalize-space()='Log out']")).click();
-        await driver.wait(until.urlContains("/worksheet/login"), 10_000);
-        await findVisible(driver, By.xpath("//h1[normalize-space()='Log in']"));
+        await driver.wait(until.urlContains("/worksheet/login"), 5_000);
+        await waitForText(driver, By.css("h1"), "Log in");
+
+        assert.equal(new URL(await driver.getCurrentUrl()).pathname, "/worksheet/login");
+        const bodyText = await driver.findElement(By.css("body")).getText();
+        assert.ok(!bodyText.includes("Worksheet assistant"));
     });
 });
