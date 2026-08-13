@@ -287,7 +287,6 @@ def test_mcq_worksheet_item_validation_never_crashes_uncleanly(item):
     try:
         built = MCQWorksheetItem(**item)
     except Exception as exc:
-        # Only a validation-style error is acceptable here.
         assert exc.__class__.__name__ in ("ValidationError", "ValueError")
         return
     assert built.answer in built.options or not built.options
@@ -328,7 +327,7 @@ async def test_long_running_fuzz_campaign(monkeypatch):
                 {"messages": [HumanMessage(content=example)]}, config=config
             )
             assert result.get("__interrupt__") or "generated_worksheet" in result
-        except Exception as exc:  # noqa: BLE001 - fuzzer: record, don't stop
+        except Exception as exc:  
             failures.append((example, repr(exc)))
 
     print(f"[fuzz campaign] ran {iterations} iterations in {duration_seconds}s, "

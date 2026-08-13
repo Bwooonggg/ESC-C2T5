@@ -55,8 +55,7 @@ async def test_dict_resume(clarification_app, thread_config):
 
     assert result["pending_fields"] == []
     assert result["messages"][-1].content == "qn_type: MCQ, difficulty: hard"
-    # confirms the bug fix: the node returns updates, it never mutates state
-    # in place, so nothing here silently overwrote qn_type/difficulty itself
+
 
 
 @pytest.mark.asyncio

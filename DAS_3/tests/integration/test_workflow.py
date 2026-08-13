@@ -110,30 +110,26 @@ async def test_e2e_clarification_loop_then_succeeds():
  
         config = {"configurable": {"thread_id": "test-thread-clarification"}}
  
-        # Deliberately vague -- not enough for route_decision to proceed
+       
         initial_state = {"messages": [HumanMessage(content="quiz me")]}
  
         paused_state = await graph.ainvoke(initial_state, config=config)
  
-        # Graph should be paused at the interrupt, not finished
+       
         assert "__interrupt__" in paused_state
         interrupt_payload = paused_state["__interrupt__"][0].value
         assert "awaiting" in interrupt_payload
-        assert paused_state["pending_fields"]  # ask_clarification_node populated this
+        assert paused_state["pending_fields"]  
  
-        # Simulate the user answering with a structured (dict) reply -- avoids
-        # needing to mock a 3rd LLM call for the free-text parsing branch
+
         resume_value = {"qn_type": "MCQ", "difficulty": "medium", "topic": "grammar"}
         final_state = await graph.ainvoke(Command(resume=resume_value), config=config)
- 
-    # Loop succeeded: 2nd get_intent pass returned valid values, routing proceeded
+
     assert final_state["qn_type"] == "MCQ"
     assert final_state["difficulty"] == "medium"
  
-    # made it all the way through to worksheet generation
     assert final_state["messages"][-1].content == (
         'I created "Grammar Practice" with 15 questions.'
     )
  
-    # no interrupt left pending on the final state
     assert "__interrupt__" not in final_state or not final_state["__interrupt__"]
