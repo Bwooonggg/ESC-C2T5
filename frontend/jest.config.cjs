@@ -6,15 +6,12 @@ module.exports = {
         "^.+\\.tsx?$": [
             "ts-jest",
             {
-                tsconfig: {
-                    module: "commonjs",
-                    moduleResolution: "node",
-                    jsx: "react-jsx",
-                    esModuleInterop: true,
-                    erasableSyntaxOnly: false,
-                    strict: true,
-                },
+                tsconfig: "<rootDir>/tsconfig.test.json",
             },
         ],
     },
+    moduleNameMapper: {
+        "\\.(css|less|scss|sass)$": "<rootDir>/test/styleMock.cjs",
+    },
+    setupFilesAfterEnv: ["<rootDir>/test/setupTests.ts"],
 };

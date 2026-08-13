@@ -82,7 +82,7 @@ $requiredEnvironmentFiles = @(
     'frontend\.env',
     'DAS_1\backend\.env',
     'DAS_3\.env',
-    'DAS_7\backend\.env'
+    'DAS_7\.env'
 )
 $missingEnvironmentFiles = @(
     $requiredEnvironmentFiles | Where-Object {
@@ -125,7 +125,7 @@ $serviceDefinitions = @(
     [ordered]@{
         name = 'das7'
         port = 4000
-        directory = Join-Path $repositoryRoot 'DAS_7\backend'
+        directory = Join-Path $repositoryRoot 'DAS_7'
         script = 'node_modules\tsx\dist\cli.mjs'
         arguments = @('watch', 'src\index.ts')
     },

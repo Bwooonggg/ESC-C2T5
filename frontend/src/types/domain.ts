@@ -1,8 +1,6 @@
 // DAS 7 domain types, transcribed from the PM2 class diagram.
 //
-// Keep these files synchronized:
-//   DAS_7/mock_backend/src/types/domain.ts
-//   DAS_7/frontend/src/types/domain.ts
+// Keep this file synchronized with DAS_7/src/types.ts.
 //
 // Interfaces and string-literal unions are used because the frontend compiles
 // with `erasableSyntaxOnly`, which does not allow enums or namespaces.
