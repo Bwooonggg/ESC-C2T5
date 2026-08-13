@@ -10,6 +10,5 @@
         "noEmit": true,
         "types": ["node", "jest"]
     },
-    "include": ["src", "test", "scripts"],
-    "exclude": ["test/integration"]
+    "include": ["src", "test", "scripts"]
 }
