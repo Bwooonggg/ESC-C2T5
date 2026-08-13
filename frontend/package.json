@@ -10,7 +10,9 @@
     "lint": "echo \"no linter configured yet\"",
     "test": "jest",
     "test:ui:das7": "cross-env DAS7_UI_HEADED=false node --test --test-timeout=60000 test/ui/das7/das7-ui.spec.js",
-    "test:ui:das7:headed": "cross-env DAS7_UI_HEADED=true node --test --test-timeout=60000 test/ui/das7/das7-ui.spec.js"
+    "test:ui:das7:headed": "cross-env DAS7_UI_HEADED=true node --test --test-timeout=60000 test/ui/das7/das7-ui.spec.js",
+    "test:ui:das3": "cross-env DAS3_UI_HEADED=false node --test --test-timeout=90000 test/ui/das3/das3-ui.spec.js",
+    "test:ui:das3:headed": "cross-env DAS3_UI_HEADED=true node --test --test-timeout=90000 test/ui/das3/das3-ui.spec.js"
   },
   "dependencies": {
     "@langchain/langgraph-sdk": "^1.9.28",
