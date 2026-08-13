@@ -38,7 +38,7 @@ async def test_only_topic_missing():
 
 
 @pytest.mark.asyncio
-async def test_invalid_difficulty_does_not_require_clarification():
+async def test_invalid_difficulty():
     state = {
         "qn_type": "Open_ended",
         "difficulty": "super-hard", 
@@ -65,7 +65,7 @@ async def test_qn_type_and_topic_missing():
 
 
 @pytest.mark.asyncio
-async def test_nothing_missing_produces_empty_pending_fields():
+async def test_nothing_missing():
     state = {
         "qn_type": "MCQ",
         "difficulty": "medium",
@@ -80,7 +80,7 @@ async def test_nothing_missing_produces_empty_pending_fields():
 
 
 @pytest.mark.asyncio
-async def test_custom_clarification_reason_used_as_intro():
+async def test_custom_reason():
     state = {
         "clarification_reason": "Your last answer was unclear.",
         "topic": "Geometry",

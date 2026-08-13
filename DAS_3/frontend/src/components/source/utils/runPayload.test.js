@@ -2,7 +2,7 @@ import { createRunPayload } from "./runPayload.js";
 
 
 describe("createRunPayload", () => {
-  test("starts a normal run with only the new user message", () => {
+  test("starts normal runs", () => {
     expect(
       createRunPayload({ awaitingClarification: false, text: "Band A verbs" }),
     ).toEqual({
@@ -15,7 +15,7 @@ describe("createRunPayload", () => {
     });
   });
 
-  test("resumes the interrupted run with the clarification reply", () => {
+  test("resumes interrupted runs", () => {
     expect(
       createRunPayload({ awaitingClarification: true, text: "Make it MCQ" }),
     ).toEqual({

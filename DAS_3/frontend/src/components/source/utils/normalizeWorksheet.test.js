@@ -2,7 +2,7 @@ import { normalizeWorksheet } from "./normalizeWorksheet.js";
 
 
 describe("normalizeWorksheet", () => {
-  test("accepts the canonical worksheet contract", () => {
+  test("accepts canonical worksheets", () => {
     const worksheet = {
       title: "Reading Practice",
       readingPassage: "Maya visited the community garden.",
@@ -19,7 +19,7 @@ describe("normalizeWorksheet", () => {
     expect(normalizeWorksheet(worksheet)).toEqual(worksheet);
   });
 
-  test("normalizes transitional worksheet aliases", () => {
+  test("normalizes aliases", () => {
     expect(
       normalizeWorksheet({
         reading_passage: "A short passage.",

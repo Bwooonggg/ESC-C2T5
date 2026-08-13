@@ -62,6 +62,7 @@ def make_fake_get_intent_node(qn_type, topic, difficulty="easy", question_count=
 
     async def fake_get_intent_node(state: State):
         return {
+            "action": "create" if qn_type and topic else "clarify",
             "qn_type": qn_type,
             "topic": topic,
             "question_count": question_count,
@@ -88,7 +89,7 @@ def build_test_workflow(fake_get_intent_node, retriever, worksheet_llm):
         "get_intent",
         route_decision,
         {
-            "ready": "retrieve_and_rerank",
+            "create": "retrieve_and_rerank",
             "needs_clarification": "ask_clarification",
         },
     )
@@ -102,7 +103,7 @@ def build_test_workflow(fake_get_intent_node, retriever, worksheet_llm):
 
 
 @pytest.mark.asyncio
-async def test_full_workflow_ready_path_produces_worksheet():
+async def test_ready_flow():
     fake_get_intent = make_fake_get_intent_node(qn_type="MCQ", topic="Fractions")
     retriever = FakeKnowledgeBaseRetriever(docs=["doc about fractions"])
     worksheet_llm = FakeWorksheetLLM({
@@ -140,7 +141,7 @@ async def test_full_workflow_ready_path_produces_worksheet():
 
 
 @pytest.mark.asyncio
-async def test_full_workflow_missing_topic_routes_to_clarification():
+async def test_missing_topic_flow():
     fake_get_intent = make_fake_get_intent_node(qn_type="MCQ", topic=None)
 
     class ExplodingRetriever:

@@ -23,7 +23,10 @@ those tools use the repository as their build and deployment context.
 ## Environment
 
 Copy `.env.example` to the ignored `.env` file and fill in the required values.
-The backend uses OpenRouter and the model configured by `OPENROUTER_MODEL`.
+The backend uses OpenRouter. `OPENROUTER_MODEL` controls general worksheet
+generation, while `OPENROUTER_INTENT_MODEL`, `OPENROUTER_REVISION_MODEL`, and
+`OPENROUTER_VERIFIER_MODEL` independently control intent extraction, worksheet
+revision, and revision verification.
 Docker Compose loads this same file for the DAS3 backend stack. `SUPABASE_URL`,
 `SUPABASE_SERVICE_ROLE_KEY`, and the optional `SUPABASE_JWKS_URL` are backend-only
 settings; never copy the service-role key into browser configuration.

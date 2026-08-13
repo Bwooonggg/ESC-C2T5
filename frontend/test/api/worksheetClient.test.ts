@@ -8,7 +8,7 @@ jest.mock("../../src/api/auth", () => ({ getAccessToken: jest.fn() }));
 afterEach(() => jest.resetAllMocks());
 
 describe("worksheet client", () => {
-    it("reads the latest worksheet token whenever a client is created", async () => {
+    it("UT-LOGIN-U19-01 reads the latest worksheet token whenever a client is created", async () => {
         jest.mocked(getAccessToken).mockResolvedValueOnce("teacher-one").mockResolvedValueOnce("teacher-refreshed");
 
         await createWorksheetClient();

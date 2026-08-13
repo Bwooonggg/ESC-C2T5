@@ -39,10 +39,6 @@ Current functionality includes:
   authenticated **Send update now** action.
 - Local browser preview stubs for all three services when `VITE_USE_STUBS=true`.
 
-`DAS_7/frontend/` is the older standalone DAS7 interface. It remains in the repository
-as a reference but is not started by the root development scripts and does not affect
-the centralized frontend.
-
 The permanent design is in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Historical
 implementation plans remain under `docs/integration/` until that temporary folder is
 cleaned up; they should not be treated as the current runtime guide.
@@ -54,8 +50,7 @@ ESC-C2T5/
 |-- frontend/               Centralized React frontend for DAS1, DAS3, and DAS7
 |-- DAS_1/                  Public screening backend and legacy service files
 |-- DAS_3/                  Authenticated LangGraph worksheet backend
-|-- DAS_7/backend/          Parent insights API and Brevo email scheduler
-|-- DAS_7/frontend/         Legacy standalone DAS7 frontend (not started)
+|-- DAS_7/                  Parent insights API and Brevo email scheduler
 |-- docs/                   System architecture and temporary integration notes
 |-- Files/                  Project briefs and reference material
 |-- API_CONTRACTS.md        Browser-facing API and error conventions
@@ -66,6 +61,24 @@ Each package owns its dependencies and lockfile. There is no plan to merge the
 three backends.
 
 ## Architecture summary
+
+```text
+User ──► Homepage
+            │
+            ▼
+            ├──► Frontend | DAS1 ──► DAS1 backend ────────────────────────────────────┐
+            ├──► DAS3 login ──┬──► Frontend | DAS3 ──► DAS3 backend ──────────────────┤
+            │                 └──────────────────────────────────────────────────────►│
+            └──► DAS7 login ──┬──► Frontend | DAS7 ──► DAS7 backend ──────────────────┤
+                              └──────────────────────────────────────────────────────►│
+                                                                                      ▼
+                                                                               Shared Supabase
+```
+
+The frontend is one application with a separate area for each DAS service. DAS1
+is available directly from the homepage, while DAS3 and DAS7 have their own login
+flows. Each frontend area calls its matching backend, and the frontend and all
+three backends connect to the shared Supabase project.
 
 DAS1 is public. DAS3 and DAS7 share one Supabase Auth project, but use different
 profile tables and independent browser sessions:
@@ -108,7 +121,7 @@ configured environment files. Place each file at the exact path shown:
 | `frontend/.env` | Browser-safe Supabase and API proxy configuration |
 | `DAS_1/backend/.env` | Screening backend providers and database access |
 | `DAS_3/.env` | Worksheet providers, Supabase authorization, and Docker |
-| `DAS_7/backend/.env` | Insights, Supabase, LLM, and email configuration |
+| `DAS_7/.env` | Insights, Supabase, LLM, and email configuration |
 
 Never commit these files. The matching `.env.example` files document their
 expected variables but do not contain working credentials.
@@ -118,7 +131,7 @@ From the repository root, install the three host-side packages once:
 ```powershell
 npm install --prefix frontend
 npm install --prefix DAS_1/backend
-npm install --prefix DAS_7/backend
+npm install --prefix DAS_7
 ```
 
 Docker installs the DAS3 Python dependencies while building its image, so no
@@ -176,7 +189,7 @@ npm run dev --prefix DAS_1/backend
 Terminal 3 — DAS7 insights backend:
 
 ```powershell
-npm run dev --prefix DAS_7/backend
+npm run dev --prefix DAS_7
 ```
 
 Terminal 4 — centralized frontend:
@@ -205,12 +218,16 @@ Use these dummy accounts for local development and testing:
 | Primary teacher | `esc.teacher.local@example.com` | `0tRMN8XRk6AsUpgwg78FO1fYWPqrAgC-` | Normal Worksheet login |
 | Teacher B | `esc.teacher-b.local@example.com` | `JaVWNS088zw0KQyhnsynwwuM17zpclNO` | Verifies that teachers cannot access each other's threads |
 | Demo parent | `esc.parent.local@example.com` | `LEPRJt9r4f-J9dLrnVFG4jixQW0lUxie` | Normal Parent Insights login with seeded student data |
+| Separate demo parent | `esc.parent.separate@example.com` | `S2Y9Dqz7xCiaCoLh4N5lDvv7Aa1!` | Demonstrates parent-account separation with access only to Chloe Tan |
 | Test parent A | `das7.testa@example.com` | `das7.testa` | Hosted integration tests |
 | Test parent B | `das7.testb@example.com` | `das7.testb` | Cross-parent ownership tests |
 
 Use the primary teacher at `/worksheet/login` and the demo parent at
-`/insights/login`. The A/B accounts exist primarily for authorization tests and
-may not retain application profiles after the test harness cleans up.
+`/insights/login`. The separate demo parent is Daniel Tan and is linked only to
+Chloe Tan; use it to confirm that one parent cannot view another parent's students
+or progress. The A/B accounts exist primarily for authorization tests and may not
+retain application profiles after the test harness cleans up. These are shared
+demonstration credentials and must not be reused for production accounts.
 
 ### Frontend preview stubs
 
@@ -271,11 +288,11 @@ Compose runs LangGraph, PostgreSQL, and Redis and publishes LangGraph on host po
 ### DAS7 backend
 
 ```powershell
-npm install --prefix DAS_7/backend
-npm run dev --prefix DAS_7/backend
+npm install --prefix DAS_7
+npm run dev --prefix DAS_7
 ```
 
-Copy `DAS_7/backend/.env.example` to `DAS_7/backend/.env` first. The backend defaults
+Copy `DAS_7/.env.example` to `DAS_7/.env` first. The backend defaults
 to port `4000`. Use `EMAIL_PROVIDER=brevo` with a valid `BREVO_API_KEY` and verified
 `EMAIL_FROM` address when real email delivery is required. Use the fake provider
 for local work and tests. Scheduled emails use the parent's saved frequency; the
@@ -292,7 +309,7 @@ npm test --prefix DAS_1
 python -m pytest DAS_3/tests
 npm test --prefix DAS_3/frontend
 npm run frontend:test
-npm test --prefix DAS_7/backend
+npm test --prefix DAS_7
 ```
 
 Some DAS3 integration tests load the committed Milvus seed and may load model
@@ -351,5 +368,9 @@ volumes preserve local service data across container restarts.
 
 ## Team
 
+<<<<<<< HEAD
 C2T5: Brian Wong, Toh Shijie, Patrick Liu, Michael Soh, Le Bin, Vincent Alexander,
 Mahek Zaveri, and Jia Zhi.
+=======
+C2T5: Brian Wong, Toh Shijie, Patrick Liu, Michael Soh, Le Bin, Vincent Alexander, Mahek Zaveri, and Jia Zhi.
+>>>>>>> 98de6fe7ed103d7ca21eaa26c8a123e2f83666e9

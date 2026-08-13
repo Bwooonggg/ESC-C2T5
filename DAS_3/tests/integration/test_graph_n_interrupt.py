@@ -30,7 +30,7 @@ def thread_config():
 
 
 @pytest.mark.asyncio
-async def test_graph_pauses_and_exposes_pending_fields(clarification_app, thread_config):
+async def test_pause_fields(clarification_app, thread_config):
     initial_state = {"qn_type": None, "topic": None, "difficulty": None}
 
     result = await clarification_app.ainvoke(initial_state, config=thread_config)
@@ -44,7 +44,7 @@ async def test_graph_pauses_and_exposes_pending_fields(clarification_app, thread
 
 
 @pytest.mark.asyncio
-async def test_dict_resume_produces_expected_transcript(clarification_app, thread_config):
+async def test_dict_resume(clarification_app, thread_config):
     initial_state = {"qn_type": None, "topic": None, "difficulty": None}
     await clarification_app.ainvoke(initial_state, config=thread_config)
 
@@ -55,8 +55,7 @@ async def test_dict_resume_produces_expected_transcript(clarification_app, threa
 
     assert result["pending_fields"] == []
     assert result["messages"][-1].content == "qn_type: MCQ, difficulty: hard"
-    # confirms the bug fix: the node returns updates, it never mutates state
-    # in place, so nothing here silently overwrote qn_type/difficulty itself
+
 
 
 @pytest.mark.asyncio
@@ -74,7 +73,7 @@ async def test_free_text_resume(clarification_app, thread_config):
 
 
 @pytest.mark.asyncio
-async def test_reply_is_combined_with_original_query(clarification_app, thread_config):
+async def test_combined_reply(clarification_app, thread_config):
     initial_state = {
         "qn_type": None,
         "topic": None,
@@ -93,7 +92,7 @@ async def test_reply_is_combined_with_original_query(clarification_app, thread_c
 
 
 @pytest.mark.asyncio
-async def test_resuming_twice_on_same_thread_is_idempotent_to_reinvoke(
+async def test_double_resume(
     clarification_app, thread_config
 ):
     """Regression guard: resuming a thread that isn't currently interrupted

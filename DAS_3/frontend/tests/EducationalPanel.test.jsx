@@ -5,7 +5,7 @@ import { WorksheetPreview } from "../src/components/worksheet_preview.jsx";
 
 
 describe("WorksheetPreview", () => {
-  test("renders the worksheet title, passage, instructions, question, and choices", () => {
+  test("renders an MCQ worksheet", () => {
     const worksheet = {
       title: "Grade 3 Reading Comprehension",
       readingPassage: "Maya visited the community garden on Saturday.",
@@ -51,7 +51,7 @@ describe("WorksheetPreview", () => {
     expect(markup).toContain('class="worksheet-item"');
   });
 
-  test("renders answer space for an open-ended worksheet", () => {
+  test("renders an open worksheet", () => {
     const worksheet = {
       title: "Band B Writing",
       readingPassage: "Write about the garden.",

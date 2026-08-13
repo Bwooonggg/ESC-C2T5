@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { logout } from "../api/auth";
 import { createWorksheetClient } from "./client";
-import { findAssistantText, findClarification, findWorksheet, type Worksheet } from "./utils";
+import { findAssistantText, findClarification, findWorksheet, findWorksheetInThreadState, type Worksheet } from "./utils";
 import { WorksheetPreview } from "./WorksheetPreview";
 import { USE_STUBS } from "../config/stubs";
 import { createStubWorksheet } from "../stubs/worksheet";
@@ -89,6 +89,14 @@ export function WorksheetApp() {
                 clarification = findClarification(data) ?? clarification;
                 if (nextWorksheet) setStatus("Formatting your worksheet…");
                 else setStatus("Building activities…");
+            }
+            if (!clarification) {
+                try {
+                    const finalState = await client.threads.getState(activeThread);
+                    nextWorksheet = findWorksheetInThreadState(finalState) ?? nextWorksheet;
+                } catch (stateError) {
+                    console.warn("Unable to refresh worksheet from final thread state.", stateError);
+                }
             }
             if (clarification) {
                 setAwaitingClarification(true);

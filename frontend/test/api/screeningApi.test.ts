@@ -3,7 +3,7 @@ import { screeningApi } from "../../src/screening/api";
 afterEach(() => jest.resetAllMocks());
 
 describe("screening API", () => {
-    it("uses the screening base URL without an Authorization header", async () => {
+    it("UT-LOGIN-U18-01 uses the screening base URL without an Authorization header", async () => {
         const fetchMock = jest.fn().mockResolvedValue({ ok: true, json: async () => ({ id: "s1" }) });
         global.fetch = fetchMock as unknown as typeof fetch;
 

@@ -42,19 +42,7 @@ afterEach(() => {
 });
 
 describe("request", () => {
-    it("unwraps the envelope and returns only the data", async () => {
-        mockFetch(okEnvelope({ hello: "world" }));
-
-        await expect(request("/thing")).resolves.toEqual({ hello: "world" });
-    });
-
-    it("throws the server's message when the envelope reports failure", async () => {
-        mockFetch({ ok: false, error: "progressUnavailable" }, { ok: false, status: 503 });
-
-        await expect(request("/thing")).rejects.toThrow("progressUnavailable");
-    });
-
-    it("reports a readable error when the response is not JSON", async () => {
+    it("UT-LOGIN-U13-01 reports a readable error when the response is not JSON", async () => {
         global.fetch = jest.fn().mockResolvedValue({
             ok: false,
             status: 502,
@@ -67,7 +55,7 @@ describe("request", () => {
         await expect(request("/thing")).rejects.toThrow(/non-JSON response \(502\)/);
     });
 
-    it("routes through createApiUrl, so every path is prefixed and relative", async () => {
+    it("UT-LOGIN-U13-02 routes through createApiUrl, so every path is prefixed and relative", async () => {
         const fetchMock = mockFetch(okEnvelope(null));
 
         await request("/thing");
@@ -75,27 +63,10 @@ describe("request", () => {
         expect(fetchMock.mock.calls[0][0]).toBe("/api/insights/thing");
     });
 
-    it("sends the current Supabase access token as a bearer token", async () => {
-        const fetchMock = mockFetch(okEnvelope(null));
-
-        await request("/thing");
-
-        const headers = fetchMock.mock.calls[0][1].headers as Headers;
-        expect(headers.get("Authorization")).toBe("Bearer test-access-token");
-        expect(getAccessTokenMock).toHaveBeenCalledWith("insights");
-    });
-
-    it("does not call the backend when there is no authenticated session", async () => {
-        const fetchMock = mockFetch(okEnvelope(null));
-        getAccessTokenMock.mockRejectedValueOnce(new Error("Authentication required."));
-
-        await expect(request("/thing")).rejects.toThrow("Authentication required.");
-        expect(fetchMock).not.toHaveBeenCalled();
-    });
 });
 
 describe("endpoint methods", () => {
-    it("getCurrentParent calls GET /api/insights/me", async () => {
+    it("UT-LOGIN-U14-01 getCurrentParent calls GET /api/insights/me", async () => {
         const fetchMock = mockFetch(okEnvelope({ parent: {}, students: [] }));
 
         await getCurrentParent();
@@ -103,7 +74,7 @@ describe("endpoint methods", () => {
         expect(fetchMock.mock.calls[0][0]).toBe("/api/insights/me");
     });
 
-    it("trackProgress interpolates the studentId", async () => {
+    it("UT-LOGIN-U14-02 trackProgress interpolates the studentId", async () => {
         const fetchMock = mockFetch(okEnvelope({ progress: [], summary: {} }));
 
         await trackProgress("s1");
@@ -112,7 +83,7 @@ describe("endpoint methods", () => {
         expect(fetchMock.mock.calls[0][0]).not.toContain("${");
     });
 
-    it("getPreferences interpolates the parentId", async () => {
+    it("UT-LOGIN-U14-03 getPreferences interpolates the parentId", async () => {
         const fetchMock = mockFetch(okEnvelope({ parentId: "p1" }));
 
         await getPreferences("p1");
@@ -129,7 +100,7 @@ describe("savePreferences", () => {
         recipientEmail: "parent.demo@dial.sg",
     };
 
-    it("PUTs the editable fields as JSON", async () => {
+    it("UT-LOGIN-U15-01 PUTs the editable fields as JSON", async () => {
         const fetchMock = mockFetch(okEnvelope(prefs));
 
         await savePreferences("p1", prefs);
@@ -145,7 +116,7 @@ describe("savePreferences", () => {
         });
     });
 
-    it("does not send parentId in the body — it travels in the URL", async () => {
+    it("UT-LOGIN-U15-02 does not send parentId in the body — it travels in the URL", async () => {
         const fetchMock = mockFetch(okEnvelope(prefs));
 
         await savePreferences("p1", prefs);
@@ -153,7 +124,7 @@ describe("savePreferences", () => {
         expect(JSON.parse(fetchMock.mock.calls[0][1].body)).not.toHaveProperty("parentId");
     });
 
-    it("surfaces the backend's validation message", async () => {
+    it("UT-LOGIN-U15-03 surfaces the backend's validation message", async () => {
         mockFetch(
             { ok: false, error: "`frequency` must be one of: Weekly, Fortnightly, Monthly." },
             { ok: false, status: 400 },
@@ -164,12 +135,89 @@ describe("savePreferences", () => {
 });
 
 describe("sendUpdateNow", () => {
-    it("POSTs to the signed-in parent's notification endpoint", async () => {
+    it("UT-LOGIN-U16-01 POSTs to the signed-in parent's notification endpoint", async () => {
         const fetchMock = mockFetch(okEnvelope({ outcome: "parentNotified" }));
 
         await sendUpdateNow("p1");
 
         expect(fetchMock.mock.calls[0][0]).toBe("/api/insights/parents/p1/notifications");
         expect(fetchMock.mock.calls[0][1].method).toBe("POST");
+    });
+});
+
+describe("authentication boundary", () => {
+    function response(body: unknown, status = 200, ok = status >= 200 && status < 300) {
+        global.fetch = jest.fn().mockResolvedValue({ ok, status, json: async () => body }) as unknown as typeof fetch;
+        return global.fetch as jest.MockedFunction<typeof fetch>;
+    }
+
+    it("UT-LOGIN-U11-01 sends the current token while preserving custom headers", async () => {
+        getAccessTokenMock.mockResolvedValue("token");
+        const fetchMock = response(okEnvelope({ value: 1 }));
+
+        await expect(request<{ value: number }>("/thing", { headers: { "X-Request-ID": "r1" } })).resolves.toEqual({ value: 1 });
+
+        const headers = fetchMock.mock.calls[0][1]?.headers as Headers;
+        expect(headers.get("Authorization")).toBe("Bearer token");
+        expect(headers.get("X-Request-ID")).toBe("r1");
+    });
+
+    it("UT-LOGIN-U11-02 does not fetch when token retrieval fails", async () => {
+        const tokenError = new Error("Authentication required.");
+        getAccessTokenMock.mockRejectedValue(tokenError);
+        const dispatch = jest.spyOn(window, "dispatchEvent");
+
+        await expect(request("/thing")).rejects.toBe(tokenError);
+
+        expect(global.fetch).not.toHaveBeenCalled();
+        expect(dispatch).not.toHaveBeenCalled();
+        dispatch.mockRestore();
+    });
+
+    async function expectAuthFailure(status: 401 | 403) {
+        const dispatch = jest.spyOn(window, "dispatchEvent");
+        response({ ok: false, error: `server-${status}` }, status, false);
+
+        await expect(request("/thing")).rejects.toMatchObject({ name: "InsightsApiError", status, message: `server-${status}` });
+
+        expect(dispatch).toHaveBeenCalledTimes(1);
+        const event = dispatch.mock.calls[0][0] as CustomEvent<{ service: string; status: number }>;
+        expect(event.type).toBe("dial:auth-failure");
+        expect(event.detail).toEqual({ service: "insights", status });
+        dispatch.mockRestore();
+    }
+
+    async function expectNoAuthFailure(status: 400 | 402 | 404 | 500) {
+        const dispatch = jest.spyOn(window, "dispatchEvent");
+        response({ ok: false, error: `server-${status}` }, status, false);
+
+        await expect(request("/thing")).rejects.toMatchObject({ name: "InsightsApiError", status, message: `server-${status}` });
+
+        expect(dispatch).not.toHaveBeenCalled();
+        dispatch.mockRestore();
+    }
+
+    it("UT-LOGIN-U11-03 emits an auth-failure event for status 401", async () => {
+        await expectAuthFailure(401);
+    });
+
+    it("UT-LOGIN-U11-04 emits an auth-failure event for status 403", async () => {
+        await expectAuthFailure(403);
+    });
+
+    it("UT-LOGIN-U11-05 does not emit an auth-failure event for status 500", async () => {
+        await expectNoAuthFailure(500);
+    });
+
+    it("UT-LOGIN-U11-06 does not emit an auth-failure event for status 400", async () => {
+        await expectNoAuthFailure(400);
+    });
+
+    it("UT-LOGIN-U11-07 does not emit an auth-failure event for status 402", async () => {
+        await expectNoAuthFailure(402);
+    });
+
+    it("UT-LOGIN-U11-08 does not emit an auth-failure event for status 404", async () => {
+        await expectNoAuthFailure(404);
     });
 });
