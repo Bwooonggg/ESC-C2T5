@@ -299,6 +299,20 @@ Some DAS3 integration tests load the committed Milvus seed and may load model
 weights. DAS7 integration tests require a deliberately configured test Supabase
 project and skip themselves when the required variables are absent.
 
+The centralized frontend also has browser-driven end-to-end suites covering the
+DAS1, DAS3, and DAS7 user flows in stub mode, using both Selenium and
+Playwright:
+
+```powershell
+npm run test:ui:das1 --prefix frontend
+npm run test:ui:das3 --prefix frontend
+npm run test:ui:das7 --prefix frontend
+npm run test:e2e --prefix frontend
+```
+
+See [docs/TESTING.md](docs/TESTING.md) for prerequisites, headed/UI-mode
+variants, and troubleshooting notes.
+
 ## API conventions
 
 The frontend uses one API client per service:

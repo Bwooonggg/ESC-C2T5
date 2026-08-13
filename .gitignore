@@ -39,3 +39,5 @@ AGENTS.md
 
 # Local DAS 7 test plans
 /DAS_7/backend/docs/*-test-plan.md
+
+frontend/test-results/
