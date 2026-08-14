@@ -1,88 +1,76 @@
+import os
+
 import pytest
-from langgraph.graph import StateGraph, START, END
+from langchain_core.messages import HumanMessage
+from langgraph.checkpoint.memory import MemorySaver
+from langgraph.graph import START, END, StateGraph
+from langfuse.langchain import CallbackHandler
+from pymilvus import MilvusClient
+from FlagEmbedding import FlagReranker
 
-from das_agent.graph.agent import route_decision 
-
+from das_agent.graph.state import State
 from das_agent.nodes.nodes import (
+    ChatOpenRouter,
     RetrieveAndRerankNode,
     WorksheetAgentNode,
-    ask_clarification_node,
-    wait_for_clarification_node,
+    get_intent_node,
 )
-from das_agent.graph.state import State
-from das_agent.worksheet.schemas import GeneratedMCQWorksheet, MCQWorksheetItem
+from das_agent.graph.agent import route_decision
+from das_agent.retrieval.knowledge_retriever import KnowledgeBaseRetriever
+from das_agent.retrieval.ingestion import (
+    COLLECTION_NAME,
+    get_embedding,
+    get_milvus_db_path,
+)
+
+pytestmark = pytest.mark.integration
+langfuse_handler = CallbackHandler()
+
+WORKSHEET_MODEL = os.getenv("OPENROUTER_INTENT_MODEL", "qwen/qwen3.5-27b")
+RERANKER_MODEL_ID = "BAAI/bge-reranker-base"
 
 
-def _to_mcq_worksheet(payload: dict) -> GeneratedMCQWorksheet:
-    items = [MCQWorksheetItem(**item) for item in payload["items"]]
-    return GeneratedMCQWorksheet(
-        title=payload["title"],
-        readingPassage=payload.get("readingPassage", "A short passage."),
-        instructions=payload.get("instructions", "Answer the following."),
-        items=items,
+@pytest.fixture
+def thread_config():
+    return {"configurable": {"thread_id": "live-segmented-test-thread"}}
+
+
+@pytest.fixture(scope="session")
+def real_reranker():
+    return FlagReranker(RERANKER_MODEL_ID, use_fp16=True)
+
+
+@pytest.fixture(scope="session")
+def real_embedding():
+    return get_embedding()
+
+
+@pytest.fixture
+def real_milvus_client():
+    return MilvusClient(uri=get_milvus_db_path())
+
+
+@pytest.fixture
+def real_components(real_embedding, real_milvus_client, real_reranker):
+    real_llm = ChatOpenRouter(model=WORKSHEET_MODEL, temperature=0)
+
+    real_retriever = KnowledgeBaseRetriever(
+        embedding_model=real_embedding,
+        search_client=real_milvus_client,
+        reranker=real_reranker,
+        collection_name=COLLECTION_NAME,
     )
 
-
-class _FakeStructuredRunnable:
-    def __init__(self, responses):
-        self._responses = iter(responses)
-
-    def invoke(self, messages, config=None, **kwargs):
-        return next(self._responses)
-
-    async def ainvoke(self, messages, config=None, **kwargs):
-        return next(self._responses)
+    return real_retriever, real_llm
 
 
-class FakeWorksheetLLM:
-    def __init__(self, *json_payloads):
-        self._responses = [_to_mcq_worksheet(p) for p in json_payloads]
+@pytest.mark.asyncio
+async def test_live_intent_to_retrieval_flow(real_components, thread_config):
+    real_retriever, real_llm = real_components
 
-    def with_structured_output(self, schema, *, method=None, strict=None, include_raw=False, **kwargs):
-        return _FakeStructuredRunnable(self._responses)
-
-
-class _FakeDoc:
-    def __init__(self, page_content):
-        self.page_content = page_content
-
-
-class FakeKnowledgeBaseRetriever:
-
-    def __init__(self, docs):
-        self._docs = [_FakeDoc(d) if isinstance(d, str) else d for d in docs]
-        self.calls = []
-
-    def retrieve_and_rerank(self, query):
-        self.calls.append(query)
-        return self._docs
-
-
-def make_fake_get_intent_node(qn_type, topic, difficulty="easy", question_count=1, reason=None):
-
-    async def fake_get_intent_node(state: State):
-        return {
-            "action": "create" if qn_type and topic else "clarify",
-            "qn_type": qn_type,
-            "topic": topic,
-            "question_count": question_count,
-            "difficulty": difficulty,
-            "query": state.get("query", ""),
-            "clarification_reason": reason,
-            "clarification_query": None,
-        }
-
-    return fake_get_intent_node
-
-
-def build_test_workflow(fake_get_intent_node, retriever, worksheet_llm):
     workflow = StateGraph(State)
-
-    workflow.add_node("retrieve_and_rerank", RetrieveAndRerankNode(retriever))
-    workflow.add_node("get_intent", fake_get_intent_node)
-    workflow.add_node("worksheet_agent", WorksheetAgentNode(worksheet_llm))
-    workflow.add_node("ask_clarification", ask_clarification_node)
-    workflow.add_node("wait_for_clarification", wait_for_clarification_node)
+    workflow.add_node("get_intent", get_intent_node)
+    workflow.add_node("retrieve_and_rerank", RetrieveAndRerankNode(real_retriever))
 
     workflow.add_edge(START, "get_intent")
     workflow.add_conditional_edges(
@@ -90,92 +78,69 @@ def build_test_workflow(fake_get_intent_node, retriever, worksheet_llm):
         route_decision,
         {
             "create": "retrieve_and_rerank",
-            "needs_clarification": "ask_clarification",
+            "needs_clarification": END,
+            "revise": "retrieve_and_rerank",
         },
     )
-    workflow.add_edge("ask_clarification", "wait_for_clarification")
-    workflow.add_edge("wait_for_clarification", "get_intent")
+    workflow.add_edge("retrieve_and_rerank", END)
+
+    app = workflow.compile(checkpointer=MemorySaver())
+
+    config = {
+        **thread_config,
+        "callbacks": [langfuse_handler],
+        "metadata": {"test_name": "test_live_intent_to_retrieval_flow"}
+    }
+
+    initial_state = {
+        "messages": [HumanMessage(content="Create a 2-question MCQ worksheet on Fractions")],
+        "qn_type": None,
+        "topic": None,
+        "difficulty": None,
+        "question_count": None,
+        "rankedDocs": [],
+    }
+
+    result = await app.ainvoke(initial_state, config=config)
+
+    assert result["action"] == "create"
+    assert result["topic"].lower() == "fractions"
+    assert "rankedDocs" in result
+    assert len(result["rankedDocs"]) > 0
+
+
+@pytest.mark.asyncio
+async def test_live_retrieval_to_generation_flow(real_components, thread_config):
+    real_retriever, real_llm = real_components
+
+    workflow = StateGraph(State)
+    workflow.add_node("retrieve_and_rerank", RetrieveAndRerankNode(real_retriever))
+    workflow.add_node("worksheet_agent", WorksheetAgentNode(real_llm))
+
+    workflow.add_edge(START, "retrieve_and_rerank")
     workflow.add_edge("retrieve_and_rerank", "worksheet_agent")
     workflow.add_edge("worksheet_agent", END)
 
-    return workflow.compile()
+    app = workflow.compile(checkpointer=MemorySaver())
 
-
-
-@pytest.mark.asyncio
-async def test_ready_flow():
-    fake_get_intent = make_fake_get_intent_node(qn_type="MCQ", topic="Fractions")
-    retriever = FakeKnowledgeBaseRetriever(docs=["doc about fractions"])
-    worksheet_llm = FakeWorksheetLLM({
-        "title": "Fractions Basics",
-        "items": [
-            {"question": "What is 1/2 + 1/4?", "options": ["1/4", "3/4", "1/2", "1"], "answer": "3/4"},
-        ],
-    })
-
-    graph = build_test_workflow(fake_get_intent, retriever, worksheet_llm)
+    config = {
+        **thread_config,
+        "callbacks": [langfuse_handler],
+        "metadata": {"test_name": "test_live_retrieval_to_generation_flow"}
+    }
 
     initial_state = {
-        "messages": [],
-        "query": "Make me a 1 question MCQ worksheet on fractions",
-        "qn_type": None,
-        "topic": None,
-        "difficulty": None,
-        "question_count": None,
+        "messages": [HumanMessage(content="Create a 2-question MCQ worksheet on Fractions")],
+        "qn_type": "MCQ",
+        "topic": "Fractions",
+        "difficulty": "easy",
+        "question_count": 2,
         "rankedDocs": [],
     }
 
-    result = await graph.ainvoke(initial_state)
-    assert not any(
-        "clarif" in getattr(m, "content", "").lower()
-        for m in result.get("messages", [])
-    )
+    result = await app.ainvoke(initial_state, config=config)
 
-
-    assert retriever.calls == ["Make me a 1 question MCQ worksheet on fractions"]
-    assert [doc.page_content for doc in result["rankedDocs"]] == ["doc about fractions"]
-
-
-    assert result["generated_worksheet"]["title"] == "Fractions Basics"
-    assert "1 questions" in result["messages"][-1].content
-
-
-@pytest.mark.asyncio
-async def test_missing_topic_flow():
-    fake_get_intent = make_fake_get_intent_node(qn_type="MCQ", topic=None)
-
-    class ExplodingRetriever:
-        def retrieve_and_rerank(self, query):
-            raise AssertionError("retrieve_and_rerank should not run without a topic")
-
-    class _ExplodingRunnable:
-        def invoke(self, *a, **k):
-            raise AssertionError("worksheet_agent should not run without a topic")
-
-        async def ainvoke(self, *a, **k):
-            raise AssertionError("worksheet_agent should not run without a topic")
-
-    class ExplodingLLM:
-        def with_structured_output(self, schema, *, method=None, strict=None, include_raw=False, **kwargs):
-            return _ExplodingRunnable()
-
-    graph = build_test_workflow(fake_get_intent, ExplodingRetriever(), ExplodingLLM())
-
-    initial_state = {
-        "messages": [],
-        "query": "make me a worksheet",
-        "qn_type": None,
-        "topic": None,
-        "difficulty": None,
-        "question_count": None,
-        "rankedDocs": [],
-    }
-
-    result = await graph.ainvoke(initial_state)
-
-    assert "generated_worksheet" not in result
-    assert any(
-        "clarif" in getattr(m, "content", "").lower()
-        or "topic" in getattr(m, "content", "").lower()
-        for m in result.get("messages", [])
-    )
+    assert "rankedDocs" in result
+    assert "generated_worksheet" in result
+    assert result["generated_worksheet"]["title"] is not None
+    assert len(result["generated_worksheet"]["items"]) == 2

@@ -86,3 +86,4 @@ async def test_intent_clarification_resume(app, thread_config):
     assert final_result["qn_type"] == "MCQ"
     assert "fraction" in (final_result["topic"] or "").lower()
     assert final_result["pending_fields"] == []
+
