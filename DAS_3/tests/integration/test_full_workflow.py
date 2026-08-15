@@ -23,7 +23,6 @@ langfuse_handler = CallbackHandler()
 
 WORKSHEET_MODEL = os.getenv("OPENROUTER_INTENT_MODEL", "qwen/qwen3.5-27b")
 
-# TODO: confirm this matches the reranker model id used in production.
 RERANKER_MODEL_ID = "BAAI/bge-reranker-base"
 
 
@@ -80,6 +79,34 @@ async def test_clear_intent_flow_live(workflow_app, thread_config):
     assert "generated_worksheet" in result
     assert result["generated_worksheet"]["title"] is not None
     assert len(result["generated_worksheet"]["items"]) == 4
+
+
+@pytest.mark.asyncio
+async def test_open_ended_intent_flow_live(workflow_app, thread_config):
+    config = {
+        **thread_config,
+        "metadata": {"test_name": "test_open_ended_intent_flow_live"},
+        "callbacks": [langfuse_handler],
+    }
+
+    result = await workflow_app.ainvoke(
+        {
+            "messages": [
+                HumanMessage(
+                    content="Create 3 open-ended questions on Photosynthesis"
+                )
+            ]
+        },
+        config=config,
+    )
+
+    assert "generated_worksheet" in result
+    assert result["generated_worksheet"]["title"] is not None
+    items = result["generated_worksheet"]["items"]
+    assert len(items) == 3
+    for item in items:
+        assert item["options"] == []
+        assert item["answer"]
 
 
 @pytest.mark.asyncio

@@ -5,7 +5,7 @@ from langgraph.graph import END, START, StateGraph
 from langgraph.types import Command
 from langfuse.langchain import CallbackHandler
 from das_agent.graph.state import State
-from das_agent.graph.agent import route_decision 
+from das_agent.graph.agent import route_decision
 from das_agent.nodes.nodes import (
     ask_clarification_node,
     get_intent_node,
@@ -60,9 +60,26 @@ async def test_intent_clarification_interrupts(app, thread_config):
 
     assert "__interrupt__" in first_result
     payload = first_result["__interrupt__"][0].value
-    
+
     assert any("MCQ" in field or "Open-ended" in field for field in payload["awaiting"])
     assert any("topic" in field.lower() for field in payload["awaiting"])
+
+
+@pytest.mark.asyncio
+async def test_revise_without_worksheet_interrupts(app, thread_config):
+    initial_state = {
+        "messages": [HumanMessage(content="Can you make question 2 easier?")],
+        "qn_type": None,
+        "topic": None,
+        "difficulty": None,
+        "generated_worksheet": None,
+    }
+
+    result = await app.ainvoke(initial_state, config=thread_config)
+
+    assert "__interrupt__" in result
+    payload = result["__interrupt__"][0].value
+    assert "awaiting" in payload
 
 
 @pytest.mark.asyncio
@@ -80,10 +97,9 @@ async def test_intent_clarification_resume(app, thread_config):
         config=thread_config,
     )
 
-
     assert "__interrupt__" not in final_result
     assert final_result["action"] == "create"
     assert final_result["qn_type"] == "MCQ"
     assert "fraction" in (final_result["topic"] or "").lower()
+    assert final_result["difficulty"] == "medium"
     assert final_result["pending_fields"] == []
-
