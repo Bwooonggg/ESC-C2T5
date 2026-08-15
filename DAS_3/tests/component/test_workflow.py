@@ -7,7 +7,11 @@ from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.types import Command
 from das_agent.graph.agent import agent_init, build_workflow
 from das_agent.nodes import nodes
+from das_agent.nodes.nodes import QuizIntent
 from das_agent.worksheet.schemas import GeneratedMCQWorksheet, MCQWorksheetItem
+
+
+pytestmark = pytest.mark.component
 
 
 class FakeRetriever:
@@ -50,10 +54,14 @@ def make_worksheet_llm():
 
 @pytest.mark.asyncio
 async def test_sufficient_info_path_produces_worksheet():
-    intent_response = MagicMock(
+    intent_response = QuizIntent(
+        action="create",
+        has_sufficient_info=True,
         qn_type="MCQ",
         topic="grammar",
         difficulty="medium",
+        question_count=None,
+        revision_instruction=None,
         reason=None,
     )
 
@@ -90,8 +98,26 @@ async def test_sufficient_info_path_produces_worksheet():
 @pytest.mark.asyncio
 async def test_clarification_loop_then_succeeds():
     intent_responses = [
-        MagicMock(qn_type=None, topic=None, difficulty=None, reason="Missing quiz type and topic."),
-        MagicMock(qn_type="MCQ", topic="grammar", difficulty="medium", reason=None),
+        QuizIntent(
+            action="clarify",
+            has_sufficient_info=False,
+            qn_type=None,
+            topic=None,
+            difficulty=None,
+            question_count=None,
+            revision_instruction=None,
+            reason="Missing quiz type and topic.",
+        ),
+        QuizIntent(
+            action="create",
+            has_sufficient_info=True,
+            qn_type="MCQ",
+            topic="grammar",
+            difficulty="medium",
+            question_count=None,
+            revision_instruction=None,
+            reason=None,
+        ),
     ]
  
     def make_llm(*args, **kwargs):
