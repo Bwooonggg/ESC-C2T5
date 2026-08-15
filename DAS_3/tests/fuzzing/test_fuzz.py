@@ -1,6 +1,5 @@
 import os
 import time
-import math
 
 import pytest
 from hypothesis import given, settings, HealthCheck, strategies as st
@@ -10,7 +9,6 @@ from langchain_core.messages import HumanMessage
 from langgraph.checkpoint.memory import MemorySaver
 
 import das_agent.nodes.nodes as nodes_module
-from das_agent.nodes.nodes import get_question_count
 from das_agent.graph.agent import build_workflow
 from das_agent.worksheet.schemas import (
     GeneratedMCQWorksheet,
@@ -100,7 +98,7 @@ injection_like = st.sampled_from(
     ]
 )
 
-# Numbers embedded in noisy ways, to stress get_question_count's parser.
+# Numbers embedded in noisy text for adversarial prompt coverage.
 noisy_number_text = st.builds(
     lambda n, prefix, suffix: f"{prefix}{n}{suffix}",
     n=st.integers(min_value=-(10**12), max_value=10**12),
@@ -140,12 +138,22 @@ def _make_open_worksheet(count, topic):
     )
 
 
-def _fake_intent_llm(monkeypatch, qn_type, topic, sufficient=True, reason=None):
+def _fake_intent_llm(
+    monkeypatch,
+    qn_type,
+    topic,
+    sufficient=True,
+    reason=None,
+    question_count=None,
+):
     fake_result = MagicMock()
+    fake_result.action = "create" if sufficient else "clarify"
     fake_result.has_sufficient_info = sufficient
     fake_result.qn_type = qn_type if sufficient else None
     fake_result.topic = topic if sufficient else None
     fake_result.difficulty = "medium"
+    fake_result.question_count = question_count
+    fake_result.revision_instruction = None
     fake_result.reason = reason
 
     structured = MagicMock()
@@ -183,9 +191,13 @@ def _make_retriever():
 @given(valid_prompt())
 @pytest.mark.asyncio
 async def test_valid_prompts_generate_worksheet(monkeypatch, data):
-    user_prompt, qn_type, topic, _count = data
-    _fake_intent_llm(monkeypatch, qn_type=qn_type, topic=topic)
-    expected_count = get_question_count(user_prompt)
+    user_prompt, qn_type, topic, expected_count = data
+    _fake_intent_llm(
+        monkeypatch,
+        qn_type=qn_type,
+        topic=topic,
+        question_count=expected_count,
+    )
 
     worksheet_llm = _make_worksheet_llm(qn_type, expected_count, topic)
     retriever = _make_retriever()
@@ -210,7 +222,7 @@ async def test_invalid_prompts_ask_for_clarification(monkeypatch, user_prompt):
         reason="Missing worksheet topic and/or question format.",
     )
 
-    worksheet_llm = _make_worksheet_llm("MCQ", get_question_count(user_prompt))
+    worksheet_llm = _make_worksheet_llm("MCQ", 15)
     retriever = _make_retriever()
 
     checkpointer = MemorySaver()
@@ -223,25 +235,6 @@ async def test_invalid_prompts_ask_for_clarification(monkeypatch, user_prompt):
 
     assert "generated_worksheet" not in result
     assert result.get("__interrupt__")
-
-
-@given(st.integers(min_value=1, max_value=100))
-def test_get_question_count_extracts_explicit_number(n):
-    text = f"Create {n} MCQ questions on Sight Words."
-    assert get_question_count(text) == n
-
-
-@given(st.text(min_size=0, max_size=50).filter(lambda s: not any(c.isdigit() for c in s)))
-def test_get_question_count_defaults_when_no_number(text):
-    assert get_question_count(text) == 15
-
-
-@given(st.one_of(unicode_text, injection_like, noisy_number_text))
-def test_get_question_count_never_crashes(text):
-    result = get_question_count(text)
-    assert isinstance(result, int)
-    assert result > 0
-    assert result <= 10_000
 
 
 @settings(suppress_health_check=[HealthCheck.function_scoped_fixture], deadline=None)
@@ -319,9 +312,6 @@ async def test_long_running_fuzz_campaign(monkeypatch):
         example = strategy.example()
         iterations += 1
         try:
-            count = get_question_count(example)
-            assert isinstance(count, int) and count > 0
-
             config = {"configurable": {"thread_id": f"campaign-{iterations}"}}
             result = await graph.ainvoke(
                 {"messages": [HumanMessage(content=example)]}, config=config
