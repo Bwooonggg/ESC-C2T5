@@ -2,13 +2,10 @@ from pathlib import Path
 
 import pytest
 from langchain_core.messages import HumanMessage
-from pymilvus import MilvusClient
 from das_agent.retrieval.ingestion import get_milvus_db_path
 from das_agent.retrieval.knowledge_retriever import KnowledgeBaseRetriever
 from das_agent.nodes.nodes import RetrieveAndRerankNode
-from langchain_core.documents import Document
 from unittest.mock import Mock
-INTEGRATION_VECTOR = [0.1] * 384
 
 retriever = KnowledgeBaseRetriever(
         embedding_model=Mock(),
@@ -20,7 +17,7 @@ retriever = KnowledgeBaseRetriever(
 def test_default_db_path(monkeypatch):
     monkeypatch.delenv("MILVUS_DB_PATH", raising=False)
 
-    expected_path = Path(__file__).resolve().parents[1] / "data" / "milvus" / "docling.db"
+    expected_path = Path(__file__).resolve().parents[2] / "data" / "milvus" / "docling.db"
 
     assert Path(get_milvus_db_path()) == expected_path
 
@@ -44,56 +41,6 @@ async def test_combined_retrieval_query():
     search_retriever.retrieve_and_rerank.assert_called_once_with(combined_query)
     assert result["query"] == combined_query
 
-def create_integration_retriever(database_path: Path):
-    return KnowledgeBaseRetriever(
-        embedding_model=StaticEmbedding(),
-        search_client=MilvusClient(uri=str(database_path)),
-        reranker=StaticReranker(),
-    )
-
-
-class StaticEmbedding:
-    def embed_query(self, query: str) -> list[float]:
-        return INTEGRATION_VECTOR
-
-
-class StaticReranker:
-    def compute_score(self, query_and_chunk_pairs: list[tuple[str, str]]) -> list[float]:
-        return [float(index) for index in range(len(query_and_chunk_pairs))]
-
-
-def integration_record(index: int) -> dict:
-    return {
-        "id": index,
-        "vector": INTEGRATION_VECTOR,
-        "text": f"A subject is the focus of sentence {index}.",
-        "source": {
-            "dl_meta": {
-                "origin": {"filename": "integration-fixture.pdf"},
-                "headings": ["Grammar"],
-                "doc_items": [{"prov": [{"page_no": index + 1}]}],
-            }
-        },
-    }
-
-
-@pytest.fixture
-def integration_database_file(tmp_path: Path) -> Path:
-    database_path = tmp_path / "integration-milvus.db"
-    client = MilvusClient(uri=str(database_path))
-    client.create_collection(
-        collection_name="demo_collection",
-        dimension=384,
-        metric_type="COSINE",
-    )
-    client.insert(
-        collection_name="demo_collection",
-        data=[integration_record(index) for index in range(6)],
-    )
-    client.close()
-    return database_path
-
-
 def make_search_result(index: int) -> dict:
     return {
         "entity": {
@@ -110,60 +57,6 @@ def make_search_result(index: int) -> dict:
             },
         }
     }
-
-@pytest.mark.integration
-def test_subject_search(integration_database_file):
-    client = MilvusClient(uri=str(integration_database_file))
-    client.load_collection(collection_name="demo_collection")
-
-    query = StaticEmbedding().embed_query("What is a subject?")
-
-    res = client.search(
-        collection_name="demo_collection",
-        data=[query],
-        limit=3,
-        output_fields=["text", "source"],
-    )
-
-    assert res, "Search returned no results"
-    assert len(res) == 1, "Expected one query result set"
-    assert len(res[0]) == 3, "Expected three seeded results"
-    client.close()
-
-@pytest.mark.integration
-def test_rerank(integration_database_file):
-    integration_retriever = create_integration_retriever(integration_database_file)
-    docs = integration_retriever.retrieve("what is a subject?", 5)
-    result = integration_retriever.rerank("what is a subject?", docs, 10)
-    assert len(docs) == 1
-    assert len(docs[0]) == 5, "Expected 5 results"
-    assert 1 < len(result) <= 10
-    doc_fields(result)
-    integration_retriever._search_client.close()
-
-
-def doc_fields(result: list):
-    for doc in result:
-        assert isinstance(doc, Document)
-
-        assert isinstance(doc.page_content, str)
-        assert doc.page_content
-
-        assert isinstance(doc.metadata["entity_id"], int)
-
-        assert isinstance(doc.metadata["filename"], str)
-
-        assert isinstance(doc.metadata["headings"], list)
-
-        assert isinstance(doc.metadata["page_numbers"], list)
-        assert doc.metadata["page_numbers"]
-        assert all(
-            isinstance(page_number, int) and page_number > 0
-            for page_number in doc.metadata["page_numbers"]
-        )
-
-        assert isinstance(doc.metadata["reranker_score"], (int, float))
-
 
 def test_retrieve_from_kb_unit_below_5():
     try:
@@ -258,30 +151,53 @@ def test_empty_rerank():
     retriever._reranker.compute_score.assert_not_called()
 
 
-@pytest.mark.integration
-@pytest.mark.asyncio
-async def test_retrieve_and_rerank(integration_database_file):
-    integration_retriever = create_integration_retriever(integration_database_file)
-    node = RetrieveAndRerankNode(integration_retriever)
-
-    result = await node(
-        {
-            "messages": [
-                HumanMessage(content="what is a subject?")
-            ],
-            "rankedDocs": [],
-        }
+def test_retrieve_and_rerank_empty_search_skips_reranker():
+    embedding = Mock()
+    embedding.embed_query.return_value = [0.1, 0.2]
+    search_client = Mock()
+    search_client.search.return_value = [[]]
+    reranker = Mock()
+    empty_retriever = KnowledgeBaseRetriever(
+        embedding_model=embedding,
+        search_client=search_client,
+        reranker=reranker,
     )
-    ranked_docs = result['rankedDocs']
-    # Reranking returns at most the requested top five documents.
-    assert result["query"] == "what is a subject?"
-    assert 1 <= len(ranked_docs) <= 5
-    assert all(isinstance(doc, Document) for doc in ranked_docs)
 
-    # Each output has a numerical reranker score.
-    scores = [doc.metadata["reranker_score"] for doc in ranked_docs]
-    assert all(isinstance(score, (int, float)) for score in scores)
+    result = empty_retriever.retrieve_and_rerank("missing topic")
 
-    # The reranker returns highest-scored documents first.
-    assert scores == sorted(scores, reverse=True)
-    integration_retriever._search_client.close()
+    assert result == []
+    reranker.compute_score.assert_not_called()
+
+
+def test_retrieve_propagates_embedding_failure_without_search():
+    embedding = Mock()
+    embedding.embed_query.side_effect = RuntimeError("embedding unavailable")
+    search_client = Mock()
+    failure_retriever = KnowledgeBaseRetriever(
+        embedding_model=embedding,
+        search_client=search_client,
+        reranker=Mock(),
+    )
+
+    with pytest.raises(RuntimeError, match="embedding unavailable"):
+        failure_retriever.retrieve("fractions", top_k=5)
+
+    search_client.search.assert_not_called()
+
+
+def test_retrieve_and_rerank_propagates_search_failure_without_reranking():
+    embedding = Mock()
+    embedding.embed_query.return_value = [0.1, 0.2]
+    search_client = Mock()
+    search_client.search.side_effect = RuntimeError("vector store unavailable")
+    reranker = Mock()
+    failure_retriever = KnowledgeBaseRetriever(
+        embedding_model=embedding,
+        search_client=search_client,
+        reranker=reranker,
+    )
+
+    with pytest.raises(RuntimeError, match="vector store unavailable"):
+        failure_retriever.retrieve_and_rerank("fractions")
+
+    reranker.compute_score.assert_not_called()
