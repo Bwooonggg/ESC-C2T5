@@ -45,12 +45,12 @@ beforeEach(async () => {
 })
 
 // IT-15 — Chat is closed once the session is completed
-describe('POST /api/sessions/:id/messages on a completed session', () => {
+describe('POST /sessions/:id/messages on a completed session', () => {
   it('responds 409, never calls Claude, and leaves the stored session alone', async () => {
     const session = await completedSession()
 
     const res = await request(app)
-      .post(`/api/sessions/${session.id}/messages`)
+      .post(`/sessions/${session.id}/messages`)
       .send({ message: 'One more thing' })
 
     expect(res.status).toBe(409)
@@ -63,12 +63,12 @@ describe('POST /api/sessions/:id/messages on a completed session', () => {
 })
 
 // IT-16 — The report endpoint is closed once the session is completed (DEF-01)
-describe('POST /api/sessions/:id/report on a completed session', () => {
+describe('POST /sessions/:id/report on a completed session', () => {
   it('responds 409, never calls Claude, and leaves the stored session completed', async () => {
     vi.mocked(generateReport).mockResolvedValue('A second, later report.')
     const session = await completedSession()
 
-    const res = await request(app).post(`/api/sessions/${session.id}/report`).send({})
+    const res = await request(app).post(`/sessions/${session.id}/report`).send({})
 
     expect(res.status).toBe(409)
     expect(res.body).toEqual({ error: 'This screening session is already complete.' })
@@ -86,7 +86,7 @@ describe('type validation on the write endpoints', () => {
   it('rejects a non-string message with 400 and no Claude call', async () => {
     const session = await create('adult')
 
-    const res = await request(app).post(`/api/sessions/${session.id}/messages`).send({ message: 42 })
+    const res = await request(app).post(`/sessions/${session.id}/messages`).send({ message: 42 })
 
     expect(res.status).toBe(400)
     expect(res.body).toEqual({ error: 'message must be a string.' })
@@ -97,7 +97,7 @@ describe('type validation on the write endpoints', () => {
     const session = await create('adult')
 
     const res = await request(app)
-      .post(`/api/sessions/${session.id}/responses`)
+      .post(`/sessions/${session.id}/responses`)
       .send({ question: 1, answer: true })
 
     expect(res.status).toBe(400)
@@ -111,7 +111,7 @@ describe('type validation on the write endpoints', () => {
     // Ordering matters for the client: a bad body reports the body problem,
     // not a misleading 404.
     const res = await request(app)
-      .post('/api/sessions/00000000-0000-0000-0000-000000000000/messages')
+      .post('/sessions/00000000-0000-0000-0000-000000000000/messages')
       .send({ message: null })
 
     expect(res.status).toBe(400)

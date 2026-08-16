@@ -21,6 +21,7 @@ server/dist/
 npm-debug.log*
 yarn-debug.log*
 pnpm-debug.log*
+.dev/
 
 # Editor / OS
 .DS_Store
@@ -32,6 +33,14 @@ Thumbs.db
 # Miscellaneous
 ROADMAP.md
 DAS_7.zip
-/docs/
 .claude
 AGENTS.md
+/docs/Lecture Slides/
+<<<<<<< HEAD
+
+# Local DAS 7 test plans
+/DAS_7/backend/docs/*-test-plan.md
+
+frontend/test-results/
+=======
+>>>>>>> 98de6fe7ed103d7ca21eaa26c8a123e2f83666e9

@@ -1,0 +1,55 @@
+.page {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.columns {
+    display: grid;
+    grid-template-columns: minmax(0, 1.8fr) minmax(270px, .8fr);
+    gap: 12px;
+    align-items: start;
+}
+
+@media (max-width: 900px) {
+    .columns {
+        grid-template-columns: 1fr;
+    }
+}
+
+.chartCard {
+    background: var(--bg-subtle);
+    border: 1px solid #e3e3e3;
+    border-top: 3px solid var(--accent);
+    border-radius: 4px;
+    padding: 12px 14px 14px;
+}
+
+.chartHeaderRow {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 0 0 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+}
+
+.chartHeading {
+    margin: 0;
+    color: var(--navy);
+    font-size: 15px;
+}
+
+.chartMeta {
+    margin: 0;
+    font-size: 13px;
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+
+.sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}

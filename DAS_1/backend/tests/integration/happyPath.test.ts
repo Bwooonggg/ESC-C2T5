@@ -47,7 +47,7 @@ beforeEach(async () => {
 describe('child screener, create → chat → checklist → report → contact', () => {
   it('carries state across every stage and hands the finished session to storage once', async () => {
     // 1. Create
-    const createRes = await request(app).post('/api/sessions').send({ screenerType: 'child' })
+    const createRes = await request(app).post('/sessions').send({ screenerType: 'child' })
     expect(createRes.status).toBe(201)
     const { id } = createRes.body as ScreeningSession
     expect(createRes.body.stage).toBe('screening')
@@ -58,14 +58,14 @@ describe('child screener, create → chat → checklist → report → contact',
       question: 'How long have you noticed this?',
     })
     const firstTurn = await request(app)
-      .post(`/api/sessions/${id}/messages`)
+      .post(`/sessions/${id}/messages`)
       .send({ message: 'He reverses letters', notes: 'He is 9.' })
     expect(firstTurn.status).toBe(200)
     expect(firstTurn.body.messages).toHaveLength(2)
 
     // 3. Checklist answer, mid-conversation
     const answerRes = await request(app)
-      .post(`/api/sessions/${id}/responses`)
+      .post(`/sessions/${id}/responses`)
       .send({ question, answer: 'Yes' })
     expect(answerRes.status).toBe(200)
     expect(answerRes.body.responses[question]).toBe('Yes')
@@ -78,7 +78,7 @@ describe('child screener, create → chat → checklist → report → contact',
       report: 'Summary: signs consistent with dyslexia. Recommend a full assessment.',
     })
     const secondTurn = await request(app)
-      .post(`/api/sessions/${id}/messages`)
+      .post(`/sessions/${id}/messages`)
       .send({ message: 'Since primary one' })
     expect(secondTurn.status).toBe(200)
     expect(secondTurn.body.stage).toBe('report')
@@ -87,7 +87,7 @@ describe('child screener, create → chat → checklist → report → contact',
     expect(secondTurn.body.notes).toBe('He is 9.')
 
     // 5. Contact — allowed now that a report exists
-    const contactRes = await request(app).post(`/api/sessions/${id}/contact`).send(contact)
+    const contactRes = await request(app).post(`/sessions/${id}/contact`).send(contact)
     expect(contactRes.status).toBe(200)
     expect(contactRes.body.stage).toBe('completed')
     expect(contactRes.body.contact).toEqual(contact)
@@ -109,11 +109,11 @@ describe('child screener, create → chat → checklist → report → contact',
   })
 
   it('does not reach storage when the contact details are invalid', async () => {
-    const createRes = await request(app).post('/api/sessions').send({ screenerType: 'child' })
+    const createRes = await request(app).post('/sessions').send({ screenerType: 'child' })
     const { id } = createRes.body as ScreeningSession
 
     const res = await request(app)
-      .post(`/api/sessions/${id}/contact`)
+      .post(`/sessions/${id}/contact`)
       .send({ name: '', email: 'nope', phone: '1' })
 
     expect(res.status).toBe(400)

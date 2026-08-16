@@ -32,6 +32,9 @@ class KnowledgeBaseRetriever:
 
     def rerank(self, query: str, search_results: list, top_k: int = 5):
         matches = search_results[0]
+        if not matches:
+            return []
+
         query_and_chunk_pairs = []
         for result in matches:
             chunk_text = result["entity"]["text"]

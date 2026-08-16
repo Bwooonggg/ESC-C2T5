@@ -6,5 +6,14 @@ export default defineConfig({
   envDir: '..',
   define: {
     'process.env': {}
-  }
+  },
+  server: {
+    proxy: {
+      '/api/worksheet': {
+        target: 'http://localhost:2024',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/worksheet/, ''),
+      },
+    },
+  },
 });

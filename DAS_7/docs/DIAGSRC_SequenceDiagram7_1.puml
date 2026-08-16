@@ -1,0 +1,117 @@
+@startuml
+title Use Case DAS 7 - Track Child's Progress
+
+hide footbox
+skinparam backgroundColor white
+skinparam shadowing false
+
+actor Parent
+participant ProgressDashboardUI as UI
+participant StudentsController as Controller
+participant InsightService as Service
+participant SupabaseRepository as Repository
+participant LLMAdapter as Adapter
+actor Supabase as Database <<Secondary Actor>>
+actor "LLM Provider" as LLM <<Secondary Actor>>
+
+Parent -> UI : viewProgress(studentId)
+activate UI
+UI -> Controller : trackProgress(parentId, studentId)
+activate Controller
+Controller -> Service : trackProgress(studentId)
+activate Service
+Service -> Repository : listProgress(studentId)
+activate Repository
+Repository -> Database : selectProgress(studentId)
+activate Database
+Database --> Repository : ProgressRecord[]
+deactivate Database
+Repository --> Service : ProgressRecord[]
+deactivate Repository
+
+alt progress data is available
+  Service -> Repository : getLatestSummary(studentId)
+  activate Repository
+  Repository -> Database : selectLatestSummary(studentId)
+  activate Database
+  Database --> Repository : Summary or null
+  deactivate Database
+  Repository --> Service : Summary or null
+  deactivate Repository
+
+  alt summary is current
+    note right of Service : reuseSummary()
+  else summary is missing or stale
+    Service -> Adapter : generateSummary(student, records)
+    activate Adapter
+    Adapter -> LLM : generateSummary(progress)
+    activate LLM
+    LLM --> Adapter : summary
+    deactivate LLM
+    Adapter --> Service : summary
+    deactivate Adapter
+    Service -> Repository : saveSummary(studentId, summary)
+    activate Repository
+    Repository -> Database : insertSummary(studentId, summary)
+    activate Database
+    Database --> Repository : Summary
+    deactivate Database
+    Repository --> Service : Summary
+    deactivate Repository
+  end
+
+  Service --> Controller : ProgressRecord[], Summary
+  deactivate Service
+  Controller --> UI : ProgressRecord[], Summary
+  deactivate Controller
+  UI --> Parent : displayProgress(progress, summary)
+  deactivate UI
+
+  opt parent requests recommendations
+    Parent -> UI : requestRecommendations(studentId)
+    activate UI
+    UI -> Controller : createRecommendation(studentId)
+    activate Controller
+    Controller -> Service : createRecommendation(studentId)
+    activate Service
+    Service -> Repository : getLatestSummary(studentId)
+    activate Repository
+    Repository -> Database : selectLatestSummary(studentId)
+    activate Database
+    Database --> Repository : Summary
+    deactivate Database
+    Repository --> Service : Summary
+    deactivate Repository
+    Service -> Adapter : generateRecommendation(student, summary)
+    activate Adapter
+    Adapter -> LLM : generateRecommendation(summary)
+    activate LLM
+    LLM --> Adapter : recommendation
+    deactivate LLM
+    Adapter --> Service : recommendation
+    deactivate Adapter
+    Service -> Repository : saveRecommendation(summaryId, recommendation)
+    activate Repository
+    Repository -> Database : insertRecommendation(summaryId, recommendation)
+    activate Database
+    Database --> Repository : Recommendation
+    deactivate Database
+    Repository --> Service : Recommendation
+    deactivate Repository
+    Service --> Controller : Recommendation
+    deactivate Service
+    Controller --> UI : Recommendation
+    deactivate Controller
+    UI --> Parent : displayRecommendation(recommendation)
+    deactivate UI
+  end
+else progress data is unavailable
+  Service --> Controller : progressUnavailable()
+  deactivate Service
+  Controller --> UI : progressUnavailable()
+  deactivate Controller
+  UI --> Parent : displayTryAgainMessage()
+  deactivate UI
+end
+
+@enduml

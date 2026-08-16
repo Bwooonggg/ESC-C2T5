@@ -5,5 +5,8 @@
   ],
   "graphs": {
     "educational_agent": "./src/das_agent/graph/deployment_graph.py:graph_dev_instance"
+  },
+  "auth": {
+    "path": "./src/das_agent/auth.py:auth"
   }
 }

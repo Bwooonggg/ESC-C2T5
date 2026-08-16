@@ -1,5 +1,4 @@
 import express from 'express'
-import cors from 'cors'
 import { errorHandler } from './controllers/screenerController.ts'
 import screenerRoutes from './routes/screenerRoutes.ts'
 
@@ -11,11 +10,10 @@ import screenerRoutes from './routes/screenerRoutes.ts'
 export function createApp() {
   const app = express()
 
-  // Enable CORS for cross-origin frontend requests
-  app.use(cors())
   app.use(express.json())
 
-  app.use('/api', screenerRoutes)
+  // The gateway owns /api/screening and strips it before forwarding.
+  app.use('/', screenerRoutes)
 
   // Registered last so it catches errors thrown by any handler above it.
   app.use(errorHandler)

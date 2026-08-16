@@ -2,13 +2,13 @@ import { getClarificationPrompt } from "./clarificationInterrupt.js";
 
 
 describe("getClarificationPrompt", () => {
-  test("returns null for a normal stream update", () => {
+  test("ignores normal updates", () => {
     expect(
       getClarificationPrompt({ event: "updates", data: { messages: [] } }),
     ).toBeNull();
   });
 
-  test("formats awaiting fields from a LangGraph interrupt update", () => {
+  test("formats interrupt fields", () => {
     const prompt = getClarificationPrompt({
       event: "updates",
       data: {
@@ -30,7 +30,7 @@ describe("getClarificationPrompt", () => {
     expect(prompt).toContain("What topic should the worksheet cover?");
   });
 
-  test("accepts a direct interrupt prompt", () => {
+  test("accepts direct prompts", () => {
     expect(
       getClarificationPrompt({
         event: "interrupt",

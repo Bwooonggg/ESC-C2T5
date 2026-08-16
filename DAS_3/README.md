@@ -1,6 +1,8 @@
 # DAS Agent
 
-Educational worksheet agent with a LangGraph Python backend and a React/Vite frontend.
+Educational worksheet agent with a LangGraph Python backend. The centralized root
+frontend is intended to become the browser client for this service after frontend
+integration is complete.
 
 ## Repository layout
 
@@ -8,20 +10,26 @@ Educational worksheet agent with a LangGraph Python backend and a React/Vite fro
 - `src/das_agent/nodes/` — LangGraph node implementations
 - `src/das_agent/retrieval/` — knowledge retrieval and document ingestion
 - `src/das_agent/worksheet/` — worksheet prompts and schemas
-- `frontend/` — React/Vite application and JavaScript tests
+- `frontend/` — legacy React/Vite application and JavaScript tests
 - `tests/` — Python tests
 - `scripts/` — operational scripts such as document ingestion
 - `data/seed/` — source documents used to seed retrieval
 - `data/milvus/` — committed Milvus Lite deployment seed
 - `docs/` — project documentation
 
-Docker, Compose, LangGraph, and Shipit configuration remain at repository root because those tools use the repository as their build and deployment context.
+Docker, Compose, and LangGraph configuration remain at repository root because
+those tools use the repository as their build and deployment context.
 
 ## Environment
 
-Copy `.env.example` to `.env` and fill in the required values. Both backend LLM calls use OpenRouter and the model configured by `OPENROUTER_MODEL`. Vite is configured to read this root environment file, including `VITE_LANGGRAPH_URL`.
-
-`.env.shipit` is a separate, ignored deployment environment file used by `shipit.yaml` and `docker-compose.yml`.
+Copy `.env.example` to the ignored `.env` file and fill in the required values.
+The backend uses OpenRouter. `OPENROUTER_MODEL` controls general worksheet
+generation, while `OPENROUTER_INTENT_MODEL`, `OPENROUTER_REVISION_MODEL`, and
+`OPENROUTER_VERIFIER_MODEL` independently control intent extraction, worksheet
+revision, and revision verification.
+Docker Compose loads this same file for the DAS3 backend stack. `SUPABASE_URL`,
+`SUPABASE_SERVICE_ROLE_KEY`, and the optional `SUPABASE_JWKS_URL` are backend-only
+settings; never copy the service-role key into browser configuration.
 
 ## Backend setup
 
@@ -31,6 +39,7 @@ Python 3.12 is required.
 python3.12 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
+pip install -e .
 ```
 
 Run the LangGraph development server:
@@ -43,6 +52,7 @@ Run Python tests:
 
 ```sh
 python -m pytest tests/
+pip install hypothesis
 ```
 
 Integration tests use the committed Milvus seed and may download or load model weights:
@@ -66,20 +76,33 @@ cd frontend
 npm test
 ```
 
-## Full-stack Docker setup
+## Docker backend stack
 
-Copy `.env.example` to `.env`, set `POSTGRES_PASSWORD` and the API keys, then run:
+Copy `.env.example` to `.env`, set `POSTGRES_PASSWORD`, provider credentials, and
+the Supabase backend credentials, then run:
 
 ```sh
 docker compose up --build
 ```
 
-The frontend is available at `http://localhost:3000` by default. Its Nginx server
-proxies `/api` to the LangGraph backend, so the browser does not need a separate
-cross-origin backend URL. Compose overrides the local-development
-`VITE_LANGGRAPH_URL` with this same-origin `/api` route. Set `FRONTEND_PORT` to
-change the host port. For a separately hosted frontend, set
-`VITE_LANGGRAPH_URL` to the public backend URL at frontend image build time.
+Compose starts only the LangGraph backend, PostgreSQL, and Redis. LangGraph is
+available at `http://localhost:2024`; the root Vite frontend proxies
+`/api/worksheet` to that address during local development. PostgreSQL, Redis, and
+the Hugging Face model cache use named volumes, while Milvus Lite remains at
+`/app/data/milvus/docling.db` in the backend image.
+
+`langgraph dev` uses its in-memory development runtime. Its thread and run state
+is persisted across Compose container recreation by the `langgraph-state` named
+volume mounted at `/app/.langgraph_api`; the retained PostgreSQL and Redis
+services are not used by this runtime. A PostgreSQL-backed LangGraph deployment
+requires `langgraph up` with the required LangSmith deployment credential.
+
+This service still uses LangGraph's native thread/run protocol rather than the
+JSON envelope used by DAS 7. Its LangGraph deployment verifies Supabase JWTs
+against the project JWKS and permits only teacher profiles. New threads are
+stamped with the JWT subject as `metadata.owner`; all thread and run operations
+are filtered to that owner. Older threads without that metadata are therefore
+inaccessible without deleting the persisted LangGraph data.
 
 ## Document ingestion
 

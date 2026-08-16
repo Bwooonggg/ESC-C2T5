@@ -27,7 +27,7 @@ function generateWorksheet(criteria) {
   
   // 2. JEST UNIT TEST SUITE
   describe('Test File 3: Adaptive Worksheet Generator Panel', () => {
-      test('Should generate exactly 10 questions matching the "Geometry" category', () => {
+      test('generates 10 Geometry questions', () => {
         const criteria = { skillLevel: 'Grade 3', category: 'Geometry', quantity: 10 };
         const worksheet = generateWorksheet(criteria);
         
@@ -35,7 +35,7 @@ function generateWorksheet(criteria) {
         expect(worksheet.questions[0].tags).toContain('Geometry');
       });
     
-      test('Should fallback to lower difficulty matrix if user profile performance is low', () => {
+      test('lowers difficulty for low performance', () => {
         const pastPerformance = { averageScore: 45 }; 
         const targetDifficulty = determineAdaptiveLevel(pastPerformance);
         expect(targetDifficulty).toBe('Remedial/Foundational');

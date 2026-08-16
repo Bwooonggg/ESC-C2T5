@@ -24,12 +24,12 @@ beforeEach(async () => {
 })
 
 // IT-07 — Contact rejected before a report exists
-describe('POST /api/sessions/:id/contact before a report exists', () => {
+describe('POST /sessions/:id/contact before a report exists', () => {
   it('rejects with 409 and leaves the session and data file untouched', async () => {
-    const createRes = await request(app).post('/api/sessions').send({ screenerType: 'adult' })
+    const createRes = await request(app).post('/sessions').send({ screenerType: 'adult' })
     const session = createRes.body as { id: string }
 
-    const contactRes = await request(app).post(`/api/sessions/${session.id}/contact`).send(contact)
+    const contactRes = await request(app).post(`/sessions/${session.id}/contact`).send(contact)
 
     expect(contactRes.status).toBe(409)
     expect(contactRes.body).toEqual({
@@ -61,7 +61,7 @@ describe('POST /api/sessions/:id/contact before a report exists', () => {
  */
 const runDbTests = process.env.RUN_DB_INTEGRATION_TESTS === '1'
 
-describe.skipIf(!runDbTests)('POST /api/sessions/:id/contact with a real MySQL schema', () => {
+describe.skipIf(!runDbTests)('POST /sessions/:id/contact with a real MySQL schema', () => {
   const justSubmittedFile = path.join(
     projectRoot,
     'backend',
@@ -81,7 +81,7 @@ describe.skipIf(!runDbTests)('POST /api/sessions/:id/contact with a real MySQL s
     session = attachReport(session, 'Summary: recommend follow-up.')
     session = await save(session)
 
-    const contactRes = await request(app).post(`/api/sessions/${session.id}/contact`).send(contact)
+    const contactRes = await request(app).post(`/sessions/${session.id}/contact`).send(contact)
 
     expect(contactRes.status).toBe(200)
     expect(contactRes.body.stage).toBe('completed')

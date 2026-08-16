@@ -27,18 +27,18 @@ beforeEach(async () => {
   vi.mocked(decideNextStep).mockReset()
 })
 
-describe('POST /api/sessions/:id/messages with notes attached', () => {
+describe('POST /sessions/:id/messages with notes attached', () => {
   it('persists the notes and hands Claude a session that already carries them', async () => {
     vi.mocked(decideNextStep).mockResolvedValue({
       status: 'continue',
       question: 'How long have you noticed this?',
     })
 
-    const createRes = await request(app).post('/api/sessions').send({ screenerType: 'child' })
+    const createRes = await request(app).post('/sessions').send({ screenerType: 'child' })
     const session = createRes.body as { id: string }
 
     const messageRes = await request(app)
-      .post(`/api/sessions/${session.id}/messages`)
+      .post(`/sessions/${session.id}/messages`)
       .send({ message: 'He reverses letters', notes: 'He is 9 and reads slowly.' })
 
     expect(messageRes.status).toBe(200)
@@ -50,23 +50,23 @@ describe('POST /api/sessions/:id/messages with notes attached', () => {
       { role: 'user', content: 'He reverses letters' },
     ])
 
-    const getRes = await request(app).get(`/api/sessions/${session.id}`)
+    const getRes = await request(app).get(`/sessions/${session.id}`)
     expect(getRes.body.notes).toBe('He is 9 and reads slowly.')
   })
 
   it('leaves existing notes untouched when the field is omitted', async () => {
     vi.mocked(decideNextStep).mockResolvedValue({ status: 'continue', question: 'And then?' })
 
-    const createRes = await request(app).post('/api/sessions').send({ screenerType: 'child' })
+    const createRes = await request(app).post('/sessions').send({ screenerType: 'child' })
     const session = createRes.body as { id: string }
 
     await request(app)
-      .post(`/api/sessions/${session.id}/messages`)
+      .post(`/sessions/${session.id}/messages`)
       .send({ message: 'First', notes: 'Keep me.' })
 
     // No `notes` key at all — the controller only calls setNotes for strings.
     const second = await request(app)
-      .post(`/api/sessions/${session.id}/messages`)
+      .post(`/sessions/${session.id}/messages`)
       .send({ message: 'Second' })
 
     expect(second.status).toBe(200)

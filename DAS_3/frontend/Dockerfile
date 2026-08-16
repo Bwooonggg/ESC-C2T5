@@ -7,7 +7,7 @@ RUN npm ci
 
 COPY . .
 
-ARG VITE_LANGGRAPH_URL=/api
+ARG VITE_LANGGRAPH_URL=/api/worksheet
 ENV VITE_LANGGRAPH_URL=${VITE_LANGGRAPH_URL}
 RUN npm run build
 

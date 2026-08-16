@@ -1,0 +1,47 @@
+.card {
+    background: var(--bg-subtle);
+    border: 1px solid #e3e3e3;
+    border-left: 3px solid var(--accent);
+    border-radius: 4px;
+    padding: 13px 15px;
+}
+
+.heading {
+    margin: 0 0 12px;
+    color: var(--navy);
+    font-size: 15px;
+}
+
+.placeholder {
+    margin: 0 0 16px;
+    color: var(--text-muted);
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.body {
+    margin: 0 0 16px;
+    color: var(--text);
+    font-size: 12px;
+    line-height: 1.55;
+}
+
+.button {
+    background: var(--accent);
+    color: var(--on-accent);
+    border: none;
+    border-radius: 999px;
+    padding: 7px 12px;
+    font-size: 11px;
+    font-weight: 500;
+}
+
+.button:disabled {
+    opacity: 0.6;
+    cursor: default;
+}
+
+.error {
+    margin: 12px 0 0;
+    color: var(--error);
+}

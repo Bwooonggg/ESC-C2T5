@@ -14,6 +14,7 @@ checkpoints.db-wal
 /.idea
 /.github
 /.langgraph_api
+/.pytest-das3-*
 /__pycache__/
 __pycache__/
 /node_modules/

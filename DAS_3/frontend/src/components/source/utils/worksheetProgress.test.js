@@ -1,7 +1,7 @@
 import { getWorksheetProgress } from "./worksheetProgress.js";
 
 describe("getWorksheetProgress", () => {
-  test("reports retrieval after intent detection", () => {
+  test("reports retrieval", () => {
     const chunk = { data: { get_intent: { qn_type: "MCQ" } } };
 
     expect(getWorksheetProgress(chunk)).toBe(
@@ -9,7 +9,7 @@ describe("getWorksheetProgress", () => {
     );
   });
 
-  test("reports worksheet creation after retrieval", () => {
+  test("reports creation", () => {
     const chunk = {
       event: "updates",
       data: { retrieve_and_rerank: { rankedDocs: [] } },
@@ -20,7 +20,7 @@ describe("getWorksheetProgress", () => {
     );
   });
 
-  test("reports finalization for a nested worksheet update", () => {
+  test("reports finalization", () => {
     const chunk = {
       values: { update: { worksheet_agent: { generated_worksheet: {} } } },
     };
@@ -28,7 +28,7 @@ describe("getWorksheetProgress", () => {
     expect(getWorksheetProgress(chunk)).toBe("Finalizing your worksheet…");
   });
 
-  test("ignores unrelated stream events", () => {
+  test("ignores unrelated events", () => {
     expect(getWorksheetProgress({ data: { heartbeat: true } })).toBeNull();
   });
 });

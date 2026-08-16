@@ -1,0 +1,270 @@
+/* Global design tokens and element defaults only.
+ *
+ * Anything component-scoped belongs in a Component.module.css next to the
+ * component. Vite hashes those class names so they cannot collide; this file is
+ * the one place where a plain global selector is the right answer.
+ *
+ * The users here are parents of children with dyslexia, and PS7 names Usability,
+ * Clarity and Accessibility as crucial properties — so the choices below
+ * (generous line-height, left-aligned prose, a bounded measure, visible focus)
+ * are requirements, not taste. */
+
+:root {
+  --text: #4d4d4d;
+  --text-muted: #6c6c6c;
+  --text-h: #2a2d3a;
+  --bg: #f5f6f8;
+  --bg-subtle: #ffffff;
+  --border: #e6d4d5;
+
+  --accent: #e91626;
+  --accent-dark: #c22933;
+  --accent-bg: #fff1f2;
+  --accent-border: #e8aeb2;
+  --navy: #001634;
+  --on-accent: #ffffff;
+
+  --ok: #1c7572;
+  --warn: #b76b00;
+  --error: #c22933;
+
+  --shadow: 0 12px 34px rgba(77, 77, 77, 0.09);
+
+  --radius: 14px;
+  --space: 8px;
+
+  /* Atkinson Hyperlegible is designed for low-vision readers and is a common
+   * recommendation for dyslexic readers; it is not bundled yet, so this falls
+   * back to the system stack until Step 11 adds the font files. */
+  --sans: Poppins, 'Atkinson Hyperlegible', system-ui, 'Segoe UI', sans-serif;
+  --heading: var(--sans);
+  --mono: ui-monospace, Consolas, monospace;
+
+  /* ~1.7 line-height: dyslexic readers lose their place on tight leading. */
+  font: 18px/1.7 var(--sans);
+  letter-spacing: 0.01em;
+  color: var(--text);
+  background: var(--bg);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Toggled on <html> by ReadableFontToggle. Opt-in, not the default — dyslexia
+ * is not one thing and these settings do not suit everyone. */
+:root.dyslexic-font {
+  letter-spacing: 0.06em;
+  word-spacing: 0.16em;
+  font-size: 20px;
+  line-height: 1.9;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  color: var(--text);
+  background: var(--bg);
+}
+
+:root.dial-large-text {
+  font-size: 20px;
+}
+
+:root.dial-large-text .screen-shell {
+  font-size: 17px;
+}
+
+:root.dial-large-text .screen-shell .message p,
+:root.dial-large-text .screen-shell label,
+:root.dial-large-text .screen-shell legend,
+:root.dial-large-text .screen-shell button {
+  font-size: 16px;
+}
+
+:root.dial-large-text .worksheet-workspace,
+:root.dial-large-text .page-container {
+  font-size: 118%;
+}
+
+:root.dial-high-contrast {
+  --text: #000000;
+  --text-muted: #222222;
+  --text-h: #000000;
+  --bg: #ffffff;
+  --bg-subtle: #ffffff;
+  --border: #252525;
+  --accent: #a5000c;
+  --accent-dark: #78050d;
+  --accent-bg: #ffe7e9;
+  --accent-border: #78050d;
+  --navy: #000000;
+}
+
+:root.dial-high-contrast :focus-visible {
+  outline-color: #000000;
+}
+
+:root.dial-high-contrast ::selection {
+  color: #ffffff;
+  background: #000000;
+}
+
+h1,
+h2,
+h3 {
+  color: var(--text-h);
+  font-family: var(--heading);
+  line-height: 1.3;
+  text-wrap: balance;
+}
+
+/* Never justify: uneven word gaps create "rivers" of whitespace that dyslexic
+ * readers track down the page instead of across the line. */
+p,
+li {
+  text-align: left;
+  hyphens: none;
+}
+
+/* ~66 characters. Long lines make it hard to find the next line's start. */
+.prose {
+  max-width: 66ch;
+}
+
+a {
+  color: var(--accent);
+  text-underline-offset: 2px;
+}
+
+/* Visible focus for keyboard users. :focus-visible, so it does not fire on
+ * mouse clicks. Never remove this without an equally visible replacement. */
+:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+}
+
+.accessibility-menu {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex: none;
+  padding: 3px;
+  border: 1px solid #d8d8d8;
+  border-radius: 999px;
+  color: var(--navy);
+  background: #ffffff;
+}
+
+.accessibility-menu button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 28px;
+  padding: 4px 8px;
+  border: 0;
+  border-radius: 999px;
+  color: inherit;
+  background: transparent;
+  font-size: 10px !important;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.accessibility-menu button > span {
+  flex: none;
+  color: inherit;
+}
+
+.accessibility-menu button:hover { background: #f2f2f2; }
+.accessibility-menu button[aria-pressed="true"] { color: #ffffff; background: var(--navy); }
+.contrast-icon { width: 13px; height: 13px; border: 1.5px solid currentColor; border-radius: 50%; background: linear-gradient(90deg, currentColor 50%, transparent 50%); }
+
+:root.dial-high-contrast .accessibility-menu { border-color: #000000; }
+:root.dial-high-contrast .accessibility-menu button { outline: 1px solid transparent; }
+:root.dial-high-contrast .accessibility-menu button[aria-pressed="true"] { color: #ffffff !important; background: #000000 !important; }
+:root.dial-high-contrast .all-services-link,
+:root.dial-high-contrast .hero-action,
+:root.dial-high-contrast .service-number,
+:root.dial-high-contrast .screen-card button,
+:root.dial-high-contrast .worksheet-composer > button {
+  color: #ffffff !important;
+  background: #000000 !important;
+  border-color: #000000 !important;
+}
+
+:root.dial-high-contrast .message.user,
+:root.dial-high-contrast .work-message.user,
+:root.dial-high-contrast .toggleBox {
+  color: #000000 !important;
+  background: #fff2a8 !important;
+  border-color: #000000 !important;
+}
+
+@media (max-width: 680px) {
+  .accessibility-label { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+  .accessibility-menu button { padding-inline: 8px; }
+}
+
+/* Base look for the few native form controls the app uses (child picker,
+ * frequency select, email input). Component-specific buttons still set their
+ * own background/border on top of this. */
+input,
+select {
+  font: inherit;
+  color: var(--text);
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px 12px;
+}
+
+textarea {
+  font: inherit;
+  color: var(--text);
+  background: #fff;
+}
+
+.page-container {
+  width: min(1240px, calc(100% - 48px));
+  margin: 0 auto;
+  padding: 16px 0 32px;
+}
+
+@media (max-width: 700px) {
+  .page-container { width: min(100% - 28px, 1240px); padding-top: 20px; }
+}
+
+input:focus-visible,
+select:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 1px;
+}
+
+table {
+  border-collapse: collapse;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

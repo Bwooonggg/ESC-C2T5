@@ -33,8 +33,8 @@ function stubContactEndpoint() {
   const received: unknown[] = []
 
   server.use(
-    http.post('*/api/sessions', () => HttpResponse.json(sessionAtReportStage)),
-    http.post('*/api/sessions/:id/contact', async ({ request }) => {
+    http.post('*/api/screening/sessions', () => HttpResponse.json(sessionAtReportStage)),
+    http.post('*/api/screening/sessions/:id/contact', async ({ request }) => {
       const body = await request.json()
       received.push(body)
       return HttpResponse.json({
@@ -84,8 +84,8 @@ describe('ScreenerPage at the report stage', () => {
   it('keeps the report on screen and shows the error when the contact save fails', async () => {
     const user = userEvent.setup()
     server.use(
-      http.post('*/api/sessions', () => HttpResponse.json(sessionAtReportStage)),
-      http.post('*/api/sessions/:id/contact', () =>
+      http.post('*/api/screening/sessions', () => HttpResponse.json(sessionAtReportStage)),
+      http.post('*/api/screening/sessions/:id/contact', () =>
         HttpResponse.json(
           { error: 'A screening report must exist before DAS services can be engaged.' },
           { status: 409 },

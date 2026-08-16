@@ -8,6 +8,7 @@
 # Environment and local runtime files
 .env
 .env.*
+!backend/.env.example
 *.log
 
 # Tooling and local cache noise

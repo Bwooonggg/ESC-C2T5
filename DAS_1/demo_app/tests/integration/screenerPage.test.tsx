@@ -24,8 +24,11 @@ afterEach(() => {
 // IT-11 — ScreenerPage + hook wiring against a mocked network
 describe('ScreenerPage (child screener) under React StrictMode', () => {
   it('starts exactly one session and re-renders the selected radio on answer', async () => {
-    const sessionCreations = countRequestsMatching('POST', /^\/api\/sessions$/)
-    const answerSubmissions = countRequestsMatching('POST', /^\/api\/sessions\/[^/]+\/responses$/)
+    const sessionCreations = countRequestsMatching('POST', /^\/api\/screening\/sessions$/)
+    const answerSubmissions = countRequestsMatching(
+      'POST',
+      /^\/api\/screening\/sessions\/[^/]+\/responses$/,
+    )
 
     render(
       <StrictMode>
@@ -54,7 +57,7 @@ describe('ScreenerPage (child screener) under React StrictMode', () => {
 describe('ScreenerPage (adult screener) when the message endpoint fails', () => {
   it('renders the alert text instead of throwing, and resets loading state', async () => {
     server.use(
-      http.post('*/api/sessions/:id/messages', () =>
+      http.post('*/api/screening/sessions/:id/messages', () =>
         HttpResponse.json({ error: 'Claude is temporarily unavailable.' }, { status: 500 }),
       ),
     )

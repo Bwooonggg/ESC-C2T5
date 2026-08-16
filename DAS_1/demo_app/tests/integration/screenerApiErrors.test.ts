@@ -20,7 +20,7 @@ afterEach(() => {
 describe('screenerApi error decoding', () => {
   it('falls back to a status message when the error body is not JSON', async () => {
     server.use(
-      http.post('*/api/sessions', () =>
+      http.post('*/api/screening/sessions', () =>
         HttpResponse.text('<html><body>502 Bad Gateway</body></html>', { status: 502 }),
       ),
     )
@@ -30,7 +30,7 @@ describe('screenerApi error decoding', () => {
 
   it('falls back to a status message when the error body is empty', async () => {
     server.use(
-      http.post('*/api/sessions/:id/messages', () => new HttpResponse(null, { status: 503 })),
+      http.post('*/api/screening/sessions/:id/messages', () => new HttpResponse(null, { status: 503 })),
     )
 
     await expect(api.sendMessage('any-id', 'hello', '')).rejects.toThrow(
@@ -40,7 +40,7 @@ describe('screenerApi error decoding', () => {
 
   it('prefers the server\'s own message whenever the body carries one', async () => {
     server.use(
-      http.post('*/api/sessions/:id/report', () =>
+      http.post('*/api/screening/sessions/:id/report', () =>
         HttpResponse.json({ error: 'The screener produced an empty report.' }, { status: 502 }),
       ),
     )
@@ -53,7 +53,7 @@ describe('screenerApi error decoding', () => {
   it('sends the contact details as the request body, not wrapped in an envelope', async () => {
     let body: unknown
     server.use(
-      http.post('*/api/sessions/:id/contact', async ({ request }) => {
+      http.post('*/api/screening/sessions/:id/contact', async ({ request }) => {
         body = await request.json()
         return HttpResponse.json({ id: 'any-id', stage: 'completed' })
       }),

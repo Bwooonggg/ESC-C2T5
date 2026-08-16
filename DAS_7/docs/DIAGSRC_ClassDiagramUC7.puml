@@ -1,0 +1,71 @@
+@startuml
+title DAS 7 Parent Insight Dashboard - Class Diagram
+
+top to bottom direction
+hide circle
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+
+class User {
+  -userId: String
+  -email: String
+}
+
+class Parent {
+  -parentId: String
+  -name: String
+  -mobileNumber: String
+}
+
+class Student {
+  -studentId: String
+  -name: String
+  -dateOfBirth: Date
+  -bandLevel: String
+}
+
+class ProgressRecord {
+  -recordId: String
+  -date: Date
+  -skillArea: String
+  -score: Number
+  -notes: String
+}
+
+class Summary {
+  -summaryId: String
+  -content: String
+  -generatedAt: DateTime
+}
+
+class Recommendation {
+  -recommendationId: String
+  -content: String
+  -generatedAt: DateTime
+}
+
+class NotificationPreference {
+  -enabled: Boolean
+  -frequency: String
+  -recipientEmail: String
+}
+
+class EmailNotification {
+  -notificationId: String
+  -recipientEmail: String
+  -subject: String
+  -body: String
+  -sentAt: DateTime
+}
+
+User <|-- Parent
+Parent "*" -- "*" Student : guardian of
+Student "1" *-- "0..*" ProgressRecord : has
+Student "1" *-- "0..*" Summary : summarised by
+Summary "1" *-- "0..*" Recommendation : basis for
+Parent "1" *-- "0..1" NotificationPreference : configures
+Parent "1" *-- "0..*" EmailNotification : receives
+EmailNotification "0..*" --> "0..1" Summary : includes
+
+@enduml

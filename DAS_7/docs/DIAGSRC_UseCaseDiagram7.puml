@@ -1,0 +1,64 @@
+@startuml
+title DAS 7 Parent Insight Dashboard - Use Case Diagram
+
+left to right direction
+skinparam shadowing false
+skinparam packageStyle rectangle
+
+actor Parent
+actor "Scheduler clock" as Clock
+
+rectangle "DAS 7 Parent Insight Dashboard" {
+  package "Parent-facing features" {
+    usecase "Authenticate parent" as UCAuth
+    usecase "View linked students" as UCStudents
+    usecase "View progress" as UCProgress
+    usecase "Get current summary" as UCSummary
+    usecase "Generate home\nrecommendations" as UCRecommendations
+    usecase "View notification\npreferences" as UCViewPrefs
+    usecase "Save notification\npreferences" as UCSavePrefs
+    usecase "Send progress\nupdate now" as UCSendNow
+  }
+
+  package "Notification processing" {
+    usecase "Send due scheduled\nprogress updates" as UCScheduled
+    usecase "Build summaries for\nall linked students" as UCBuildEmail
+    usecase "Deliver progress email" as UCDeliver
+  }
+}
+
+actor "Supabase Auth / JWKS" as Auth
+actor "LLM Provider" as LLM
+actor "Email Provider" as Email
+
+Parent --> UCAuth
+Parent --> UCStudents
+Parent --> UCProgress
+Parent --> UCRecommendations
+Parent --> UCViewPrefs
+Parent --> UCSavePrefs
+Parent --> UCSendNow
+Clock --> UCScheduled
+
+UCProgress .> UCSummary : <<include>>
+UCSendNow .> UCBuildEmail : <<include>>
+UCScheduled .> UCBuildEmail : <<include>>
+UCBuildEmail .> UCSummary : <<include>>
+UCBuildEmail .> UCDeliver : <<include>>
+
+UCAuth --> Auth
+UCSummary --> LLM
+UCRecommendations --> LLM
+UCDeliver --> Email
+
+note bottom of UCSummary
+  Reuses a stored summary when current;
+  otherwise generates and persists one.
+end note
+
+note bottom of UCAuth
+  Every parent-facing API operation verifies the JWT
+  and resolves its subject to a registered parent.
+end note
+
+@enduml

@@ -42,15 +42,15 @@ afterEach(() => {
 })
 
 // IT-18 — Claude is unreachable
-describe('POST /api/sessions/:id/messages when the Claude service rejects', () => {
+describe('POST /sessions/:id/messages when the Claude service rejects', () => {
   it('surfaces a 500 in the documented error shape and rolls the turn back', async () => {
-    const createRes = await request(app).post('/api/sessions').send({ screenerType: 'adult' })
+    const createRes = await request(app).post('/sessions').send({ screenerType: 'adult' })
     const session = createRes.body as { id: string }
 
     vi.mocked(decideNextStep).mockRejectedValue(new Error('Claude is temporarily unavailable.'))
 
     const res = await request(app)
-      .post(`/api/sessions/${session.id}/messages`)
+      .post(`/sessions/${session.id}/messages`)
       .send({ message: 'I mix up letters' })
 
     expect(res.status).toBe(500)
@@ -65,14 +65,14 @@ describe('POST /api/sessions/:id/messages when the Claude service rejects', () =
 })
 
 // IT-19 — Claude returns an empty report
-describe('POST /api/sessions/:id/report when Claude returns an empty report', () => {
+describe('POST /sessions/:id/report when Claude returns an empty report', () => {
   it('maps the model rule to 502 and leaves the session in the screening stage', async () => {
-    const createRes = await request(app).post('/api/sessions').send({ screenerType: 'adult' })
+    const createRes = await request(app).post('/sessions').send({ screenerType: 'adult' })
     const session = createRes.body as { id: string }
 
     vi.mocked(generateReport).mockResolvedValue('   ')
 
-    const res = await request(app).post(`/api/sessions/${session.id}/report`).send({})
+    const res = await request(app).post(`/sessions/${session.id}/report`).send({})
 
     expect(res.status).toBe(502)
     expect(res.body).toEqual({ error: 'The screener produced an empty report.' })
@@ -86,13 +86,13 @@ describe('POST /api/sessions/:id/report when Claude returns an empty report', ()
 // IT-19b — a non-Error thrown anywhere below still produces the {error} shape
 describe('errorHandler with a non-Error rejection', () => {
   it('falls back to 500 "Server error" rather than leaking the raw value', async () => {
-    const createRes = await request(app).post('/api/sessions').send({ screenerType: 'adult' })
+    const createRes = await request(app).post('/sessions').send({ screenerType: 'adult' })
     const session = createRes.body as { id: string }
 
     vi.mocked(decideNextStep).mockRejectedValue('socket hang up')
 
     const res = await request(app)
-      .post(`/api/sessions/${session.id}/messages`)
+      .post(`/sessions/${session.id}/messages`)
       .send({ message: 'hello' })
 
     expect(res.status).toBe(500)
