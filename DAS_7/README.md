@@ -11,7 +11,11 @@ DAS7 is the Express and TypeScript backend for the Parent Insight Dashboard. It 
 
 The service stores data in the shared Supabase project's `insight` schema. Supabase Auth supplies user identities and access tokens. Summary and recommendation generation can use either the deterministic local stub or OpenRouter; email can use either the in-memory fake or Brevo.
 
-For the detailed design rationale, data model, and error semantics, see [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md). The current unit-test design is in [`docs/UNIT_TEST_PLAN.md`](docs/UNIT_TEST_PLAN.md), and the frontend API contract is in [`docs/FRONTEND_INTEGRATION.md`](docs/FRONTEND_INTEGRATION.md).
+For the detailed design rationale, data model, and error semantics, see
+[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md). The test documentation is split
+into [unit](docs/TEST_UNIT.md), [integration](docs/TEST_INTEGRATION.md), and
+[browser UI](docs/TEST_UI.md) plans. The browser-facing API conventions are in
+the root [`API_CONTRACTS.md`](../API_CONTRACTS.md).
 
 ## Backend structure
 
@@ -39,11 +43,12 @@ DAS_7/
 │       ├── llm/                 stub and OpenRouter LLM implementations
 │       └── email/               fake and Brevo email implementations
 ├── scripts/seed.ts              repeatable demonstration-data seed
+├── fuzzing/preference/          preference-validation fuzzing harness
 ├── test/
 │   ├── unit/                    offline unit tests with direct dependencies mocked
 │   ├── integration/             real app, routes, JWT verification, and Supabase data
 │   └── helpers/                 integration harness and test-user authentication
-├── docs/                        architecture, diagrams, test plan, frontend guide
+├── docs/                        architecture, diagrams, and test plans
 ├── .env.example                 runtime and integration-test environment template
 ├── jest.config.cjs
 ├── package.json
@@ -404,7 +409,10 @@ The interval values are milliseconds. The defaults above are 15 minutes, 7 days,
 npm test -- test/unit
 ```
 
-The unit suite contains **174 tests** and runs offline. It isolates routes, authentication helpers, services, repositories, row mappers, schedulers, and provider adapters by mocking each unit's direct outgoing dependencies. No unit test contacts Supabase, OpenRouter, or Brevo.
+The unit suite runs offline. It isolates routes, authentication helpers, services,
+repositories, row mappers, schedulers, and provider adapters by mocking each
+unit's direct outgoing dependencies. No unit test contacts Supabase, OpenRouter,
+or Brevo. Run the command above for the current test count and result.
 
 ### Integration tests
 

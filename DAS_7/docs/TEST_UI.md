@@ -1,8 +1,8 @@
 # DAS 7 Selenium UI Test Plan
 
-**Status:** Approved and implemented. All **10 Selenium UI tests pass** in headless Chrome.
-The existing frontend regression suite also passes with **7 suites and 41 tests**, and the
-production frontend build succeeds.
+**Status:** Approved and implemented as 10 Selenium UI cases. Use the commands
+below for current results; frontend Jest totals are not duplicated here because
+the shared frontend covers all three subsystems and changes independently.
 
 ## 1. Objective
 
@@ -271,7 +271,7 @@ Verification results:
 | Verification | Result |
 | --- | --- |
 | Selenium UI7-01 through UI7-10 | 10/10 passed |
-| Existing frontend Jest tests | 7/7 suites, 41/41 tests passed |
+| Existing frontend Jest tests | Run `npm test` from `frontend/` for the current result |
 | TypeScript and Vite production build | Passed |
 | Production dependency audit | 0 vulnerabilities |
 

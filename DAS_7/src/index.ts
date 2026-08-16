@@ -111,7 +111,7 @@ const deps: Deps = {
     insightService, preferenceService, notifierService,
 };
 
-// 0.0.0.0, not localhost: the container is reached through Traefik.
+// Bind every local interface so the root Vite proxy can reach this host process.
 const server = createApp(deps).listen(config.port, '0.0.0.0', () => {
     console.log(
         `[das7] listening on http://0.0.0.0:${config.port}`

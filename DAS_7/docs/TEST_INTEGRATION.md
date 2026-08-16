@@ -1,8 +1,9 @@
 # DAS 7 Bottom-Up Integration Test Plan
 
-**Status:** Approved and implemented. The verified result is **8 integration suites and 38
-passing integration tests**. The complete DAS 7 regression run is **18 suites and 148 tests
-passing**.
+**Status:** Approved and implemented as 8 integration suites containing 38 test
+cases. Use the commands in this document for the current result; totals for the
+complete regression suite are intentionally not duplicated here because they
+change as unit coverage grows.
 
 ## 1. Objective
 
@@ -19,9 +20,9 @@ This plan follows the lecture's **bottom-up call-graph technique**:
 
 The source designs are:
 
-- `UC7_ClassDiagram.puml`
-- `sequenceDiagram7_1.puml` — Track Child's Progress
-- `sequenceDiagram7_2.puml` — Notify Parent
+- `DIAGSRC_ClassDiagramUC7.puml`
+- `DIAGSRC_SequenceDiagram7_1.puml` — Track Child's Progress
+- `DIAGSRC_SequenceDiagram7_2.puml` — Notify Parent
 
 ## 2. Scope
 
@@ -289,7 +290,7 @@ The format below follows the integration/system test-case example from the lectu
 | Test case ID | IT7B-H01 (normal and exception) |
 | --- | --- |
 | Test case name | Save notification preferences and send an update now |
-| Objective | Verify the parent-initiated notification path in `sequenceDiagram7_2.puml`. |
+| Objective | Verify the parent-initiated notification path in `DIAGSRC_SequenceDiagram7_2.puml`. |
 | Pre-conditions | Parent A is authenticated and all linked students have progress. |
 | Event Sequence — Input | Send authenticated `PUT /parents/{parentAId}/preferences` with valid enabled settings. |
 | Event Sequence — Output | HTTP 200 returns the normalized stored preference. |
@@ -355,4 +356,4 @@ Verification was performed in bottom-up order:
 2. Level 2 service suites, including Level 4 scheduler cases: 13/13 passed.
 3. Level 3 HTTP/auth suites: 22/22 passed.
 4. `npm run typecheck`: passed.
-5. Complete `npm test` regression: 18/18 suites and 148/148 tests passed.
+5. Run the complete regression with `npm test`; its total is reported by Jest rather than copied into this document.

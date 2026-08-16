@@ -30,6 +30,7 @@ export function createInsightService(deps: InsightDeps): InsightService {
 
         const latest = await summaryRepo.latestByStudent(studentId);
         const newest = await progressRepo.latestCreatedAt(studentId);
+        // true if no summary/newest progress date supersedes the newest summary date
         const stale = !latest
             || (newest !== null && Date.parse(newest) > Date.parse(latest.generatedAt));
         if (!stale) return latest;

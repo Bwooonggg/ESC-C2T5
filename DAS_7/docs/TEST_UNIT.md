@@ -2,9 +2,18 @@
 
 ## Scope and counting rule
 
-This plan follows `sequenceDiagram7_1.puml` and `sequenceDiagram7_2.puml`, then maps each diagram activation to the current backend implementation. It also covers the explicitly selected authentication, authorization, identity lookup, and mapping units that run outside the two diagram flows. The implementation is the test oracle. Each test isolates one unit and mocks only that unit's direct outgoing dependencies.
+This plan follows `DIAGSRC_SequenceDiagram7_1.puml` and
+`DIAGSRC_SequenceDiagram7_2.puml`, then maps each diagram activation to the
+current backend implementation. It also covers the explicitly selected
+authentication, authorization, identity lookup, and mapping units that run
+outside the two diagram flows. The implementation is the test oracle. Each test
+isolates one unit and mocks only that unit's direct outgoing dependencies.
 
-Every table row is one separately reported Jest test. A row never combines several boundary values, equivalence-class representatives, or loop cardinalities. Tests may still use `it.each`, but each dataset entry must have its own Test ID and its own row below. The plan contains **174 unit tests**.
+Every table row is one separately reported Jest test. A row never combines
+several boundary values, equivalence-class representatives, or loop
+cardinalities. Tests may still use `it.each`, but each dataset entry must have
+its own Test ID and its own row below. Jest's output is authoritative for the
+current executed test count.
 
 The UI and external actors are outside this backend plan. Repeated calls to the same implementation unit are covered once, with separate rows for their distinct paths.
 
