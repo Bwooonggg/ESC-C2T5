@@ -79,8 +79,12 @@ describeIntegration('preferences API (integration)', () => {
         const strangerId = randomUUID();
         const auth = `Bearer ${h.tokenA}`;
 
-        const getForeign = await request(h.app).get(prefsPath(h.parentB.parentId)).set('Authorization', auth);
-        const getUnknown = await request(h.app).get(prefsPath(strangerId)).set('Authorization', auth);
+        const getForeign = await request(h.app)
+            .get(prefsPath(h.parentB.parentId))
+            .set('Authorization', auth);
+        const getUnknown = await request(h.app)
+            .get(prefsPath(strangerId))
+            .set('Authorization', auth);
 
         expect(getForeign.status).toBe(404);
         expect(getForeign.body).toEqual({ ok: false, error: 'notFound' });
@@ -88,8 +92,14 @@ describeIntegration('preferences API (integration)', () => {
         expect(getUnknown.body).toEqual(getForeign.body);
 
         const body = { enabled: true, frequency: 'Monthly', recipientEmail: 'b@test.dev' };
-        const putForeign = await request(h.app).put(prefsPath(h.parentB.parentId)).set('Authorization', auth).send(body);
-        const putUnknown = await request(h.app).put(prefsPath(strangerId)).set('Authorization', auth).send(body);
+        const putForeign = await request(h.app)
+            .put(prefsPath(h.parentB.parentId))
+            .set('Authorization', auth)
+            .send(body);
+        const putUnknown = await request(h.app)
+            .put(prefsPath(strangerId))
+            .set('Authorization', auth)
+            .send(body);
 
         expect(putForeign.status).toBe(404);
         expect(putForeign.body).toEqual({ ok: false, error: 'notFound' });

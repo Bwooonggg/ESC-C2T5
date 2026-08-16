@@ -107,7 +107,9 @@ class ControllableLlmClient implements LlmClient, LlmControl {
         input: Parameters<LlmClient['generateSummary']>[0],
     ): Promise<string> {
         this.summaryCalls += 1;
-        if (this.mode === 'fail') throw new LlmUnavailableError('harness: llm forced to fail');
+        if (this.mode === 'fail') {
+            throw new LlmUnavailableError('harness: llm forced to fail');
+        }
         return this.inner.generateSummary(input);
     }
 
@@ -115,14 +117,18 @@ class ControllableLlmClient implements LlmClient, LlmControl {
         input: Parameters<LlmClient['generateRecommendation']>[0],
     ): Promise<string> {
         this.recommendationCalls += 1;
-        if (this.mode === 'fail') throw new LlmUnavailableError('harness: llm forced to fail');
+        if (this.mode === 'fail') {
+            throw new LlmUnavailableError('harness: llm forced to fail');
+        }
         return this.inner.generateRecommendation(input);
     }
 }
 
 function requireEnv(key: string): string {
     const value = (process.env[key] ?? '').trim();
-    if (value === '') throw new Error(`createHarness needs ${key} in the environment`);
+    if (value === '') {
+        throw new Error(`createHarness needs ${key} in the environment`);
+    }
     return value;
 }
 
@@ -201,7 +207,9 @@ export async function createHarness(): Promise<TestHarness> {
             })
             .select()
             .single();
-        if (error) throw new Error(`harness: insert parent — ${error.message}`);
+        if (error) {
+            throw new Error(`harness: insert parent — ${error.message}`);
+        }
         parentIds.push(parentId);
         return rowToParent(data as ParentRow, []);
     }
@@ -220,13 +228,17 @@ export async function createHarness(): Promise<TestHarness> {
             })
             .select()
             .single();
-        if (inserted.error) throw new Error(`harness: insert student — ${inserted.error.message}`);
+        if (inserted.error) {
+            throw new Error(`harness: insert student — ${inserted.error.message}`);
+        }
         studentIds.push(studentId);
 
         const link = await client
             .from('parent_students')
             .insert({ parent_id: opts.parentId, student_id: studentId });
-        if (link.error) throw new Error(`harness: link guardianship — ${link.error.message}`);
+        if (link.error) {
+            throw new Error(`harness: link guardianship — ${link.error.message}`);
+        }
 
         if (opts.withProgress) {
             const progress = await client
@@ -247,17 +259,31 @@ export async function createHarness(): Promise<TestHarness> {
         const failures: string[] = [];
 
         if (parentIds.length > 0) {
-            const { error } = await client.from('parents').delete().in('parent_id', parentIds);
-            if (error) failures.push(`parents — ${error.message}`);
-            else parentIds.length = 0;
+            const { error } = await client
+                .from('parents')
+                .delete()
+                .in('parent_id', parentIds);
+            if (error) {
+                failures.push(`parents — ${error.message}`);
+            } else {
+                parentIds.length = 0;
+            }
         }
         if (studentIds.length > 0) {
-            const { error } = await client.from('students').delete().in('student_id', studentIds);
-            if (error) failures.push(`students — ${error.message}`);
-            else studentIds.length = 0;
+            const { error } = await client
+                .from('students')
+                .delete()
+                .in('student_id', studentIds);
+            if (error) {
+                failures.push(`students — ${error.message}`);
+            } else {
+                studentIds.length = 0;
+            }
         }
 
-        if (failures.length > 0) throw new Error(`harness: cleanup failed — ${failures.join('; ')}`);
+        if (failures.length > 0) {
+            throw new Error(`harness: cleanup failed — ${failures.join('; ')}`);
+        }
     }
 
     // A crashed earlier run can leave a parent holding the test user's
@@ -268,8 +294,12 @@ export async function createHarness(): Promise<TestHarness> {
             .select('parent_id, name')
             .eq('auth_user_id', authUserId)
             .maybeSingle();
-        if (error) throw new Error(`harness: read parent by auth user — ${error.message}`);
-        if (data === null) return;
+        if (error) {
+            throw new Error(`harness: read parent by auth user — ${error.message}`);
+        }
+        if (data === null) {
+            return;
+        }
 
         const stale = data as { parent_id: string; name: string };
         if (stale.name !== HARNESS_PARENT_NAME) {

@@ -6,9 +6,15 @@ import type { TestHarness } from '../helpers/harness.js';
 describeIntegration('track progress (IT7A)', () => {
     let h: TestHarness;
 
-    beforeAll(async () => { h = await createHarness(); });
-    beforeEach(() => h.llm.reset());
-    afterAll(async () => { await h?.cleanup(); });
+    beforeAll(async () => {
+        h = await createHarness();
+    });
+    beforeEach(() => {
+        h.llm.reset();
+    });
+    afterAll(async () => {
+        await h?.cleanup();
+    });
 
     it('IT7A-H01 tracks progress through the authenticated HTTP endpoint', async () => {
         const res = await request(h.app)

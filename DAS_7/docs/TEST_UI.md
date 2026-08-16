@@ -1,48 +1,8 @@
-# DAS 7 Selenium UI Test Plan
+# DAS 7 Selenium UI test plan
 
-**Status:** Approved and implemented as 10 Selenium UI cases. Use the commands
-below for current results; frontend Jest totals are not duplicated here because
-the shared frontend covers all three subsystems and changes independently.
+## 1. Tooling and execution
 
-## 1. Objective
-
-Verify the DAS 7 React interface in a real Chrome browser without testing the backend,
-Supabase, authentication service, database, email provider, or LLM provider.
-
-```text
-Chrome -> React/Vite -> frontend preview-data module
-```
-
-These are **UI tests**, not end-to-end tests. Vite will run with `VITE_USE_STUBS=true`, causing
-the frontend to use its built-in Parent Insight preview data. No DAS 7 backend process is
-required.
-
-## 2. Scope
-
-### Included
-
-- Login-page layout and controls
-- Parent Insight header and navigation
-- Student banner, metadata, and child selector
-- Progress, skill score, summary, and recommendation presentation
-- Email-update controls and user feedback
-- Loading and button states visible to the user
-- Larger-text and high-contrast controls
-- Logout navigation
-
-### Excluded
-
-- Express routes, services, repositories, and Supabase
-- Real login and authorization behaviour
-- Database persistence
-- Real email or generated-content providers
-- API contract and end-to-end tests
-- Pixel-by-pixel visual-regression testing
-- Other DAS subsystems
-
-## 3. Proposed tooling and execution
-
-| Item | Proposal |
+| Item | Setting |
 | --- | --- |
 | Browser automation | Selenium WebDriver for JavaScript |
 | Test runner | Node.js built-in test runner |
@@ -53,20 +13,19 @@ required.
 | Backend process | Not started |
 | Failure evidence | Current URL and screenshot, with no credentials |
 
-Proposed commands after approval:
+Commands:
 
 ```bash
 npm run test:ui:das7
 npm run test:ui:das7:headed
 ```
 
-The normal command will start Vite in preview-data mode, run Chrome headlessly, and stop the
-Vite process that it started. The headed command will show Chrome while executing the same
-tests.
+The normal command starts Vite in preview-data mode, runs the tests in headless Chrome, and
+stops the Vite process afterward. The headed command runs the same tests with Chrome visible.
 
-## 4. UI test data
+## 2. UI test data
 
-The tests use the frontend's existing deterministic preview data:
+The tests use the frontend's existing deterministic preview data.
 
 | Preview item | Expected UI value |
 | --- | --- |
@@ -77,33 +36,31 @@ The tests use the frontend's existing deterministic preview data:
 | Skills | Six skill areas |
 | Initial email setting | Enabled, Fortnightly, `jamie.tan@example.com` |
 
-Preview mode is restricted by the application to `localhost` and `127.0.0.1`. UI tests will
-not contain or require Supabase credentials.
+The application restricts preview mode to `localhost` and `127.0.0.1`. The UI tests do not
+contain or require Supabase credentials.
 
-Each test starts with a fresh browser session so the preview preference and local-storage state
-do not leak between cases.
+Each test starts a fresh browser session to prevent preview preferences and local storage from
+leaking between cases.
 
-## 5. Synchronization and selectors
+## 3. Synchronization and selectors
 
-The React UI updates asynchronously, including a deliberate short preview-data delay. Selenium
-will use explicit waits for visible text, element state, and changed values. Fixed-duration
-sleeps will not be the normal synchronization mechanism.
+The React UI updates asynchronously and includes a short preview-data delay. Selenium uses explicit waits for visible text, element state, and value changes instead of fixed-duration
+sleeps.
 
-Selectors will prefer:
+Use selectors in this order:
 
 1. IDs: `student-select`, `notify-enabled`, `notify-frequency`, `notify-email`
 2. Form names: `email`, `password`
 3. Accessible labels and roles: `Main`, `Display settings`, status and alert roles
 4. Button and heading text when that text is part of the interface contract
 
-Generated CSS-module class names will not be used as selectors. The test may inspect the
-document root for the stable accessibility classes `dial-large-text` and
-`dial-high-contrast`.
+Do not use generated CSS-module class names as selectors. Tests may inspect the document root
+for the stable accessibility classes `dial-large-text` and `dial-high-contrast`.
 
-## 6. Test case specifications
+## 4. Test case specifications
 
-The tables use the lecture format: ID, test name, objective, preconditions, alternating
-input/output events, and postconditions.
+The tables follow the lecture format with an ID, test name, objective, preconditions,
+alternating input and output events, and postconditions.
 
 ### UI7-01
 
@@ -234,46 +191,3 @@ input/output events, and postconditions.
 | Event Sequence - Input | Press `Log out`. |
 | Event Sequence - Output | The browser navigates to `/insights/login` and the login form becomes visible. |
 | Post-conditions | The UI no longer displays parent or student dashboard information. |
-
-## 7. Traceability
-
-| UI area | Test cases |
-| --- | --- |
-| Login page | UI7-01, UI7-10 |
-| Header and navigation | UI7-02, UI7-06, UI7-10 |
-| Child progress dashboard | UI7-02, UI7-03, UI7-04 |
-| Summary and recommendations | UI7-03, UI7-04, UI7-05 |
-| Email-update form | UI7-06, UI7-07, UI7-08 |
-| Accessibility controls | UI7-09 |
-
-## 8. Acceptance criteria
-
-The UI test implementation is complete when:
-
-- All ten cases pass in Chrome using frontend preview data.
-- No backend process, Supabase credential, test database, email provider, or LLM is used.
-- Tests use explicit waits and stable selectors.
-- Every failure saves a screenshot and reports the current URL.
-- Browser state is isolated between test cases.
-- Existing frontend unit tests and build still pass.
-
-## 9. Implementation and verified results
-
-| Artifact | Location |
-| --- | --- |
-| UI cases | `frontend/test/ui/das7/das7-ui.spec.js` |
-| Vite, Chrome, wait, and screenshot support | `frontend/test/ui/das7/support.js` |
-| Headless command | `npm run test:ui:das7` from `frontend/` |
-| Headed command | `npm run test:ui:das7:headed` from `frontend/` |
-
-Verification results:
-
-| Verification | Result |
-| --- | --- |
-| Selenium UI7-01 through UI7-10 | 10/10 passed |
-| Existing frontend Jest tests | Run `npm test` from `frontend/` for the current result |
-| TypeScript and Vite production build | Passed |
-| Production dependency audit | 0 vulnerabilities |
-
-The Selenium suite starts only Vite with `VITE_USE_STUBS=true`. It does not start or call the
-DAS 7 backend, Supabase, a database, an email provider, or an LLM provider.

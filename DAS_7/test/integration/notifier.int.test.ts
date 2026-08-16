@@ -31,7 +31,10 @@ describeIntegration('notifier (integration)', () => {
         const student = await h.createStudent({ parentId: parent.parentId, withProgress });
         const recipientEmail = `notify-${randomUUID()}@test.dev`;
         await h.deps.preferenceRepo.upsert({
-            parentId: parent.parentId, enabled, frequency: 'Weekly', recipientEmail,
+            parentId: parent.parentId,
+            enabled,
+            frequency: 'Weekly',
+            recipientEmail,
         });
         return { parent, student, recipientEmail };
     }
