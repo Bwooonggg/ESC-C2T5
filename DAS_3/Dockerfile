@@ -22,12 +22,13 @@ RUN apt-get update && \
         poppler-utils && \
     rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt .
-COPY pyproject.toml .
 RUN pip install --no-cache-dir --no-deps \
         --index-url https://download.pytorch.org/whl/cpu \
         torch==2.13.0 \
         torchvision==0.28.0
+
+COPY requirements.txt .
+COPY pyproject.toml .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .

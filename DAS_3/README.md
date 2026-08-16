@@ -79,10 +79,16 @@ npm test
 ## Docker backend stack
 
 Copy `.env.example` to `.env`, set `POSTGRES_PASSWORD`, provider credentials, and
-the Supabase backend credentials, then run:
+the Supabase backend credentials, then build on the first run or after DAS3 changes:
 
 ```sh
 docker compose up --build
+```
+
+For normal subsequent starts, reuse the existing image:
+
+```sh
+docker compose up --no-build
 ```
 
 Compose starts only the LangGraph backend, PostgreSQL, and Redis. LangGraph is

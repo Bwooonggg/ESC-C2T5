@@ -1,5 +1,6 @@
 param(
-    [int]$TimeoutSeconds = 180
+    [int]$TimeoutSeconds = 180,
+    [switch]$RebuildDas3
 )
 
 $ErrorActionPreference = 'Stop'
@@ -40,6 +41,66 @@ function Save-State {
     $State | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $statePath
 }
 
+function Get-FilesFingerprint {
+    param(
+        [string]$BaseDirectory,
+        [string[]]$RelativePaths
+    )
+
+    $entries = foreach ($relativePath in ($RelativePaths | Sort-Object -Unique)) {
+        $absolutePath = Join-Path $BaseDirectory $relativePath
+        if (-not (Test-Path -LiteralPath $absolutePath -PathType Leaf)) {
+            throw "Fingerprint input is missing: $absolutePath"
+        }
+
+        $normalizedPath = $relativePath.Replace('\', '/')
+        $fileHash = (Get-FileHash -LiteralPath $absolutePath -Algorithm SHA256).Hash.ToLowerInvariant()
+        "${normalizedPath}:$fileHash"
+    }
+
+    $bytes = [System.Text.Encoding]::UTF8.GetBytes($entries -join "`n")
+    $algorithm = [System.Security.Cryptography.SHA256]::Create()
+    try {
+        return ([BitConverter]::ToString($algorithm.ComputeHash($bytes))).Replace('-', '').ToLowerInvariant()
+    } finally {
+        $algorithm.Dispose()
+    }
+}
+
+function Ensure-NodeDependencies {
+    param(
+        [System.Collections.IDictionary]$Definition,
+        [string]$RuntimeDirectory
+    )
+
+    $fingerprint = Get-FilesFingerprint `
+        -BaseDirectory $Definition.directory `
+        -RelativePaths @('package.json', 'package-lock.json')
+    $stampPath = Join-Path $RuntimeDirectory "npm-$($Definition.name).sha256"
+    $entrypointPath = Join-Path $Definition.directory $Definition.script
+    $entrypointExists = Test-Path -LiteralPath $entrypointPath -PathType Leaf
+    $storedFingerprint = if (Test-Path -LiteralPath $stampPath -PathType Leaf) {
+        (Get-Content -Raw -LiteralPath $stampPath).Trim()
+    } else {
+        ''
+    }
+
+    if ($entrypointExists -and $storedFingerprint -eq $fingerprint) {
+        return
+    }
+
+    Write-Host "Installing $($Definition.name) dependencies..."
+    & npm.cmd ci --prefix $Definition.directory
+    if ($LASTEXITCODE -ne 0) {
+        throw "npm ci failed for $($Definition.name) with exit code $LASTEXITCODE."
+    }
+    if (-not (Test-Path -LiteralPath $entrypointPath -PathType Leaf)) {
+        throw "npm ci completed, but the $($Definition.name) entrypoint is still missing."
+    }
+
+    Set-Content -LiteralPath $stampPath -Value $fingerprint -NoNewline
+}
+
 function Start-NodeService {
     param(
         [string]$Name,
@@ -72,10 +133,15 @@ function Start-NodeService {
     Save-State $State
 }
 
-foreach ($command in @('docker', 'node.exe')) {
+foreach ($command in @('docker', 'node.exe', 'npm.cmd')) {
     if (-not (Get-Command $command -ErrorAction SilentlyContinue)) {
         throw "Required command '$command' was not found on PATH."
     }
+}
+
+$dockerServerVersion = @(& docker info --format '{{.ServerVersion}}' 2>$null)
+if ($LASTEXITCODE -ne 0 -or $dockerServerVersion.Count -eq 0) {
+    throw 'Docker Desktop is not ready. Start Docker Desktop, wait for the engine, and try again.'
 }
 
 $requiredEnvironmentFiles = @(
@@ -138,10 +204,53 @@ $serviceDefinitions = @(
     }
 )
 foreach ($definition in $serviceDefinitions) {
-    if (-not (Test-Path -LiteralPath (Join-Path $definition.directory $definition.script))) {
-        throw "Dependencies for $($definition.name) are missing. Run npm install in $($definition.directory)."
+    Ensure-NodeDependencies -Definition $definition -RuntimeDirectory $runtimeDirectory
+}
+
+$das3BuildInputPaths = @(
+    '.dockerignore',
+    'Dockerfile',
+    'docker-entrypoint.sh',
+    'langgraph.json',
+    'pyproject.toml',
+    'requirements.txt'
+)
+foreach ($directoryName in @('src', 'scripts', 'data')) {
+    $inputDirectory = Join-Path $composeDirectory $directoryName
+    if (-not (Test-Path -LiteralPath $inputDirectory -PathType Container)) {
+        continue
+    }
+    $das3BuildInputPaths += Get-ChildItem -LiteralPath $inputDirectory -Recurse -File |
+        Where-Object {
+            $_.FullName -notmatch '[\\/]__pycache__[\\/]' `
+                -and $_.Extension -notin @('.pyc', '.pyo')
+        } |
+        ForEach-Object { $_.FullName.Substring($composeDirectory.Length + 1) }
+}
+
+$das3Fingerprint = Get-FilesFingerprint `
+    -BaseDirectory $composeDirectory `
+    -RelativePaths $das3BuildInputPaths
+$das3BuildStatePath = Join-Path $runtimeDirectory 'das3-build.json'
+$das3ImageOutput = @(& docker image inspect 'das-agent:dev' --format '{{.Id}}' 2>$null)
+$das3ImageExists = $LASTEXITCODE -eq 0 -and $das3ImageOutput.Count -gt 0
+$das3ImageId = if ($das3ImageExists) {
+    ($das3ImageOutput -join '').Trim()
+} else {
+    ''
+}
+$das3BuildState = $null
+if (Test-Path -LiteralPath $das3BuildStatePath -PathType Leaf) {
+    try {
+        $das3BuildState = Get-Content -Raw -LiteralPath $das3BuildStatePath | ConvertFrom-Json
+    } catch {
+        Write-Warning 'The DAS3 build state is invalid; DAS3 will be rebuilt.'
     }
 }
+$das3BuildIsCurrent = $das3ImageExists `
+    -and $null -ne $das3BuildState `
+    -and $das3BuildState.fingerprint -eq $das3Fingerprint `
+    -and $das3BuildState.imageId -eq $das3ImageId
 
 $runningComposeServices = @(
     & docker compose --project-directory $composeDirectory ps --status running --services 2>$null
@@ -156,8 +265,28 @@ $state = [ordered]@{
 Save-State $state
 
 try {
+    if ($RebuildDas3 -or -not $das3BuildIsCurrent) {
+        Write-Host 'Building DAS3 because its image is missing, stale, or explicitly requested...'
+        & docker compose --project-directory $composeDirectory build langgraph-dev
+        if ($LASTEXITCODE -ne 0) {
+            throw "Docker Compose build failed with exit code $LASTEXITCODE."
+        }
+
+        $das3ImageOutput = @(& docker image inspect 'das-agent:dev' --format '{{.Id}}')
+        if ($LASTEXITCODE -ne 0 -or $das3ImageOutput.Count -eq 0) {
+            throw 'DAS3 built successfully, but its image could not be inspected.'
+        }
+        $das3ImageId = ($das3ImageOutput -join '').Trim()
+        [ordered]@{
+            fingerprint = $das3Fingerprint
+            imageId = $das3ImageId
+        } | ConvertTo-Json | Set-Content -LiteralPath $das3BuildStatePath
+    } else {
+        Write-Host 'Reusing the current DAS3 image.'
+    }
+
     Write-Host 'Starting DAS3 Docker services...'
-    & docker compose --project-directory $composeDirectory up -d --build
+    & docker compose --project-directory $composeDirectory up -d --no-build
     if ($LASTEXITCODE -ne 0) {
         throw "Docker Compose failed with exit code $LASTEXITCODE."
     }

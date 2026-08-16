@@ -145,6 +145,11 @@ Start the complete local backend/frontend stack from the repository root:
 .\scripts\start-dev.ps1
 ```
 
+On a fresh clone, the script installs missing Node dependencies and builds the
+DAS3 image. Later starts reuse that image until a DAS3 build input changes. Use
+`.\scripts\start-dev.ps1 -RebuildDas3` only when you intentionally need a forced
+DAS3 rebuild.
+
 The script waits for all four ports and writes service output under `.dev/logs`.
 Stop only the processes it started, while preserving Docker volumes, with:
 
@@ -176,7 +181,12 @@ repository root and run one block in each terminal.
 Terminal 1 — DAS3 Docker stack:
 
 ```powershell
+# Choose one:
+# First run, or after DAS3 changes
 docker compose --project-directory DAS_3 up --build
+
+# Normal start using the existing image
+docker compose --project-directory DAS_3 up --no-build
 ```
 
 Terminal 2 — DAS1 screening backend:
@@ -275,10 +285,16 @@ environment variables. DAS1 does not require a user login.
 ### DAS3 backend
 
 From `DAS_3/`, copy `.env.example` to `.env`, fill in the backend credentials,
-then start the persistent backend stack:
+then build the persistent backend stack on the first run or after DAS3 changes:
 
 ```powershell
 docker compose up --build
+```
+
+For normal subsequent starts, reuse the existing image:
+
+```powershell
+docker compose up --no-build
 ```
 
 Compose runs LangGraph, PostgreSQL, and Redis and publishes LangGraph on host port
