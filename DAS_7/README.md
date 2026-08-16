@@ -444,14 +444,3 @@ The suites skip unless `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and `TEST_SU
 Jest runs serially (`maxWorkers: 1`) because the integration suites share one project and two Auth users. The notification sweep may process other enabled preferences already present in that test project, so use a dedicated test project where possible and inspect its data after notification tests.
 
 Running plain `npm test` executes the unit suite and either runs or skips the integration suites according to this guard.
-
-## Production runtime
-
-Build and start the backend with:
-
-```bash
-npm run build
-npm start
-```
-
-The production reverse proxy must reproduce the development proxy contract: forward `/api/insights/*` to DAS7 and strip `/api/insights` before the request reaches Express. Keep `SUPABASE_SERVICE_ROLE_KEY` server-side, use real provider credentials only through the deployment environment, and enable the scheduler in only one process unless duplicate sweeps are intentionally coordinated.

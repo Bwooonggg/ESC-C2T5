@@ -362,25 +362,6 @@ The DAS7 email settings page saves preferences through `/api/insights/parents/:p
 and sends an immediate update through `/api/insights/parents/:parentId/notifications`.
 Both operations require the parent's Insights access token.
 
-## Runtime scope
-
-Production hosting is out of scope. The target local setup uses Docker only for
-the DAS3 LangGraph, PostgreSQL, and Redis stack. The centralized frontend, DAS1,
-and DAS7 run directly on the host. Traefik is not used.
-
-The DAS3 Compose file is backend-only; its PostgreSQL, Redis, and model-cache
-volumes preserve local service data across container restarts.
-
-## Data handling
-
-- DAS1 screening results are not clinical diagnoses and must not be presented as
-  such.
-- Do not store full names or NRIC values in DAS1 screening records.
-- Do not expose Supabase service-role keys, LLM keys, or Brevo keys to frontend
-  code.
-- Return the same `404 Not Found` response when a protected record is absent or
-  belongs to another user. This avoids revealing whether the record exists.
-
 ## Team
 
 C2T5: Brian Wong, Toh Shijie, Patrick Liu, Michael Soh, Le Bin, Vincent Alexander,

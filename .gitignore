@@ -36,6 +36,7 @@ DAS_7.zip
 .claude
 AGENTS.md
 /docs/Lecture Slides/
+tmp/
 
 # Local DAS 7 test plans
 /DAS_7/backend/docs/*-test-plan.md
