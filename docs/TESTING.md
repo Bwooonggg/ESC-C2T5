@@ -1,6 +1,6 @@
-# Frontend UI testing
+# Frontend browser testing
 
-This document covers the browser-driven end-to-end tests under `frontend/test/`.
+This document covers the browser-driven UI-flow tests under `frontend/test/`.
 It does not cover the DAS1, DAS3, or DAS7 backend test suites — see the root
 [README.md](../README.md#tests) for those commands.
 
@@ -9,21 +9,24 @@ It does not cover the DAS1, DAS3, or DAS7 backend test suites — see the root
 ```
 frontend/test/
   api/          Jest unit tests for the typed API clients (jsdom, no browser)
+  auth/         Jest unit tests for authentication and route guards
+  components/   Jest unit tests for shared React components
   config/       Jest unit tests for environment/config helpers
   lib/          Jest unit tests for shared formatting utilities
-  ui/           Selenium end-to-end suites (one folder per service)
+  pages/        Jest unit tests for service pages
+  ui/           Selenium browser-flow suites (one folder per service)
     das1/
     das3/
     das7/
   e2e/          Playwright end-to-end suites (one file per service)
 ```
 
-The `api/`, `config/`, and `lib/` suites run under Jest and never open a browser.
-The `ui/` and `e2e/` suites drive a real Chromium browser against the frontend
-running in stub mode (`VITE_USE_STUBS=true`) — no backend, Docker, or Supabase
-project required.
+The `api/`, `auth/`, `components/`, `config/`, `lib/`, and `pages/` suites run
+under Jest and never open a browser. The `ui/` and `e2e/` suites drive a real
+Chromium browser against the frontend running in stub mode
+(`VITE_USE_STUBS=true`) — no backend, Docker, or Supabase project required.
 
-## What the end-to-end suites cover
+## What the browser-flow suites cover
 
 Both `ui/` (Selenium) and `e2e/` (Playwright) exercise the same three user
 journeys, kept in parallel as a comparison between the two tools:
@@ -55,7 +58,7 @@ with `VITE_USE_STUBS=false` and are out of scope for these suites.
   with:
 
   ```powershell
-  npx playwright install chromium --prefix frontend
+  npm exec --prefix frontend -- playwright install chromium
   ```
 
 ## Running the tests
@@ -108,7 +111,7 @@ Failure screenshots and traces are saved under `frontend/test-results/`. View a
 trace with:
 
 ```powershell
-npx playwright show-trace frontend/test-results/<failed-test-folder>/trace.zip
+npm exec --prefix frontend -- playwright show-trace frontend/test-results/<failed-test-folder>/trace.zip
 ```
 
 ## Notes for anyone extending these suites

@@ -39,9 +39,8 @@ Current functionality includes:
   authenticated **Send update now** action.
 - Local browser preview stubs for all three services when `VITE_USE_STUBS=true`.
 
-The permanent design is in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Historical
-implementation plans remain under `docs/integration/` until that temporary folder is
-cleaned up; they should not be treated as the current runtime guide.
+The implemented system design is documented in
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Repository layout
 
@@ -51,7 +50,7 @@ ESC-C2T5/
 |-- DAS_1/                  Public screening backend and legacy service files
 |-- DAS_3/                  Authenticated LangGraph worksheet backend
 |-- DAS_7/                  Parent insights API and Brevo email scheduler
-|-- docs/                   System architecture and temporary integration notes
+|-- docs/                   System architecture, authentication, and testing guides
 |-- Files/                  Project briefs and reference material
 |-- API_CONTRACTS.md        Browser-facing API and error conventions
 `-- README.md
@@ -368,9 +367,5 @@ volumes preserve local service data across container restarts.
 
 ## Team
 
-<<<<<<< HEAD
 C2T5: Brian Wong, Toh Shijie, Patrick Liu, Michael Soh, Le Bin, Vincent Alexander,
 Mahek Zaveri, and Jia Zhi.
-=======
-C2T5: Brian Wong, Toh Shijie, Patrick Liu, Michael Soh, Le Bin, Vincent Alexander, Mahek Zaveri, and Jia Zhi.
->>>>>>> 98de6fe7ed103d7ca21eaa26c8a123e2f83666e9

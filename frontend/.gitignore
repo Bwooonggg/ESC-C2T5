@@ -30,4 +30,4 @@ dist-ssr
 .agents
 
 # Selenium failure evidence
-test/ui/das7/artifacts/
+test/ui/*/artifacts/

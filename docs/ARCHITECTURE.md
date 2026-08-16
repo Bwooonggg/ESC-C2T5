@@ -1,7 +1,6 @@
 # System architecture
 
-This document describes the target architecture. For the gap between this design
-and the current code, see [integration/README.md](integration/README.md).
+This document describes the implemented architecture.
 
 ## Scope
 
@@ -67,8 +66,8 @@ Public API prefix: `/api/screening`
 ### DAS3 worksheet
 
 DAS3 is for teachers. Its LangGraph backend owns worksheet generation, retrieval,
-and worksheet data. Before it is exposed through the centralized frontend, it must
-verify Supabase JWTs and confirm that `sub` belongs to a teacher profile.
+and worksheet data. It verifies Supabase JWTs and confirms that `sub` belongs to a
+teacher profile before serving protected requests from the centralized frontend.
 
 Public API prefix: `/api/worksheet`
 
