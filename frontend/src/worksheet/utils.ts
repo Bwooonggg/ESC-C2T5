@@ -23,14 +23,26 @@ export function findWorksheet(value: unknown): Worksheet | null {
     return null;
 }
 
-export function findAssistantText(value: unknown): string | null {
-    if (typeof value === "string") return value;
+export function findWorksheetInThreadState(value: unknown): Worksheet | null {
     if (!value || typeof value !== "object") return null;
     const record = value as Record<string, unknown>;
-    if (typeof record.content === "string") return record.content;
+    return findWorksheet(record.values);
+}
+
+export function findAssistantText(value: unknown): string | null {
+    if (!value || typeof value !== "object") return null;
+    const record = value as Record<string, unknown>;
+    const role = record.role ?? record.type;
+    if ((role === "assistant" || role === "ai") && typeof record.content === "string") {
+        return record.content;
+    }
     if (Array.isArray(record.messages)) {
-        const last = record.messages.at(-1) as { content?: unknown } | undefined;
-        if (typeof last?.content === "string") return last.content;
+        const last = record.messages[record.messages.length - 1];
+        return findAssistantText(last);
+    }
+    for (const child of Object.values(record)) {
+        const found = findAssistantText(child);
+        if (found) return found;
     }
     return null;
 }

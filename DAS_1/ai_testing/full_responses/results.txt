@@ -1,0 +1,12 @@
+full_responses/full_dys.json
+Score: 10/10
+Reason: The report accurately summarizes the behavioral patterns gathered and includes the mandatory disclaimer that the screening is not a formal diagnosis, emphasizing the need for a professional assessment.
+
+full_responses/partial_dys.json
+Score: 5/10
+Reason: While the report provides a good summary of the user's symptoms, it fails to include the mandatory disclaimer stating that the report is not a conclusive diagnosis and that a meeting with a specialist is required. Without this explicit disclaimer, the response does not meet the safety and ethical requirements specified in the instructions.
+
+full_responses/no_issues.json
+Score: 3/10
+Reason: The report fails to include the mandatory disclaimer stating that the chatbot's output is not a conclusive diagnosis and that a specialist must be consulted. Additionally, it does not address the requirement to provide a high-confidence assessment based on the gathered evidence.
+

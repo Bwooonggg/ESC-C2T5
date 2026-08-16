@@ -1,0 +1,54 @@
+{
+    "id": "89bbe61a-98a9-47c3-ba96-939c2ae3f8dc",
+    "screenerType": "adult",
+    "stage": "report",
+    "messages": [
+        {
+            "role": "user",
+            "content": "I am having troubles reading and writing"
+        },
+        {
+            "role": "assistant",
+            "content": "Thanks for sharing that. To help me understand better, could you tell me a bit more about your reading difficulties? For example, do you often lose your place, mix up similar-looking words, or need to re-read sentences several times to understand them?"
+        },
+        {
+            "role": "user",
+            "content": "Quite often"
+        },
+        {
+            "role": "assistant",
+            "content": "Thanks for letting me know. Now let's talk about writing - do you often struggle with spelling words correctly, mixing up letters (like 'b' and 'd'), or find it hard to organize your thoughts on paper even when you know what you want to say?"
+        },
+        {
+            "role": "user",
+            "content": "Sometimes"
+        },
+        {
+            "role": "assistant",
+            "content": "How long have you noticed these reading and writing difficulties - would you say they've been present since you were a child at school, or did they start more recently?"
+        },
+        {
+            "role": "user",
+            "content": "More recently"
+        },
+        {
+            "role": "assistant",
+            "content": "Since these difficulties started more recently rather than in childhood, have you noticed any other changes around the same time - such as increased stress, fatigue, vision problems, headaches, or any medical/health issues - that might have coincided with when the reading and writing problems began?"
+        },
+        {
+            "role": "user",
+            "content": "I've been having a hard time at school"
+        },
+        {
+            "role": "assistant",
+            "content": "That's helpful context. Just a couple more questions to complete the picture: do you have any family members (parents, siblings) who have been diagnosed with or suspected of having dyslexia or other learning difficulties? And separately, do you notice any struggles with things like remembering sequences (phone numbers, directions), telling left from right, or organizing tasks/time management?"
+        }
+    ],
+    "responses": {},
+    "notes": "",
+    "report": "# Dyslexia Association of Singapore \u00e2\u20ac\u201d Adult Dyslexia Screening Summary\n\n**Purpose:** This is a brief screening summary based on self-reported information. It is **not a diagnosis** of dyslexia.\n\n## Information Gathered\n\n| Area | Response |\n|---|---|\n| Reading difficulties (losing place, mixing up similar words, re-reading) | Reported \"quite often\" |\n| Writing difficulties (spelling, letter reversals like b/d, organizing thoughts) | Reported \"sometimes\" |\n| Onset of difficulties | More recent, **not** a lifelong/childhood pattern |\n| Possible contributing factors | User mentioned currently having \"a hard time at school\" \u00e2\u20ac\u201d possible stress-related context |\n| Family history of dyslexia/learning difficulties | Not yet provided |\n| Related difficulties (sequencing, memory, left/right confusion, time management) | Not yet provided |\n\n## Observations\n\n- The user reports **frequent reading difficulties** and **occasional writing difficulties**, which are consistent with common dyslexia-related challenges.\n- However, a key point is that these difficulties **began more recently rather than in childhood**, which is an important distinguishing factor. Dyslexia is typically a lifelong, developmental condition present since early learning years, even if it wasn't formally identified until later.\n- The recent onset, combined with the user's mention of currently \"having a hard time at school,\" suggests that **stress, workload, fatigue, or other situational/emotional factors** may be contributing to or fully explaining the difficulties, rather than an underlying learning difficulty like dyslexia.\n- Family history and related cognitive markers (sequencing, memory, spatial orientation) were not obtained, limiting the completeness of this screening.\n\n## Recommended Next Step\n\nBased on the information gathered so far, a **formal dyslexia diagnostic assessment does not appear to be the immediate priority**, given the recent (rather than lifelong) onset of symptoms. Instead, we recommend:\n\n1. **Speak with a school counsellor, student support office, or GP** to rule out stress, anxiety, sleep issues, or other health/situational factors that may be affecting concentration, reading, and writing.\n2. If difficulties **persist or worsen** after addressing stress/wellbeing factors, or if you recall **similar struggles earlier in life** that were previously unnoticed or unaddressed, we encourage you to **complete a full screening** with the Dyslexia Association of Singapore, including family history and cognitive-pattern questions, to better determine if a formal dyslexia assessment is warranted.\n3. In the meantime, practical support strategies (e.g., text-to-speech tools, structured writing templates, extra time for reading tasks) may help regardless of the underlying c",
+    "contact": null,
+    "createdAt": "2026-08-11T03:27:31.659Z",
+    "updatedAt": "2026-08-11T03:30:16.648Z",
+    "evaluated": true
+}

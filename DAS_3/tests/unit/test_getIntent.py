@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import AsyncMock, patch, MagicMock
-from das_agent.nodes.nodes import QuizIntent, ask_clarification_node, get_intent_node, get_question_count
+from das_agent.nodes.nodes import QuizIntent, ask_clarification_node, get_intent_node
 from langchain_core.messages import HumanMessage
 from das_agent.nodes import nodes
 from das_agent.graph.agent import route_decision
@@ -27,8 +27,9 @@ def patch_structured_llm(quiz_intent: QuizIntent):
     return patch.object(nodes, "ChatOpenRouter", return_value=mock_llm_instance)
 
 @pytest.mark.asyncio
-async def test_get_intent_success_detects_intent_and_updates_state():
+async def test_intent_state():
     fake_result = QuizIntent(
+        action="create",
         has_sufficient_info=True,
         qn_type="MCQ",
         topic="grammar",
@@ -47,32 +48,35 @@ async def test_get_intent_success_detects_intent_and_updates_state():
 
 
 @pytest.mark.asyncio
-async def test_get_intent_uses_configured_openrouter_model(monkeypatch):
+async def test_configured_model(monkeypatch):
     fake_result = QuizIntent(
+        action="create",
         has_sufficient_info=True,
         qn_type="MCQ",
         topic="grammar",
         difficulty="medium",
     )
-    monkeypatch.setenv("OPENROUTER_MODEL", "provider/test-model")
+    monkeypatch.setenv("OPENROUTER_INTENT_MODEL", "provider/test-intent-model")
 
     with patch_structured_llm(fake_result) as openrouter:
         await get_intent_node(make_state("quiz me on grammar"))
 
     openrouter.assert_called_once_with(
-        model="provider/test-model",
+        model="provider/test-intent-model",
         temperature=0,
         reasoning={"effort": "none"},
-        max_tokens=256,
+        max_tokens=512,
     )
 
 
 @pytest.mark.asyncio
-async def test_get_intent_uses_user_requested_question_count():
+async def test_requested_count():
     fake_result = QuizIntent(
+        action="create",
         has_sufficient_info=True,
         qn_type="MCQ",
         difficulty="medium",
+        question_count=8,
     )
     state = make_state("Create 8 medium Grade 3 reading comprehension MCQ questions")
 
@@ -83,12 +87,14 @@ async def test_get_intent_uses_user_requested_question_count():
 
 
 @pytest.mark.asyncio
-async def test_get_intent_preserves_original_request_during_clarification():
+async def test_preserve_request():
     fake_result = QuizIntent(
+        action="create",
         has_sufficient_info=True,
         qn_type="MCQ",
         topic="subject-verb agreement",
         difficulty="medium",
+        question_count=8,
     )
     state = {
         "messages": [HumanMessage(content="Make it MCQ")],
@@ -107,7 +113,117 @@ async def test_get_intent_preserves_original_request_during_clarification():
     assert result["clarification_query"] is None
 
 
-def test_quiz_intent_documents_band_difficulty_mapping():
+@pytest.mark.asyncio
+async def test_edit_intent():
+    state = {
+        "messages": [
+            HumanMessage(content="Create a Band A MCQ worksheet on subject verb agreement"),
+            HumanMessage(
+                content=(
+                    "Can you edit question 2? I want it to have an option named satting"
+                )
+            ),
+        ],
+        "generated_worksheet": {
+            "title": "Subject-Verb Agreement",
+            "readingPassage": "A short passage.",
+            "instructions": "Choose the best answer.",
+            "items": [
+                {
+                    "question": f"Question {index + 1}?",
+                    "options": ["sits", "sat", "sitting", "sit"],
+                    "answer": "sits",
+                }
+                for index in range(15)
+            ],
+        },
+        "qn_type": "MCQ",
+        "topic": "Subject-Verb Agreement",
+        "difficulty": "easy",
+    }
+
+    fake_result = QuizIntent(
+        action="revise",
+        has_sufficient_info=True,
+        qn_type=None,
+        topic=None,
+        difficulty=None,
+        revision_instruction="Add the exact option 'satting' to question 2.",
+    )
+
+    with patch_structured_llm(fake_result) as openrouter:
+        result = await get_intent_node(state)
+
+    openrouter.assert_called_once()
+    assert result["action"] == "revise"
+    assert result["question_count"] == 15
+    assert result["qn_type"] == "MCQ"
+    assert result["topic"] == "Subject-Verb Agreement"
+    assert result["revision_instruction"] == (
+        "Add the exact option 'satting' to question 2."
+    )
+    assert result["query"].startswith("Can you edit question 2")
+
+
+@pytest.mark.asyncio
+async def test_natural_revision():
+    state = {
+        "messages": [HumanMessage(content="Make number two easier")],
+        "generated_worksheet": {
+            "title": "Grammar Practice",
+            "readingPassage": "A short passage.",
+            "instructions": "Choose the best answer.",
+            "items": [
+                {
+                    "question": f"Question {index + 1}?",
+                    "options": ["one", "two", "three", "four"],
+                    "answer": "one",
+                }
+                for index in range(4)
+            ],
+        },
+        "qn_type": "MCQ",
+        "topic": "Grammar",
+        "difficulty": "medium",
+    }
+    fake_result = QuizIntent(
+        action="revise",
+        has_sufficient_info=True,
+        qn_type=None,
+        topic=None,
+        difficulty=None,
+        revision_instruction="Make question 2 easier.",
+    )
+
+    with patch_structured_llm(fake_result):
+        result = await get_intent_node(state)
+
+    assert result["action"] == "revise"
+    assert result["revision_instruction"] == "Make question 2 easier."
+
+
+@pytest.mark.asyncio
+async def test_revision_without_sheet():
+    fake_result = QuizIntent(
+        action="revise",
+        has_sufficient_info=True,
+        qn_type=None,
+        topic=None,
+        difficulty=None,
+        revision_instruction="Make question 2 easier.",
+    )
+
+    with patch_structured_llm(fake_result):
+        result = await get_intent_node(
+            make_state("Make number two easier")
+        )
+
+    assert result["action"] == "clarify"
+    assert "no current worksheet" in result["clarification_reason"].lower()
+    assert route_decision(result) == "needs_clarification"
+
+
+def test_band_mapping_schema():
     difficulty_schema = QuizIntent.model_json_schema()["properties"]["difficulty"]
 
     assert "Band A to easy" in difficulty_schema["description"]
@@ -115,25 +231,22 @@ def test_quiz_intent_documents_band_difficulty_mapping():
     assert "Band C to hard" in difficulty_schema["description"]
 
 
-@pytest.mark.parametrize(
-    ("query", "expected"),
-    [
-        ("Create a medium Grade 3 reading worksheet", 15),
-        ("Create 8 medium Grade 3 reading comprehension questions", 8),
-        ("Make me 6 phonics MCQs", 6),
-        ("Give me 10 questions about grammar", 10),
-        ("I would like 12 questions", 12),
-        ("Questions: 4", 4),
-    ],
-)
-def test_get_question_count(query, expected):
-    assert get_question_count(query) == expected
+def test_revision_schema():
+    properties = QuizIntent.model_json_schema()["properties"]
 
+    assert "revision_instruction" in properties
+    assert "revision_scope" not in properties
+    assert "target_question_numbers" not in properties
 
 
 @pytest.mark.asyncio
-async def test_get_intent_node_returns_open_ended():
-    fake_result = QuizIntent(has_sufficient_info=True, qn_type="Open_ended", difficulty="hard")
+async def test_open_intent():
+    fake_result = QuizIntent(
+        action="create",
+        has_sufficient_info=True,
+        qn_type="Open_ended",
+        difficulty="hard",
+    )
     state = make_state("Open ended grammar questions ")
  
     with patch_structured_llm(fake_result):
@@ -144,8 +257,9 @@ async def test_get_intent_node_returns_open_ended():
 
 
 @pytest.mark.asyncio
-async def test_get_intent_node_handles_empty_info():
+async def test_empty_intent():
     fake_result = QuizIntent(
+        action="clarify",
         has_sufficient_info=False,
         qn_type=None,
         difficulty=None,
@@ -161,20 +275,39 @@ async def test_get_intent_node_handles_empty_info():
     assert result["clarification_reason"] == "No topic or question format specified."
 
 
-def test_route_does_not_require_difficulty():
-    state = {"qn_type": "MCQ", "topic": "grammar", "difficulty": None}
+def test_optional_difficulty():
+    state = {
+        "action": "create",
+        "qn_type": "MCQ",
+        "topic": "grammar",
+        "difficulty": None,
+    }
 
-    assert route_decision(state) == "ready"
+    assert route_decision(state) == "create"
 
 
-def test_route_requires_a_topic():
-    state = {"qn_type": "MCQ", "topic": None, "difficulty": "easy"}
+def test_required_topic():
+    state = {
+        "action": "create",
+        "qn_type": "MCQ",
+        "topic": None,
+        "difficulty": "easy",
+    }
 
     assert route_decision(state) == "needs_clarification"
 
 
+def test_revision_route():
+    state = {
+        "action": "revise",
+        "generated_worksheet": {"items": []},
+    }
+
+    assert route_decision(state) == "revise"
+
+
 @pytest.mark.asyncio
-async def test_clarification_does_not_ask_for_difficulty():
+async def test_no_difficulty_prompt():
     result = await ask_clarification_node(
         {"qn_type": None, "difficulty": None, "topic": None}
     )
@@ -189,10 +322,11 @@ async def test_clarification_does_not_ask_for_difficulty():
 @pytest.mark.parametrize(
     "query", ["asdkjhaskjdh gibberish input", "help me", ""]
 )
-async def test_get_intent_failure_nonsense_info_routes_to_clarification(query):
+async def test_nonsense_intent(query):
     state = make_state(query)
  
     mocked_ai_response = QuizIntent(
+        action="clarify",
         has_sufficient_info=False,
         qn_type=None,
         difficulty=None,
@@ -211,10 +345,11 @@ async def test_get_intent_failure_nonsense_info_routes_to_clarification(query):
 @pytest.mark.parametrize(
     "query", ["generate me a worksheet", "help me", ""]
 )
-async def test_get_intent_failure_insufficient_info_routes_to_clarification(query):
+async def test_incomplete_intent(query):
     state = make_state(query)
  
     mocked_ai_response = QuizIntent(
+        action="clarify",
         has_sufficient_info=False,
         qn_type=None,
         difficulty=None,

@@ -48,14 +48,23 @@ function touch(session: ScreeningSession): ScreeningSession {
   return { ...session, updatedAt: new Date().toISOString() }
 }
 
+/**
+ * The rule every write path shares: once the contact has been captured the
+ * session is closed. Exported so a Controller can refuse before it pays for a
+ * Claude call, rather than only when the Model rejects the result.
+ */
+export function assertNotCompleted(session: ScreeningSession): void {
+  if (session.stage === 'completed') {
+    throw new DomainError('This screening session is already complete.', 409)
+  }
+}
+
 export function appendMessage(
   session: ScreeningSession,
   role: ChatRole,
   content: string,
 ): ScreeningSession {
-  if (session.stage === 'completed') {
-    throw new DomainError('This screening session is already complete.', 409)
-  }
+  assertNotCompleted(session)
 
   const trimmed = content.trim()
   if (!trimmed) {
@@ -98,6 +107,8 @@ export function attachReport(
   session: ScreeningSession,
   report: string,
 ): ScreeningSession {
+  assertNotCompleted(session)
+
   const trimmed = report.trim()
   if (!trimmed) {
     throw new DomainError('The screener produced an empty report.', 502)

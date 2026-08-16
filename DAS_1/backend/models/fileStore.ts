@@ -27,12 +27,38 @@ export async function readAll(): Promise<SessionTable> {
   }
 }
 
+async function persist(table: SessionTable): Promise<void> {
+  await mkdir(path.dirname(dataFile), { recursive: true })
+  await writeFile(dataFile, JSON.stringify(table, null, 2), 'utf8')
+}
+
 export function writeAll(table: SessionTable): Promise<void> {
-  const write = pendingWrite.then(async () => {
-    await mkdir(path.dirname(dataFile), { recursive: true })
-    await writeFile(dataFile, JSON.stringify(table, null, 2), 'utf8')
-  })
+  const write = pendingWrite.then(() => persist(table))
 
   pendingWrite = write.catch(() => undefined)
   return write
+}
+
+/**
+ * Read, change and write the table as one critical section.
+ *
+ * writeAll only serialises the write, so a caller that reads the table itself
+ * and then writes it back races every other caller: each reads the same
+ * version, and the last write wins with the others' records missing. Chaining
+ * the read onto `pendingWrite` too means a mutation always starts from the
+ * table the previous mutation left behind.
+ */
+export function updateAll(mutate: (table: SessionTable) => void): Promise<SessionTable> {
+  const update = pendingWrite.then(async () => {
+    const table = await readAll()
+    mutate(table)
+    await persist(table)
+    return table
+  })
+
+  pendingWrite = update.then(
+    () => undefined,
+    () => undefined,
+  )
+  return update
 }
